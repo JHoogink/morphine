@@ -71,6 +71,7 @@ public class SimpleModel
 				Duration.of("5 day"), Duration.of("9999 day"),
 				Duration.of("3 day"), Duration.of("7 day"));
 
+		
 		final TransmissionRoute route = TransmissionRoute.AIRBORNE;
 		final TransmissionSpace space = TransmissionSpace.of(scheduler, route);
 		final Place rivm = Place.Simple.of(Place.RIVM_POSITION, Place.NO_ZIP,
@@ -94,6 +95,12 @@ public class SimpleModel
 		final ProbabilityDistribution<Gender> genderDist = distParser
 				.getFactory()
 				.createUniformCategorical(Gender.MALE, Gender.FEMALE);
+
+		final ProbabilityDistribution<Boolean> effectiveDist= distParser
+				.getFactory()
+				.createBernoulli(0.5); 
+					
+		/*final ProbabilitDistribution<Vaccine> va
 		/*
 		 * FIXME RandomDistribution. Util .valueOf( "uniform(male;female)",
 		 * distParser, Gender.class );
@@ -105,12 +112,13 @@ public class SimpleModel
 						NonSI.DAY);
 		final CountDownLatch latch = new CountDownLatch(1);
 		final Population pop = Population.Simple.of(scheduler);
-		for (int i = 1; i < n_pop; i++)
+		for (int i = 1; i <= n_pop; i++)
 		{
 			final Gender gender = genderDist.draw();
 			final Instant birth = birthDist.draw();
-			LOG.trace("#{} - gender: {}, birth: {}", i, gender,
-					birth.prettify(NonSI.DAY, 1));
+			final Boolean effective= effectiveDist.draw();
+			LOG.trace("#{} - gender: {}, birth: {}, effective: {}", i, gender,
+					birth.prettify(NonSI.DAY, 1), effective);
 			final Individual ind = Individual.Simple.of(
 					Household.Simple.of(pop, rivm), birth, gender,
 					rivm.getSpace());
