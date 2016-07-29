@@ -18,6 +18,7 @@
 		<source>1.8</source>
 		<encoding>UTF-8</encoding>
 		<skipTests>false</skipTests>
+		<hsqldb.version>2.3.4</hsqldb.version>
 
 		<maven.test.skip>${skipTests}</maven.test.skip>
 		<project.build.sourceLevel>${source}</project.build.sourceLevel>
@@ -27,7 +28,7 @@
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
 		<junit.version>4.12</junit.version>
-		<episim.version>0.0.1-SNAPSHOT</episim.version>
+		<episim.version>0.0.2</episim.version>
 	</properties>
 
 	<repositories>
@@ -37,7 +38,6 @@
 			<url>https://github.com/krevelen/coala-binder/raw/mvn-repo/</url>
 			<releases>
 				<enabled>true</enabled>
-				<updatePolicy>never</updatePolicy>
 			</releases>
 			<snapshots>
 				<enabled>false</enabled>
@@ -76,8 +76,14 @@
 	<dependencies>
 		<dependency>
 			<groupId>nl.rivm.cib</groupId>
-			<artifactId>episim-model</artifactId>
+			<artifactId>episim-persist</artifactId>
 			<version>${episim.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hsqldb</groupId>
+			<artifactId>hsqldb</artifactId>
+			<version>${hsqldb.version}</version>
 		</dependency>
 
 		<dependency>
