@@ -1,5 +1,6 @@
 package nl.rivm.cib.morphine;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +49,7 @@ import nl.rivm.cib.episim.model.populate.Population;
 import nl.rivm.cib.episim.model.populate.family.Household;
 import nl.rivm.cib.episim.model.populate.family.HouseholdParticipant;
 import nl.rivm.cib.episim.model.populate.family.HouseholdPopulation;
+import nl.tudelft.simulation.dsol.simulators.Simulator;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 import rx.subjects.Subject;
@@ -334,6 +336,8 @@ public class SimpleModel
 				Math3ProbabilityDistribution.Factory.of(
 						Math3PseudoRandom.Factory.of( MersenneTwister.class )
 								.create( "MAIN", 1234L ) ) );
+		final ProbabilityDistribution<Boolean> infectDist = distParser
+				.getFactory().createBernoulli( infectLikelihood );
 		final ProbabilityDistribution<Gender> genderDist = distParser
 				.getFactory()
 				.createUniformCategorical( Gender.MALE, Gender.FEMALE );
@@ -368,37 +372,42 @@ public class SimpleModel
 			ind.with( SimpleCondition.of( ind, measles ) );
 			// pop.add( ind );
 			final int nr = i;
-			ind.afflictions().get( measles ).emitTransitions().subscribe( t ->
-			{
-				LOG.trace( "Transition for #{} at t={}: {}", nr,
-						scheduler.now().prettify( NonSI.HOUR, 1 ), t );
-			}, e ->
-			{
-				LOG.warn( "Problem in transition", e );
-			}, () ->
-			{
-				latch.countDown();
-			} );
-			if( distParser.getFactory().getStream()
-					.nextDouble() < infectLikelihood )
+			ind.afflictions().get( measles ).emitTransitions()
+					.subscribe( tran ->
+					{
+						LOG.trace( "Transition for #{} at t={}: {}", nr,
+								scheduler.now().prettify( NonSI.HOUR, 1 ),
+								tran );
+					}, e ->
+					{
+						LOG.warn( "Problem in transition", e );
+					} );
+			if( infectDist.draw() )
 			{
 				LOG.trace( "INFECTED #{}", i );
 				ind.after( Duration.of( "30 min" ) )
 						.call( ind.afflictions().get( measles )::infect );
 			}
 		}
-		scheduler.time().subscribe( ( Instant t ) ->
+		scheduler.time().subscribe( time ->
 		{
-			LOG.trace( "t = {}", t.prettify( NonSI.DAY, 1 ) );
-		}, ( Throwable e ) ->
+			LOG.trace( "t = {}", time.prettify( NonSI.DAY, 1 ) );
+		}, error ->
 		{
-			LOG.warn( "Problem in scheduler", e );
+			LOG.warn( "Problem in scheduler", error );
+			latch.countDown();
 		}, () ->
 		{
 			latch.countDown();
 		} );
 		scheduler.resume();
 		latch.await( 3, TimeUnit.SECONDS );
+
+		// FIXME call cleanup in Scheduler implementation instead
+		final Field field = Dsol3Scheduler.class
+				.getDeclaredField( "scheduler" );
+		field.setAccessible( true );
+		((Simulator<?, ?, ?>) field.get( scheduler )).cleanUp();
 	}
 
 }
