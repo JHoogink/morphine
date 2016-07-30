@@ -29,6 +29,7 @@
 
 		<junit.version>4.12</junit.version>
 		<episim.version>0.0.2</episim.version>
+		<coala.version>0.2.0-b2</coala.version>
 	</properties>
 
 	<repositories>
@@ -78,6 +79,12 @@
 			<groupId>nl.rivm.cib</groupId>
 			<artifactId>episim-persist</artifactId>
 			<version>${episim.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.coala</groupId>
+			<artifactId>guice4-coala-adapter</artifactId>
+			<version>${coala.version}</version>
 		</dependency>
 
 		<dependency>
