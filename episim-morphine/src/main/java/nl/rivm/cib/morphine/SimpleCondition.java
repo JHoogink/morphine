@@ -192,4 +192,5 @@ public class SimpleCondition implements Condition
 				.thenAfter( disease().drawSymptomPeriod() )
 				.call( this::setSymptomPhase, SymptomPhase.ASYMPTOMATIC );
 	}
+	
 }
