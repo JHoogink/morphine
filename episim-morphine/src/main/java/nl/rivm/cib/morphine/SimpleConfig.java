@@ -37,4 +37,10 @@ public interface SimpleConfig extends GlobalConfig {
 
 	@DefaultValue("7 day")
 	Duration symptomPeriodConst();
+
+	@DefaultValue("0 0 0 14 * ? *")
+	String statisticsRule();
+
+	@DefaultValue("2017-01-01T00:00:00Z")
+	String offsetDate();
 }

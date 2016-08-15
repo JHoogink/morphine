@@ -15,6 +15,7 @@ import javax.measure.unit.NonSI;
 import javax.measure.unit.Unit;
 
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 import org.jscience.physics.amount.Amount;
 
 import io.coala.bind.LocalBinder;
@@ -31,6 +32,7 @@ import io.coala.random.PseudoRandom;
 import io.coala.time.Duration;
 import io.coala.time.Instant;
 import io.coala.time.Scheduler;
+import io.coala.time.Timing;
 import io.coala.time.Units;
 import nl.rivm.cib.episim.model.Gender;
 import nl.rivm.cib.episim.model.Store;
@@ -147,6 +149,18 @@ public class SimpleModel implements Scenario {
 				ind.after(Duration.of("2 days")).call(ind.afflictions().get(measles)::infect);
 			}
 		}
+
+		atEach(Timing.of(this.config.statisticsRule()).asObservable(DateTime.parse(this.config.offsetDate()).toDate()))
+				.subscribe(self -> {
+					// TODO save model statistics to database
+					LOG.trace("saving model statistics to database, t={}", self.now());
+					exportStatistics();
+				}, error -> {
+				});
+	}
+
+	private void exportStatistics() {
+		LOG.trace("t = {}", now().prettify(NonSI.DAY, 1));
 	}
 
 	/**
