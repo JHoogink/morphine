@@ -164,7 +164,7 @@ public class SimpleCondition implements Condition
 	}
 
 	@Override
-	public Observable<TransitionEvent<?>> emitTransitions()
+	public Observable<TransitionEvent<?>> transitions()
 	{
 		return this.transitions.asObservable();
 	}

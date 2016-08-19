@@ -27,9 +27,12 @@
 
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
-		<junit.version>4.12</junit.version>
 		<episim.version>0.0.2</episim.version>
-		<coala.version>0.2.0-b2</coala.version>
+		<coala.version>0.2.0-b3-SNAPSHOT</coala.version>
+		<concurrentunit.version>0.4.2</concurrentunit.version>
+
+		<!-- testing -->
+		<junit.version>4.12</junit.version>
 	</properties>
 
 	<repositories>
@@ -88,9 +91,27 @@
 		</dependency>
 
 		<dependency>
+			<groupId>io.coala</groupId>
+			<artifactId>dsol3-coala-adapter</artifactId>
+			<version>${coala.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.coala</groupId>
+			<artifactId>math3-coala-adapter</artifactId>
+			<version>${coala.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.hsqldb</groupId>
 			<artifactId>hsqldb</artifactId>
 			<version>${hsqldb.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.jodah</groupId>
+			<artifactId>concurrentunit</artifactId>
+			<version>${concurrentunit.version}</version>
 		</dependency>
 
 		<dependency>

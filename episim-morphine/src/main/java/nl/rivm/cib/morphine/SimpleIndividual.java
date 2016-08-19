@@ -28,9 +28,9 @@ import nl.rivm.cib.episim.model.Individual;
 import nl.rivm.cib.episim.model.disease.Afflicted;
 import nl.rivm.cib.episim.model.disease.Condition;
 import nl.rivm.cib.episim.model.disease.Disease;
-import nl.rivm.cib.episim.model.populate.Population;
-import nl.rivm.cib.episim.model.populate.family.Household;
-import nl.rivm.cib.episim.model.populate.family.HouseholdParticipant;
+import nl.rivm.cib.episim.model.person.Household;
+import nl.rivm.cib.episim.model.person.HouseholdParticipant;
+import nl.rivm.cib.episim.model.person.Population;
 
 /**
  * {@link SimpleIndividual}
@@ -52,7 +52,7 @@ public interface SimpleIndividual
 		{
 
 			@Override
-			public Instant birth()
+			public Instant born()
 			{
 				return birth;
 			}
