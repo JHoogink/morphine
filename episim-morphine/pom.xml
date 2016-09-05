@@ -27,8 +27,8 @@
 
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
-		<episim.version>0.0.2</episim.version>
-		<coala.version>0.2.0-b3-SNAPSHOT</coala.version>
+		<episim.version>0.1.0-SNAPSHOT</episim.version>
+		<coala.version>0.2.0-b3</coala.version>
 		<concurrentunit.version>0.4.2</concurrentunit.version>
 
 		<!-- testing -->
