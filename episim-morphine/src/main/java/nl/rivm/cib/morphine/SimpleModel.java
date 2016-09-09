@@ -1,7 +1,5 @@
 package nl.rivm.cib.morphine;
 
-import static org.aeonbits.owner.util.Collections.entry;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,18 +8,19 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.measure.quantity.Frequency;
 import javax.measure.unit.NonSI;
 import javax.measure.unit.Unit;
 
+import org.aeonbits.owner.ConfigCache;
 import org.apache.logging.log4j.Logger;
 import org.jscience.physics.amount.Amount;
 
-import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
 import io.coala.config.GlobalConfig;
 import io.coala.config.InjectConfig;
-import io.coala.dsol3.Dsol3Config;
+import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.guice4.Guice4LocalBinder;
 import io.coala.log.LogUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
@@ -33,6 +32,7 @@ import io.coala.random.PseudoRandom;
 import io.coala.rx.RxCollection;
 import io.coala.time.Duration;
 import io.coala.time.Instant;
+import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.time.Units;
 import net.jodah.concurrentunit.Waiter;
@@ -52,6 +52,7 @@ import nl.rivm.cib.episim.model.scenario.Scenario;
  * @version $Id$
  * @author hooginkj
  */
+@Singleton
 public class SimpleModel implements Scenario
 {
 	/** */
@@ -96,10 +97,17 @@ public class SimpleModel implements Scenario
 	@Inject
 	private DistributionParser distParser;
 
-	// provided anew on each replication's init() call
-	private Scheduler scheduler;
-
+	// TODO @InjectDist
 	private ProbabilityDistribution<Instant> birthDist;
+
+	private final Scheduler scheduler;
+
+	@Inject
+	public SimpleModel( final Scheduler scheduler )
+	{
+		this.scheduler = scheduler;
+		scheduler.onReset( this::init );
+	}
 
 	@Override
 	public Scheduler scheduler()
@@ -107,12 +115,8 @@ public class SimpleModel implements Scenario
 		return this.scheduler;
 	}
 
-	@Override
-	public void init( final Scheduler scheduler ) throws Exception
+	public void init() throws Exception
 	{
-		this.scheduler = scheduler;
-		this.distParser = new DistributionParser( this.distFactory );
-
 		// final Set<Individual> pop = new HashSet<>();
 		final int n_pop = 10;
 		// final Set<Location> homes = new HashSet<>();
@@ -217,31 +221,26 @@ public class SimpleModel implements Scenario
 	 */
 	public static void main( final String[] args ) throws Exception
 	{
-		LOG.trace( "Starting scenario..." );
+		// configure replication FIXME via LocalConfig?
+		ConfigCache.getOrCreate( ReplicateConfig.class, Collections
+				.singletonMap( ReplicateConfig.DURATION_KEY, "" + 500 ) );
 
-		Units.DAILY.toString();
-		final long seed = 1234L;
-
-		@SuppressWarnings( "serial" )
-		final LocalBinder binder = Guice4LocalBinder.of( LocalConfig.builder()
-				.withProvider( Scenario.class, SimpleModel.class )
+		// configure tooling
+		final LocalConfig config = LocalConfig.builder().withId( "ecosysSim" )
+				.withProvider( Scheduler.class, Dsol3Scheduler.class )
+				.withProvider( PseudoRandom.Factory.class,
+						Math3PseudoRandom.MersenneTwisterFactory.class )
 				.withProvider( ProbabilityDistribution.Factory.class,
 						Math3ProbabilityDistribution.Factory.class )
-				.build(), new HashMap<Class<?>, Object>()
-				{
-					{
-						put( PseudoRandom.class, Math3PseudoRandom.Factory
-								.ofMersenneTwister().create( "rng", seed ) );
-					}
-				} );
+				.withProvider( ProbabilityDistribution.Parser.class,
+						DistributionParser.class )
+				.build();
+		LOG.trace( "Starting MORPHINE replication, config: {}",
+				config.toYAML() );
 
-		final Dsol3Config config = Dsol3Config.of(
-				entry( Dsol3Config.ID_KEY, "morphine" ),
-				entry( Dsol3Config.START_TIME_KEY, "0 day" ),
-				entry( Dsol3Config.RUN_LENGTH_KEY, "100" ) );
-		LOG.info( "Starting MORPHINE replication, config: {}", config.toYAML() );
-		final Scheduler scheduler = config
-				.create( binder.inject( Scenario.class )::init );
+		// create binder and inject the model including a local scheduler
+		final Scheduler scheduler = Guice4LocalBinder.of( config )
+				.inject( SimpleModel.class ).scheduler();
 
 		final Waiter waiter = new Waiter();
 		scheduler.time().subscribe( time ->
@@ -254,7 +253,8 @@ public class SimpleModel implements Scenario
 		{
 			waiter.resume();
 		} );
-		// go go go
+
+		// go go go!
 		scheduler.resume();
 		waiter.await( 3, TimeUnit.SECONDS );
 
