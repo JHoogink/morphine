@@ -45,7 +45,7 @@ public interface SimpleIndividual
 	// combine features
 
 	static SimpleIndividual of( final Household<SimpleIndividual> household,
-		final Instant birth, final Gender gender,
+		final Instant birth, final Gender gender, 
 		final Map<Disease, Condition> afflictions )
 	{
 		return new SimpleIndividual()

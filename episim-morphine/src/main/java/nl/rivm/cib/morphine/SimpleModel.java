@@ -15,10 +15,10 @@ import javax.measure.unit.Unit;
 
 import org.aeonbits.owner.ConfigCache;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 import org.jscience.physics.amount.Amount;
 
 import io.coala.bind.LocalConfig;
-import io.coala.config.GlobalConfig;
 import io.coala.config.InjectConfig;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.guice4.Guice4LocalBinder;
@@ -34,6 +34,7 @@ import io.coala.time.Duration;
 import io.coala.time.Instant;
 import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
+import io.coala.time.Timing;
 import io.coala.time.Units;
 import net.jodah.concurrentunit.Waiter;
 import nl.rivm.cib.episim.model.Gender;
@@ -57,36 +58,6 @@ public class SimpleModel implements Scenario
 {
 	/** */
 	private static final Logger LOG = LogUtil.getLogger( SimpleModel.class );
-
-	/**
-	 * {@link SimpleConfig}
-	 * 
-	 * @version $Id$
-	 * @author Rick van Krevelen
-	 */
-	public static interface SimpleConfig extends GlobalConfig
-	{
-		@DefaultValue( "10 h" )
-		Duration contactPeriod();
-
-		@DefaultValue( "uniform-discrete(-5;0)" )
-		String birthDist();
-
-		@DefaultValue( "2 day" )
-		Duration latentPeriodConst();
-
-		@DefaultValue( "5 day" )
-		Duration recoverPeriodConst();
-
-		@DefaultValue( "9999 day" )
-		Duration wanePeriodConst();
-
-		@DefaultValue( "3 day" )
-		Duration onsetPeriodConst();
-
-		@DefaultValue( "7 day" )
-		Duration symptomPeriodConst();
-	}
 
 	@InjectConfig
 	private SimpleConfig config;
@@ -213,6 +184,22 @@ public class SimpleModel implements Scenario
 						.call( ind.afflictions().get( measles )::infect );
 			}
 		}
+
+		atEach( Timing.of( this.config.statisticsRule() )
+				.offset( DateTime.parse( this.config.offsetDate() ) )
+				.iterate() ).subscribe( t ->
+				{
+					// TODO save model statistics to database
+					LOG.trace( "saving model statistics to database, t={}", t );
+					exportStatistics();
+				}, error ->
+				{
+				} );
+	}
+
+	private void exportStatistics()
+	{
+		LOG.trace( "t = {}", now().prettify( NonSI.DAY, 1 ) );
 	}
 
 	/**
@@ -223,7 +210,7 @@ public class SimpleModel implements Scenario
 	{
 		// configure replication FIXME via LocalConfig?
 		ConfigCache.getOrCreate( ReplicateConfig.class, Collections
-				.singletonMap( ReplicateConfig.DURATION_KEY, "" + 500 ) );
+				.singletonMap( ReplicateConfig.DURATION_KEY, "" + 100 ) );
 
 		// configure tooling
 		final LocalConfig config = LocalConfig.builder().withId( "ecosysSim" )
