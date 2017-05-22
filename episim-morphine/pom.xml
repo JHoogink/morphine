@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>nl.rivm.cib.morphine</groupId>
-	<artifactId>episim-morphine</artifactId>
+	<artifactId>epidemes-morphine</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<name>${project.artifactId} ${project.version}</name>
@@ -18,7 +18,6 @@
 		<source>1.8</source>
 		<encoding>UTF-8</encoding>
 		<skipTests>false</skipTests>
-		<hsqldb.version>2.3.4</hsqldb.version>
 
 		<maven.test.skip>${skipTests}</maven.test.skip>
 		<project.build.sourceLevel>${source}</project.build.sourceLevel>
@@ -27,12 +26,19 @@
 
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
-		<episim.version>0.1.0-SNAPSHOT</episim.version>
-		<coala.version>0.2.0-b4</coala.version>
-		<concurrentunit.version>0.4.2</concurrentunit.version>
+		<epidemes.version>0.1.0</epidemes.version> <!-- epidemiology -->
+		<hsqldb.version>2.3.4</hsqldb.version> <!-- file/in-memory database -->
+		<jta.version>1.1</jta.version> <!-- java (db) transaction API -->
+		<hibernate.version>5.2.1.Final</hibernate.version> <!-- rdbms provider -->
+		<javassist.version>3.20.0-GA</javassist.version> <!-- used by Hibernate? -->
+		<hikari.version>2.4.7</hikari.version> <!-- db connection pool -->
+
+		<!-- Eclipse JPA activation, see http://stackoverflow.com/a/37604836 -->
+		<m2e.jpa.activation>false</m2e.jpa.activation>
 
 		<!-- testing -->
 		<junit.version>4.12</junit.version>
+		<concurrentunit.version>0.4.2</concurrentunit.version>
 	</properties>
 
 	<repositories>
@@ -64,8 +70,8 @@
 		</repository>
 
 		<repository>
-			<name>EPISIM Public Maven Repository</name>
-			<id>episim-public</id>
+			<name>EPIDEMES Public Maven Repository</name>
+			<id>epidemes-public</id>
 			<url>https://github.com/krevelen/rivm-episim/raw/mvn-repo/</url>
 			<releases>
 				<enabled>true</enabled>
@@ -80,38 +86,64 @@
 	<dependencies>
 		<dependency>
 			<groupId>nl.rivm.cib</groupId>
-			<artifactId>episim-persist</artifactId>
-			<version>${episim.version}</version>
+			<artifactId>epidemes-demo</artifactId>
+			<version>${epidemes.version}</version>
 		</dependency>
 
+		<!-- Java Enterprise eXtension APIs, including JPA 2.1 -->
+		<!-- <dependency> <groupId>javax</groupId> <artifactId>javaee-api</artifactId> 
+			<scope>provided</scope> </dependency> -->
+		<!-- javax.transaction needed BEFORE Hibernate (eg in Kundera RDBMS) -->
 		<dependency>
-			<groupId>io.coala</groupId>
-			<artifactId>guice4-coala-adapter</artifactId>
-			<version>${coala.version}</version>
+			<groupId>javax.transaction</groupId>
+			<artifactId>jta</artifactId>
+			<version>${jta.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
-		<dependency>
-			<groupId>io.coala</groupId>
-			<artifactId>dsol3-coala-adapter</artifactId>
-			<version>${coala.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>io.coala</groupId>
-			<artifactId>math3-coala-adapter</artifactId>
-			<version>${coala.version}</version>
-		</dependency>
-
+		<!-- incl. in-memory JDBC database -->
 		<dependency>
 			<groupId>org.hsqldb</groupId>
 			<artifactId>hsqldb</artifactId>
 			<version>${hsqldb.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-hikaricp</artifactId>
+			<version>${hibernate.version}</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<artifactId>HikariCP-java6</artifactId>
+					<groupId>com.zaxxer</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- replaces default Hibernate connection pool (C3P0) -->
+		<dependency>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+			<version>${hikari.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>${javassist.version}</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>net.jodah</groupId>
 			<artifactId>concurrentunit</artifactId>
 			<version>${concurrentunit.version}</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>

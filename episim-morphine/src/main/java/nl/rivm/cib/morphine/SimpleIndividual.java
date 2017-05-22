@@ -21,16 +21,16 @@ package nl.rivm.cib.morphine;
 
 import java.util.Map;
 
+import io.coala.enterprise.Actor;
 import io.coala.time.Instant;
 import io.coala.time.Scheduler;
-import nl.rivm.cib.episim.model.Gender;
-import nl.rivm.cib.episim.model.Individual;
+import nl.rivm.cib.episim.geard.GeardHousehold;
+import nl.rivm.cib.episim.geard.HouseholdParticipant;
+import nl.rivm.cib.episim.geard.Individual;
+import nl.rivm.cib.episim.geard.Population;
 import nl.rivm.cib.episim.model.disease.Afflicted;
 import nl.rivm.cib.episim.model.disease.Condition;
-import nl.rivm.cib.episim.model.disease.Disease;
-import nl.rivm.cib.episim.model.person.Household;
-import nl.rivm.cib.episim.model.person.HouseholdParticipant;
-import nl.rivm.cib.episim.model.person.Population;
+import nl.rivm.cib.episim.model.person.Gender;
 
 /**
  * {@link SimpleIndividual}
@@ -44,9 +44,9 @@ public interface SimpleIndividual
 
 	// combine features
 
-	static SimpleIndividual of( final Household<SimpleIndividual> household,
-		final Instant birth, final Gender gender, 
-		final Map<Disease, Condition> afflictions )
+	static SimpleIndividual of( final GeardHousehold<SimpleIndividual> household,
+		final Instant birth, final Gender gender,
+		final Map<Actor.ID, Condition> afflictions )
 	{
 		return new SimpleIndividual()
 		{
@@ -70,7 +70,7 @@ public interface SimpleIndividual
 			}
 
 			@Override
-			public Household<SimpleIndividual> household()
+			public GeardHousehold<SimpleIndividual> household()
 			{
 				return household;
 			}
@@ -82,7 +82,7 @@ public interface SimpleIndividual
 			}
 
 			@Override
-			public Map<Disease, Condition> afflictions()
+			public Map<Actor.ID, Condition> afflictions()
 			{
 				return afflictions;
 			}
