@@ -99,9 +99,9 @@ public class HHModel implements Scenario
 		final int n = this.config.populationSize();
 		this.hhAttributes = SparseMatrix.Factory.zeros( n,
 				HHAttribute.values().length );
-		this.ppAttributes = SparseMatrix.Factory.zeros( n,
+		this.ppAttributes = SparseMatrix.Factory.zeros( 3*n,
 				HHMemberAttribute.values().length );
-		this.hhPressure = SparseMatrix.Factory.zeros( n, n );
+		this.hhPressure = SparseMatrix.Factory.zeros( 3*n, 3*n );
 
 		this.timeRange = Range
 				.upFromAndIncluding( scheduler().offset().toLocalDate() );
@@ -115,8 +115,9 @@ public class HHModel implements Scenario
 
 		// populate households
 		for( long time = System
-				.currentTimeMillis(), i = 0, agPrev = 0; i < n; i += createHousehold() )
+				.currentTimeMillis(), i = 0, agPrev = 0; i < n; i ++  )
 		{
+			createHousehold();
 			if( System.currentTimeMillis() - time > 1000 )
 			{
 				time = System.currentTimeMillis();

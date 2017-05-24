@@ -19,6 +19,7 @@
  */
 package nl.rivm.cib.morphine.household;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -35,6 +36,7 @@ import org.hibernate.cfg.AvailableSettings;
 import org.hsqldb.jdbc.JDBCDataSource;
 
 import io.coala.bind.LocalConfig;
+import io.coala.config.YamlUtil;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
@@ -47,6 +49,7 @@ import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
+import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import nl.rivm.cib.episim.cbs.TimeUtil;
 
@@ -65,8 +68,9 @@ public class HHSimulator
 	/**
 	 * @param args arguments from the command line
 	 * @throws NamingException
+	 * @throws IOException 
 	 */
-	public static void main( final String[] args ) throws NamingException
+	public static void main( final String[] args ) throws NamingException, IOException
 	{
 		// convert command-line arguments to map
 		final Map<?, ?> argMap = Arrays.stream( args )
@@ -77,7 +81,7 @@ public class HHSimulator
 		// merge arguments into configuration imported from YAML file
 		HHConfig.YamlLoader.register();
 		final HHConfig hhConfig = ConfigCache.getOrCreate( HHConfig.class,
-				argMap );
+				argMap, YamlUtil.flattenYaml(FileUtil.toInputStream("morphine.yaml")) );
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), argMap, hhConfig );
 

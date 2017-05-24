@@ -13,6 +13,8 @@ Configuration:
       AppenderRef:
         ref: Console
     Logger:
+    - name: nl.rivm.cib
+      level: trace
     - name: javax.management
       level: warn
     - name: com.google.inject

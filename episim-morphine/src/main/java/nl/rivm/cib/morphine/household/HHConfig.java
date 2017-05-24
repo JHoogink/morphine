@@ -42,9 +42,10 @@ import nl.rivm.cib.morphine.pienter.HesitancyProfile;
  * @version $Id$
  * @author Rick van Krevelen
  */
-@Sources( { "${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-		"${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-		"classpath:" + HHConfig.MORPHINE_CONFIG_YAML_FILE } )
+@Sources( { /*"${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
+		"${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,*/
+//		"classpath:" + 
+		"file:/C:/Users/Joram%20Hoogink/Documents/Morphine/Source/morphine-episim/episim-morphine/"+HHConfig.MORPHINE_CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
 
