@@ -25,14 +25,24 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.naming.NamingException;
+import javax.persistence.EntityManagerFactory;
+
 import org.aeonbits.owner.ConfigCache;
+import org.aeonbits.owner.ConfigFactory;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.cfg.AvailableSettings;
+import org.hsqldb.jdbc.JDBCDataSource;
 
 import io.coala.bind.LocalConfig;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
+import io.coala.name.JndiUtil;
+import io.coala.persist.HibernateJPAConfig;
+import io.coala.persist.JPAConfig;
+import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.ReplicateConfig;
@@ -54,8 +64,9 @@ public class HHSimulator
 
 	/**
 	 * @param args arguments from the command line
+	 * @throws NamingException
 	 */
-	public static void main( final String[] args )
+	public static void main( final String[] args ) throws NamingException
 	{
 		// convert command-line arguments to map
 		final Map<?, ?> argMap = Arrays.stream( args )
@@ -70,7 +81,17 @@ public class HHSimulator
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), argMap, hhConfig );
 
-		// configure replication run length
+		// bind a local HSQL data source for exporting statistics
+		JndiUtil.bindLocally( HHConfig.DATASOURCE_JNDI, '/', () ->
+		{
+			final JDBCDataSource ds = new JDBCDataSource();
+			ds.setUrl( hhConfig.hsqlUrl() );
+			ds.setUser( hhConfig.hsqlUser() );
+			ds.setPassword( hhConfig.hsqlPassword() );
+			return ds;
+		} );
+
+		// (re)configure replication run length
 		final ZonedDateTime offset = hhConfig.offset()
 				.atStartOfDay( TimeUtil.NL_TZ );
 		final long durationDays = Duration
@@ -81,7 +102,7 @@ public class HHSimulator
 						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
 						.build() );
 
-		// configure tooling (TODO from MORPHINE config file?)
+		// configure tooling
 		final LocalConfig binderConfig = LocalConfig.builder()
 				.withId( "morphine" ) // replication name, sets random seeds
 
@@ -93,12 +114,26 @@ public class HHSimulator
 						Math3PseudoRandom.MersenneTwisterFactory.class )
 				.withProvider( ProbabilityDistribution.Factory.class,
 						Math3ProbabilityDistribution.Factory.class )
+				.withProvider( ProbabilityDistribution.Parser.class,
+						DistributionParser.class )
 
 				.build();
 
-		binderConfig.createBinder() // create binder
-				.inject( HHModel.class ) // inject model with specified tooling
-				.run(); // run model
+		final Map<?, ?> jpaConfig = MapBuilder.unordered()
+				.put( AvailableSettings.DATASOURCE, HHConfig.DATASOURCE_JNDI )
+				// match unit name from persistence.xml
+				.put( JPAConfig.JPA_UNIT_NAMES_KEY, "hh_pu" ).build();
+
+		binderConfig// create binder from config(s)
+				.createBinder( MapBuilder.<Class<?>, Object>unordered()
+						.put(
+								// bind singleton EntityManagerFactory
+								EntityManagerFactory.class,
+								ConfigFactory.create( HibernateJPAConfig.class,
+										jpaConfig ).createEMF() )
+						.build() )
+				.inject( HHModel.class ) // inject model with configured tooling
+				.run(); // run injected (Singleton) model
 
 		LOG.info( "Completed {}", HHSimulator.class.getSimpleName() );
 	}

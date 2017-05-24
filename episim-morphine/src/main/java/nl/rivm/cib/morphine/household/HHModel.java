@@ -12,10 +12,12 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.measure.Quantity;
 import javax.measure.quantity.Time;
+import javax.persistence.EntityManagerFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
+import org.ujmp.core.calculation.Calculation.Ret;
 
 import io.coala.bind.InjectConfig;
 import io.coala.bind.InjectConfig.Scope;
@@ -25,6 +27,7 @@ import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityUtil;
 import io.coala.math.Range;
+import io.coala.persist.JPAUtil;
 import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.time.Instant;
@@ -35,7 +38,6 @@ import io.coala.time.Timing;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
 import nl.rivm.cib.epidemes.cbs.json.Cbs71486json;
 import nl.rivm.cib.episim.model.locate.Region;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
 import nl.rivm.cib.morphine.pienter.HesitancyProfile;
 import nl.rivm.cib.morphine.pienter.HesitancyProfile.HesitancyDimension;
 
@@ -57,7 +59,19 @@ public class HHModel implements Scenario
 	private transient HHConfig config;
 
 	@Inject
+	private transient LocalBinder binder;
+
+	@Inject
 	private transient Scheduler scheduler;
+
+	@Inject
+	private transient ProbabilityDistribution.Factory distFactory;
+
+	@Inject
+	private transient ProbabilityDistribution.Parser distParser;
+
+	@Inject
+	private transient EntityManagerFactory emf;
 
 	/** virtual time range of simulation */
 	private transient Range<LocalDate> timeRange = null;
@@ -65,9 +79,6 @@ public class HHModel implements Scenario
 	private transient Instant dtInstant = null;
 	/** current (cached) date/time */
 	private transient LocalDate dtCache = null;
-
-	@Inject
-	private transient ProbabilityDistribution.Factory distFactory;
 
 	private Matrix hhAttributes;
 	private Matrix hhPressure;
@@ -79,6 +90,8 @@ public class HHModel implements Scenario
 	private transient ConditionalDistribution<Cbs71486json.Category, LocalDate> localHouseholdDist;
 
 	private transient ProbabilityDistribution<HesitancyProfile> hesitancyDist;
+	private transient ProbabilityDistribution<BigDecimal> calculationDist;
+	private transient HHBarrierEvaluator barrierEvaluator;
 
 	@Override
 	public void init() throws ParseException
@@ -96,8 +109,9 @@ public class HHModel implements Scenario
 				this.distFactory::createCategorical,
 				this.config.cbs71486( this.timeRange ) );
 
-		this.hesitancyDist = this.distFactory
-				.createCategorical( this.config.hesitancyProfiles() );
+		this.hesitancyDist = this.config.hesitancyProfiles( this.distFactory );
+		this.calculationDist = this.config
+				.hesitancyCalculationDist( this.distParser );
 
 		// populate households
 		for( long time = System
@@ -107,14 +121,15 @@ public class HHModel implements Scenario
 			{
 				time = System.currentTimeMillis();
 				long agNow = this.persons.get() + this.households.get();
-				LOG.info( "Added #pp: {} ({}%) across {} hh (= +{} actors/sec)",
+				LOG.info(
+						"Initialized {} pp ({}%) across {} hh (= +{} actors/sec)",
 						this.persons.get(), this.persons.get() * 100 / n,
 						this.households.get(), agNow - agPrev );
 				agPrev = agNow;
 			}
 		}
-		LOG.info( "Initialized #pp: {} across {} hh", this.persons.get(), n,
-				this.households.get() );
+		LOG.info( "Initialized {} pp ({}%) across {} hh", this.persons.get(),
+				this.persons.get() * 100 / n, this.households.get() );
 
 //		final Pathogen measles = this.pathogens.create( "MV-1" );
 
@@ -137,7 +152,7 @@ public class HHModel implements Scenario
 
 		final long id = this.households.incrementAndGet();
 		final Actor.ID hhRef = Actor.ID.of( String.format( "hh%08d", id ),
-				null );
+				this.binder.id() );
 		final long hhIndex = this.toHouseholdIndex( hhRef );
 
 		final Region.ID placeRef = Region.ID.of( hhCat.regionRef() );
@@ -172,16 +187,14 @@ public class HHModel implements Scenario
 						expressingRef );
 		// TODO add expressingRefs from own / neighboring / global placeRef dist
 
-		final BigDecimal initialCalculation = // TODO draw
-				DecimalUtil.ONE_HALF;
+		final BigDecimal initialCalculation = this.calculationDist.draw();
 		final BigDecimal initialConfidence = DecimalUtil.valueOf(
 				hesProf.distParams.get( HesitancyDimension.confidence )
 						.createDist( this.distFactory ).draw() );
 		final BigDecimal initialComplacency = DecimalUtil.valueOf(
 				hesProf.distParams.get( HesitancyDimension.complacency )
 						.createDist( this.distFactory ).draw() );
-		final BigDecimal initialBarrier = VaxHesitancy // TODO from config
-				.averageBarrier( initialConfidence, initialComplacency );
+		this.barrierEvaluator = this.config.barrierEvaluator();
 
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
@@ -199,8 +212,6 @@ public class HHModel implements Scenario
 				HHAttribute.CONFIDENCE.ordinal() );
 		this.hhAttributes.setAsBigDecimal( initialComplacency, hhIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
-		this.hhAttributes.setAsBigDecimal( initialBarrier, hhIndex,
-				HHAttribute.BARRIER.ordinal() );
 		this.hhAttributes.setAsLong( referentRef, hhIndex,
 				HHAttribute.REFERENT_REF.ordinal() );
 		this.hhAttributes.setAsLong( partnerRef, hhIndex,
@@ -212,6 +223,11 @@ public class HHModel implements Scenario
 		this.hhAttributes.setAsLong( child3Ref, hhIndex,
 				HHAttribute.CHILD3_REF.ordinal() );
 
+		this.hhAttributes.setAsBigDecimal(
+				this.barrierEvaluator.barrierOf(
+						this.hhAttributes.selectRows( Ret.LINK, hhIndex ) ),
+				hhIndex, HHAttribute.BARRIER.ordinal() );
+
 		return hhType.size();
 	}
 
@@ -219,11 +235,11 @@ public class HHModel implements Scenario
 	{
 		final long id = this.persons.incrementAndGet();
 		final Actor.ID memberRef = Actor.ID.of( String.format( "ind%08d", id ),
-				null );
+				this.binder.id() );
 		final long index = this.toMemberIndex( memberRef );
 		this.ppAttributes.setAsBigDecimal(
-				now().subtract( initialAge ).decimal(), index,
-				HHMemberAttribute.BIRTH.ordinal() );
+				now().to( TimeUnits.ANNUM ).subtract( initialAge ).decimal(),
+				index, HHMemberAttribute.BIRTH.ordinal() );
 		this.ppAttributes.setAsInt( HHMemberStatus.SUSCEPTIBLE.ordinal(), index,
 				HHMemberAttribute.STATUS.ordinal() );
 		this.ppAttributes.setAsInt( HHMemberBehavior.NORMAL.ordinal(), index,
@@ -270,9 +286,21 @@ public class HHModel implements Scenario
 
 	private void exportStatistics( final Instant t )
 	{
-		// FIXME output to database, CSV or other export format
-		LOG.info( "t = {} ({})", t.prettify( TimeUnits.DAY, 1 ),
-				t.prettify( scheduler().offset() ) );
+		final Instant day = t.to( TimeUnits.DAYS );
+
+		JPAUtil.session( this.emf ).subscribe( em ->
+		{
+			this.hhIndex.forEach( ( id, index ) ->
+			{
+				final HHStatisticsDao dao = HHStatisticsDao.create(
+						id.contextRef(), day, this.hhAttributes, index,
+						this.ppAttributes );
+				LOG.info( "t = {} ({}), persisting {}", day.prettify( 1 ),
+						t.prettify( scheduler().offset() ), dao );
+				em.persist( dao );
+			} );
+
+		}, this::logError );
 	}
 
 	private void logError( final Throwable e )

@@ -6,12 +6,20 @@
 morphine:
   replication:
     offset-date: 2012-01-01
-    statistics-recurrence: 0 0 0 14 * ? *
+    statistics:
+      recurrence: 0 0 0 14 * ? *
+      jdbc:
+        url: jdbc:hsqldb:file:target/hhdb
+        username: SA
+        password:
   population:
-    size: 160000
-    hesitancy-profile-data: conf/hesitancy-univariate.json
+    size: 100
     cbs-region-type: COROP
     cbs-71486ned-data: conf/71486ned-TS-2010-2016.json
+    hesitancy:
+      profile-data: conf/hesitancy-univariate.json
+      calculation-dist: const(0.5)
+      barrier-evaluator: nl.rivm.cib.morphine.household.HHBarrierEvaluator$Average
 #  measles:
 #    contact-period: 2 day
     

@@ -25,6 +25,7 @@ import java.util.Date;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
+import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -36,9 +37,13 @@ import javax.persistence.TemporalType;
 
 import org.ujmp.core.Matrix;
 
+import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import io.coala.persist.Persistable;
+import io.coala.persist.UUIDToByteConverter;
 import io.coala.time.Instant;
+import io.coala.time.TimeUnits;
 
 /**
  * {@link HHStatisticsDao} with JPA MetaModel in {@link HouseholdDao_}?
@@ -48,7 +53,7 @@ import io.coala.time.Instant;
  */
 @Entity
 @Table( name = "HOUSEHOLDS" )
-public class HHStatisticsDao
+public class HHStatisticsDao implements Persistable.Dao
 {
 
 	/**
@@ -58,11 +63,12 @@ public class HHStatisticsDao
 	 * @param members member data {@link Matrix} per {@link HHMemberAttribute}
 	 * @return a {@link MemberDao}
 	 */
-	public static HHStatisticsDao create( final Instant now,
+	public static HHStatisticsDao create( final UUID context, final Instant now,
 		final Matrix households, final long rowIndex, final Matrix members )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
-		result.id = households.getAsInt( rowIndex,
+		result.context = context;
+		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
 		result.time = now.decimal();
 		result.placeRef = households.getAsInt( rowIndex,
@@ -77,7 +83,7 @@ public class HHStatisticsDao
 				HHAttribute.CONFIDENCE.ordinal() );
 		result.complacency = households.getAsBigDecimal( rowIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
-		result.attitude = households.getAsBigDecimal( rowIndex,
+		result.barrier = households.getAsBigDecimal( rowIndex,
 				HHAttribute.BARRIER.ordinal() );
 		result.referent = MemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.REFERENT_REF.ordinal() ) );
@@ -96,7 +102,7 @@ public class HHStatisticsDao
 	 * {@link MemberDao} is an {@link Embeddable} member data access object
 	 */
 	@Embeddable
-	public static class MemberDao
+	public static class MemberDao implements Persistable.Dao
 	{
 		/**
 		 * @param now current virtual time {@link Instant} for calculating age
@@ -107,9 +113,11 @@ public class HHStatisticsDao
 		public static MemberDao create( final Instant now, final Matrix data,
 			final long rowIndex )
 		{
+			if( rowIndex < 0 ) return null;
 			final MemberDao result = new MemberDao();
-			result.age = now.decimal().subtract( data.getAsBigDecimal( rowIndex,
-					HHMemberAttribute.BIRTH.ordinal() ) );
+			result.age = now.to( TimeUnits.ANNUM ).decimal()
+					.subtract( data.getAsBigDecimal( rowIndex,
+							HHMemberAttribute.BIRTH.ordinal() ) );
 			result.status = data.getAsInt( rowIndex,
 					HHMemberAttribute.STATUS.ordinal() );
 			result.behavior = data.getAsInt( rowIndex,
@@ -123,16 +131,21 @@ public class HHStatisticsDao
 
 		public static final String BEHAVIOR_ATTR = "behavior";
 
-		@Column( name = "AGE", nullable = false, updatable = false )
+		@Column
 		protected BigDecimal age;
 
-		@Column( name = "STATUS", nullable = false, updatable = false )
+		@Column
 		protected int status;
 
-		@Column( name = "BEHAVIOR", nullable = false, updatable = false )
+		@Column
 		protected int behavior;
 
 	}
+
+	@Id
+	@GeneratedValue
+	@Column( name = "PK", nullable = false, updatable = false )
+	protected Integer pk = null;
 
 	/** time stamp of insert, as per http://stackoverflow.com/a/3107628 */
 	@Temporal( TemporalType.TIMESTAMP )
@@ -141,16 +154,16 @@ public class HHStatisticsDao
 	@JsonIgnore
 	protected Date created = null;
 
-	@Id
-	@GeneratedValue
-	@Column( name = "PK", nullable = false, updatable = false )
-	protected Integer pk = null;
+	@Column( name = "CONTEXT", nullable = false, updatable = false, length = 16,
+		columnDefinition = "BINARY(16)" )
+	@Convert( converter = UUIDToByteConverter.class )
+	protected UUID context;
 
-	@Column( name = "ID", nullable = false, updatable = false )
-	protected int id;
+	@Column( name = "HH", nullable = false, updatable = false )
+	protected int hh;
 
 	@Column( name = "TIME", nullable = false, updatable = false )
-	protected BigDecimal time;
+	protected BigDecimal time; // TODO scale/precision?
 
 	@Column( name = "PLACE_REF", nullable = false, updatable = false )
 	protected int placeRef;
@@ -162,16 +175,16 @@ public class HHStatisticsDao
 	protected boolean alternative;
 
 	@Column( name = "CALCULATION", nullable = false, updatable = false )
-	protected BigDecimal calculation;
+	protected BigDecimal calculation; // TODO scale/precision?
 
 	@Column( name = "CONFIDENCE", nullable = false, updatable = false )
-	protected BigDecimal confidence;
+	protected BigDecimal confidence; // TODO scale/precision?
 
 	@Column( name = "COMPLACENCY", nullable = false, updatable = false )
-	protected BigDecimal complacency;
+	protected BigDecimal complacency; // TODO scale/precision?
 
-	@Column( name = "ATTITUDE", nullable = false, updatable = false )
-	protected BigDecimal attitude;
+	@Column( name = "BARRIER", nullable = true, updatable = false )
+	protected BigDecimal barrier; // TODO scale/precision?
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
@@ -237,4 +250,10 @@ public class HHStatisticsDao
 					updatable = false ) ) } )
 	@Embedded
 	protected MemberDao child3;
+
+	@Override
+	public String toString()
+	{
+		return stringify();
+	}
 }
