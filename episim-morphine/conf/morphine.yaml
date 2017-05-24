@@ -1,0 +1,17 @@
+# $Id$
+#
+# MORPHINE sample configuration file
+#
+
+morphine:
+  replication:
+    offset-date: 2012-01-01
+    statistics-recurrence: 0 0 0 14 * ? *
+  population:
+    size: 160000
+    hesitancy-profile-data: conf/hesitancy-univariate.json
+    cbs-region-type: COROP
+    cbs-71486ned-data: conf/71486ned-TS-2010-2016.json
+#  measles:
+#    contact-period: 2 day
+    

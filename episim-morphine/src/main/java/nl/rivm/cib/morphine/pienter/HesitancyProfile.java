@@ -19,9 +19,11 @@
  */
 package nl.rivm.cib.morphine.pienter;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -44,9 +46,13 @@ public class HesitancyProfile extends Identified.SimpleOrdinal<String>
 	public static Observable<WeightedValue<HesitancyProfile>>
 		parse( final String fileName )
 	{
-		return JsonUtil
-				.readArrayAsync( () -> FileUtil.toInputStream( fileName ),
-						HesitancyProfile.class )
+		return parse( () -> FileUtil.toInputStream( fileName ) );
+	}
+
+	public static Observable<WeightedValue<HesitancyProfile>>
+		parse( final Callable<InputStream> input )
+	{
+		return JsonUtil.readArrayAsync( input, HesitancyProfile.class )
 				.map( p -> WeightedValue.of( p, p.fraction ) );
 	}
 

@@ -26,13 +26,17 @@
 
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
+		<log4j.version>2.8.2</log4j.version>
+		<jackson.version>2.8.8</jackson.version>
 		<epidemes.version>0.1.0</epidemes.version> <!-- epidemiology -->
 		<hsqldb.version>2.3.4</hsqldb.version> <!-- file/in-memory database -->
 		<jta.version>1.1</jta.version> <!-- java (db) transaction API -->
-		<hibernate.version>5.2.1.Final</hibernate.version> <!-- rdbms provider -->
-		<javassist.version>3.20.0-GA</javassist.version> <!-- used by Hibernate? -->
+		<hibernate.version>5.1.0.Final</hibernate.version> <!-- orm/ogm provider -->
 		<hikari.version>2.4.7</hikari.version> <!-- db connection pool -->
+		<maven-processor-plugin.version>3.3.1</maven-processor-plugin.version>
 
+		<!-- Eclipse Maven2 project lifecycle mapping -->
+		<lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
 		<!-- Eclipse JPA activation, see http://stackoverflow.com/a/37604836 -->
 		<m2e.jpa.activation>false</m2e.jpa.activation>
 
@@ -83,6 +87,37 @@
 		</repository>
 	</repositories>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.fasterxml.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-bom</artifactId>
+				<version>${log4j.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate.ogm</groupId>
+				<artifactId>hibernate-ogm-bom</artifactId>
+				<version>${hibernate.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-hikaricp</artifactId>
+				<version>${hibernate.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>nl.rivm.cib</groupId>
@@ -111,12 +146,10 @@
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
-			<version>${hibernate.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-hikaricp</artifactId>
-			<version>${hibernate.version}</version>
 			<scope>test</scope>
 			<exclusions>
 				<exclusion>
@@ -135,7 +168,6 @@
 		<dependency>
 			<groupId>org.javassist</groupId>
 			<artifactId>javassist</artifactId>
-			<version>${javassist.version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -149,7 +181,6 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -157,10 +188,59 @@
 	<build>
 		<pluginManagement>
 			<plugins>
+
+				<plugin>
+					<!-- Configure the Maven2 Eclipse IDE Integration (m2e) for non-standard 
+						plug-in executions during the compile-test-run life-cycles by the IDE -->
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>${lifecycle-mapping.version}</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+
+								<!-- Configure "org.bsc.maven:maven-processor-plugin:process" goal 
+									execution in Eclipse IDE -->
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.bsc.maven</groupId>
+										<artifactId>maven-processor-plugin</artifactId>
+										<versionRange>[1.0.0,)</versionRange>
+										<goals>
+											<goal>process</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<execute>
+											<runOnConfiguration>true</runOnConfiguration>
+											<runOnIncremental>false</runOnIncremental>
+										</execute>
+									</action>
+								</pluginExecution>
+
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
+			<!-- generate JPA MetaModel classes and add to class path -->
+			<plugin>
+				<groupId>org.bsc.maven</groupId>
+				<artifactId>maven-processor-plugin</artifactId>
+				<version>${maven-processor-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>process</id>
+						<goals>
+							<goal>process</goal>
+						</goals>
+						<phase>generate-sources</phase>
+					</execution>
+				</executions>
+			</plugin>
 
 			<!-- Set Java compiler configuration -->
 			<plugin>

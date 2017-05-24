@@ -35,7 +35,6 @@ import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
-import nl.rivm.cib.episim.hesitant.HesitantScenarioConfig;
 import nl.rivm.cib.morphine.pienter.HesitancyProfile;
 import nl.rivm.cib.morphine.pienter.HesitancyProfile.HesitancyDimension;
 import nl.rivm.cib.morphine.pienter.HesitancyProfile.VaccineStatus;
@@ -56,7 +55,7 @@ public class HesitantProfileTest
 
 	private LocalBinder binder;
 
-	/** init binder from {@link HesitantScenarioConfig#HESITANT_YAML_FILE) */
+	/** init binder */
 	@Before
 	public void initLocalBinder()
 	{
