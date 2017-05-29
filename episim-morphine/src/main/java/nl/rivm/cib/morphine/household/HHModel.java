@@ -34,12 +34,13 @@ import io.coala.time.Instant;
 import io.coala.time.Scenario;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
-import io.coala.time.Timing;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
 import nl.rivm.cib.epidemes.cbs.json.Cbs71486json;
 import nl.rivm.cib.episim.model.locate.Region;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile.HesitancyDimension;
+import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.HesitancyDimension;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.VaccineStatus;
 
 /**
  * {@link HHModel} is a simple example {@link Scenario} implementation, of which
@@ -89,19 +90,23 @@ public class HHModel implements Scenario
 	/** empirical household compositions and referent ages, see CBS 71486 */
 	private transient ConditionalDistribution<Cbs71486json.Category, LocalDate> localHouseholdDist;
 
-	private transient ProbabilityDistribution<HesitancyProfile> hesitancyDist;
+	private transient ProbabilityDistribution<HesitancyProfileJson> hesitancyDist;
 	private transient ProbabilityDistribution<BigDecimal> calculationDist;
-	private transient HHBarrierEvaluator barrierEvaluator;
+	private transient HHAttitudeEvaluator attitudeEvaluator;
+	private transient HHAttitudePropagator attitudePropagator;
+
+	private transient ProbabilityDistribution<VaxOccasion> vaxOccasionDist;
 
 	@Override
-	public void init() throws ParseException
+	public void init()
+		throws ParseException, InstantiationException, IllegalAccessException
 	{
 		final int n = this.config.populationSize();
 		this.hhAttributes = SparseMatrix.Factory.zeros( n,
 				HHAttribute.values().length );
-		this.ppAttributes = SparseMatrix.Factory.zeros( 3*n,
+		this.ppAttributes = SparseMatrix.Factory.zeros( 3 * n,
 				HHMemberAttribute.values().length );
-		this.hhPressure = SparseMatrix.Factory.zeros( 3*n, 3*n );
+		this.hhPressure = SparseMatrix.Factory.zeros( 3 * n, 3 * n );
 
 		this.timeRange = Range
 				.upFromAndIncluding( scheduler().offset().toLocalDate() );
@@ -113,9 +118,21 @@ public class HHModel implements Scenario
 		this.calculationDist = this.config
 				.hesitancyCalculationDist( this.distParser );
 
+		final ProbabilityDistribution<Number> vaccinationUtilityDist = this.config
+				.vaccinationUtilityDist( this.distParser );
+		final ProbabilityDistribution<Number> vaccinationProximityDist = this.config
+				.vaccinationProximityDist( this.distParser );
+		final ProbabilityDistribution<Number> vaccinationClarityDist = this.config
+				.vaccinationClarityDist( this.distParser );
+		final ProbabilityDistribution<Number> vaccinationAffinityDist = this.config
+				.vaccinationAffinityDist( this.distParser );
+		this.vaxOccasionDist = () -> VaxOccasion.of(
+				vaccinationUtilityDist.draw(), vaccinationProximityDist.draw(),
+				vaccinationClarityDist.draw(), vaccinationAffinityDist.draw() );
+
 		// populate households
 		for( long time = System
-				.currentTimeMillis(), i = 0, agPrev = 0; i < n; i ++  )
+				.currentTimeMillis(), i = 0, agPrev = 0; i < n; i++ )
 		{
 			createHousehold();
 			if( System.currentTimeMillis() - time > 1000 )
@@ -129,21 +146,94 @@ public class HHModel implements Scenario
 				agPrev = agNow;
 			}
 		}
+
+		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
+				.newInstance();
+		this.attitudePropagator = this.config.attitudePropagatorType()
+				.newInstance();
+		atEach( this.config.vaccinationRecurrence( scheduler() ) )
+				.subscribe( this::vaccinate, this::logError );
+		
+		final HHOracle.Factory oracleFact = 
+		this.config.hesitancyOracleFactory().newInstance();
+		
+
+		// TODO add expressingRefs from own / neighboring / global placeRef dist
+
 		LOG.info( "Initialized {} pp ({}%) across {} hh", this.persons.get(),
 				this.persons.get() * 100 / n, this.households.get() );
 
 //		final Pathogen measles = this.pathogens.create( "MV-1" );
 
-		atEach( Timing.of( this.config.statisticsRecurrence() )
-				.offset( scheduler().offset() ).iterate() )
-						.subscribe( this::exportStatistics, this::logError );
+		atEach( this.config.statisticsRecurrence( scheduler() ) )
+				.subscribe( this::exportStatistics, this::logError );
+	}
+
+	private void impress( final Instant t, final long... hhFilter )
+	{
+		this.attitudePropagator.propagate(
+				hhFilter == null ? // impress all  
+						this.hhPressure
+						// impress selected only
+						: this.hhPressure.selectRows( Ret.LINK, hhFilter ),
+				this.hhAttributes );
+	}
+
+	private static final HHAttribute[] CHILD_REF_COLUMN_INDICES = {
+//			HHAttribute.REFERENT_REF, 
+//			HHAttribute.PARTNER_REF, 
+			HHAttribute.CHILD1_REF, HHAttribute.CHILD2_REF,
+			HHAttribute.CHILD3_REF };
+
+	private void vaccinate( final Instant t )
+	{
+		final VaxOccasion occ = this.vaxOccasionDist.draw();
+		final BigDecimal nowYears = now().to( TimeUnits.ANNUM ).decimal();
+		final Range<BigDecimal> birthRange = Range
+				.of( nowYears.subtract( BigDecimal.valueOf( 4 ) ), nowYears );
+		LOG.info( "t={}, vax members positive on {}, susceptible, born {}",
+				t.prettify( scheduler().offset().toLocalDate() ), occ,
+				birthRange );
+
+		// for each households evaluated with a positive attitude
+		this.attitudeEvaluator.isPositive( occ, this.hhAttributes )
+
+				// for each child position in the positive household
+				.forEach( hhRef -> Arrays.stream( CHILD_REF_COLUMN_INDICES )
+						.mapToLong( hhAtt -> this.hhAttributes.getAsLong( hhRef,
+								hhAtt.ordinal() ) )
+
+						// if child member: 1. exists
+						.filter( ppRef -> ppRef != NA
+
+								// 2. is susceptible
+								&& this.ppAttributes.getAsInt( ppRef,
+										HHMemberAttribute.STATUS
+												.ordinal() ) == HHMemberStatus.SUSCEPTIBLE
+														.ordinal()
+
+								// 3. is of vaccination age
+								&& birthRange.contains( this.ppAttributes
+										.getAsBigDecimal( ppRef,
+												HHMemberAttribute.BIRTH
+														.ordinal() ) ) )
+						// then vaccinate
+						.forEach( ppRef -> vaccinate( hhRef, ppRef,
+								birthRange ) ) );
+	}
+
+	private void vaccinate( final long hhRef, final long ppRef,
+		final Range<BigDecimal> birthRange )
+	{
+		LOG.info( "Vax in (positive) hh #{} (susceptible) pp #{} born {}...",
+				hhRef, ppRef, birthRange );
 	}
 
 	private static final long NA = -1L;
 
 	private int createHousehold()
 	{
-		final HesitancyProfile hesProf = this.hesitancyDist.draw();
+		final HesitancyProfileJson hesProf = this.hesitancyDist.draw();
 		final Cbs71486json.Category hhCat = this.localHouseholdDist
 				.draw( dt() );
 		final Quantity<Time> hhRefAge = hhCat
@@ -157,22 +247,31 @@ public class HHModel implements Scenario
 		final long hhIndex = this.toHouseholdIndex( hhRef );
 
 		final Region.ID placeRef = Region.ID.of( hhCat.regionRef() );
-		final long placeIndex = toIndex( placeRef );
-
-		final long referentRef = createPerson( hhRefAge );
+		final long placeIndex = toPlaceIndex( placeRef );
+		final HHMemberStatus hhStatus = hesProf.status != VaccineStatus.none
+				? HHMemberStatus.IMMUNE : HHMemberStatus.SUSCEPTIBLE;
+		final long referentRef = createPerson( hhRefAge, hhStatus );
 		// TODO draw age differences empirically (e.g. CBS: 60036ned, 37201)
 		final long partnerRef = hhType.adultCount() < 2 ? NA
-				: createPerson( hhRefAge.subtract(
-						QuantityUtil.valueOf( 3, TimeUnits.ANNUM ) ) );
+				: createPerson(
+						hhRefAge.subtract(
+								QuantityUtil.valueOf( 3, TimeUnits.ANNUM ) ),
+						hhStatus );
 		final long child1Ref = hhType.childCount() < 1 ? NA
-				: createPerson( hhRefAge.subtract(
-						QuantityUtil.valueOf( 20, TimeUnits.ANNUM ) ) );
+				: createPerson(
+						hhRefAge.subtract(
+								QuantityUtil.valueOf( 20, TimeUnits.ANNUM ) ),
+						hhStatus );
 		final long child2Ref = hhType.childCount() < 2 ? NA
-				: createPerson( hhRefAge.subtract(
-						QuantityUtil.valueOf( 22, TimeUnits.ANNUM ) ) );
+				: createPerson(
+						hhRefAge.subtract(
+								QuantityUtil.valueOf( 22, TimeUnits.ANNUM ) ),
+						hhStatus );
 		final long child3Ref = hhType.childCount() < 3 ? NA
-				: createPerson( hhRefAge.subtract(
-						QuantityUtil.valueOf( 24, TimeUnits.ANNUM ) ) );
+				: createPerson(
+						hhRefAge.subtract(
+								QuantityUtil.valueOf( 24, TimeUnits.ANNUM ) ),
+						hhStatus );
 
 		// create non-NA household members pressure network, adults impress all
 		final long[] impressedRefs = Arrays
@@ -186,7 +285,6 @@ public class HHModel implements Scenario
 			for( long expressingRef : expressingRefs )
 				this.hhPressure.setAsBigDecimal( BigDecimal.ONE, impressedRef,
 						expressingRef );
-		// TODO add expressingRefs from own / neighboring / global placeRef dist
 
 		final BigDecimal initialCalculation = this.calculationDist.draw();
 		final BigDecimal initialConfidence = DecimalUtil.valueOf(
@@ -195,12 +293,12 @@ public class HHModel implements Scenario
 		final BigDecimal initialComplacency = DecimalUtil.valueOf(
 				hesProf.distParams.get( HesitancyDimension.complacency )
 						.createDist( this.distFactory ).draw() );
-		this.barrierEvaluator = this.config.barrierEvaluator();
 
+		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
 		this.hhAttributes.setAsLong( placeIndex, hhIndex,
-				HHAttribute.PLACE_REF.ordinal() );
+				HHAttribute.HOME_REF.ordinal() );
 		this.hhAttributes.setAsBoolean( hesProf.religious, hhIndex,
 				HHAttribute.RELIGIOUS.ordinal() );
 		this.hhAttributes.setAsBoolean( hesProf.alternative, hhIndex,
@@ -224,15 +322,17 @@ public class HHModel implements Scenario
 		this.hhAttributes.setAsLong( child3Ref, hhIndex,
 				HHAttribute.CHILD3_REF.ordinal() );
 
-		this.hhAttributes.setAsBigDecimal(
-				this.barrierEvaluator.barrierOf(
-						this.hhAttributes.selectRows( Ret.LINK, hhIndex ) ),
-				hhIndex, HHAttribute.BARRIER.ordinal() );
+		// evaluate current barrier value
+//		this.hhAttributes.setAsBigDecimal(
+//				this.barrierEvaluator.barrierOf(
+//						this.hhAttributes.selectRows( Ret.LINK, hhIndex ) ),
+//				hhIndex, HHAttribute.BARRIER.ordinal() );
 
 		return hhType.size();
 	}
 
-	private long createPerson( final Quantity<Time> initialAge )
+	private long createPerson( final Quantity<Time> initialAge,
+		final HHMemberStatus status )
 	{
 		final long id = this.persons.incrementAndGet();
 		final Actor.ID memberRef = Actor.ID.of( String.format( "ind%08d", id ),
@@ -241,7 +341,7 @@ public class HHModel implements Scenario
 		this.ppAttributes.setAsBigDecimal(
 				now().to( TimeUnits.ANNUM ).subtract( initialAge ).decimal(),
 				index, HHMemberAttribute.BIRTH.ordinal() );
-		this.ppAttributes.setAsInt( HHMemberStatus.SUSCEPTIBLE.ordinal(), index,
+		this.ppAttributes.setAsInt( status.ordinal(), index,
 				HHMemberAttribute.STATUS.ordinal() );
 		this.ppAttributes.setAsInt( HHMemberBehavior.NORMAL.ordinal(), index,
 				HHMemberAttribute.BEHAVIOR.ordinal() );
@@ -277,31 +377,27 @@ public class HHModel implements Scenario
 				key -> (long) this.ppIndex.size() );
 	}
 
-	private final Map<Region.ID, Long> placeIndex = new HashMap<>();
+//	private final Map<Region.ID, Long> placeIndex = new HashMap<>();
 
-	private long toIndex( final Region.ID placeRef )
+	private long toPlaceIndex( final Region.ID placeRef )
 	{
-		return this.placeIndex.computeIfAbsent( placeRef,
-				key -> (long) this.placeIndex.size() );
+		return Long.valueOf( placeRef.unwrap().substring( 2 ) );
+//		return this.placeIndex.computeIfAbsent( placeRef,
+//				key -> (long) this.placeIndex.size() );
 	}
 
 	private void exportStatistics( final Instant t )
 	{
-		final Instant day = t.to( TimeUnits.DAYS );
-
-		JPAUtil.session( this.emf ).subscribe( em ->
-		{
-			this.hhIndex.forEach( ( id, index ) ->
-			{
-				final HHStatisticsDao dao = HHStatisticsDao.create(
-						id.contextRef(), day, this.hhAttributes, index,
-						this.ppAttributes );
-				LOG.info( "t = {} ({}), persisting {}", day.prettify( 1 ),
-						t.prettify( scheduler().offset() ), dao );
-				em.persist( dao );
-			} );
-
-		}, this::logError );
+		JPAUtil.session( this.emf ).subscribe(
+				em -> this.hhIndex.forEach( ( id,
+					index ) -> em.persist( HHStatisticsDao.create(
+							id.contextRef(), t, this.hhAttributes, index,
+							this.ppAttributes ) ) ),
+				this::logError,
+				() -> LOG.info( "t = {} ({}), persisted {} households",
+						t.prettify( TimeUnits.DAYS, 1 ),
+						t.prettify( scheduler().offset() ),
+						this.hhIndex.size() ) );
 	}
 
 	private void logError( final Throwable e )

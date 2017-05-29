@@ -65,23 +65,28 @@ public class HHSimulator
 	/** */
 	private static final Logger LOG = LogUtil.getLogger( HHSimulator.class );
 
+	public static final String CONF_ARG = "conf";
+
 	/**
 	 * @param args arguments from the command line
 	 * @throws NamingException
-	 * @throws IOException 
+	 * @throws IOException
 	 */
-	public static void main( final String[] args ) throws NamingException, IOException
+	public static void main( final String[] args )
+		throws NamingException, IOException
 	{
 		// convert command-line arguments to map
-		final Map<?, ?> argMap = Arrays.stream( args )
+		final Map<String, String> argMap = Arrays.stream( args )
 				.filter( arg -> arg.contains( "=" ) )
 				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length == 2 )
 				.collect( Collectors.toMap( arr -> arr[0], arr -> arr[1] ) );
+		argMap.computeIfAbsent( CONF_ARG, key -> "conf/morphine.yaml" );
 
 		// merge arguments into configuration imported from YAML file
 		HHConfig.YamlLoader.register();
 		final HHConfig hhConfig = ConfigCache.getOrCreate( HHConfig.class,
-				argMap, YamlUtil.flattenYaml(FileUtil.toInputStream("morphine.yaml")) );
+				argMap, YamlUtil.flattenYaml(
+						FileUtil.toInputStream( argMap.get( CONF_ARG ) ) ) );
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), argMap, hhConfig );
 

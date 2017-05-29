@@ -35,32 +35,45 @@ import org.ujmp.core.Matrix;
  */
 public enum HHAttribute
 {
+	/** population-unique identifier (may be replaced upon death/emigration) */
 	IDENTIFIER,
 
-	PLACE_REF,
+	/** home region code */
+	HOME_REF,
 
+	/** {@link Boolean} */
 	REGISTERED,
 
+	/** {@link Boolean} */
 	RELIGIOUS,
 
+	/** {@link Boolean} */
 	ALTERNATIVE,
 
+	/** {@link BigDecimal} &isin; [0,1] */
 	CALCULATION,
 
+	/** {@link BigDecimal} &isin; [0,1] */
 	CONFIDENCE,
 
+	/** {@link BigDecimal} &isin; [0,1] */
 	COMPLACENCY,
 
-	BARRIER,
+//	BARRIER,
 
+	/** {@link Long} member row-index */
 	REFERENT_REF,
 
+	/** {@link Long} member row-index, or -1 for N/A */
 	PARTNER_REF,
 
+	/** {@link Long} member row-index, or -1 for N/A */
 	CHILD1_REF,
 
+	/** {@link Long} member row-index, or -1 for N/A */
 	CHILD2_REF,
 
+	/** {@link Long} member row-index, or -1 for N/A */
 	CHILD3_REF,
 
 	;
@@ -70,7 +83,7 @@ public enum HHAttribute
 		return data.getAsObject( hhIndex, ordinal() );
 	}
 
-	public static Map<HHAttribute, Object> get( final Matrix data,
+	public static Map<HHAttribute, Object> toMap( final Matrix data,
 		final long hhIndex, final HHAttribute... attribute )
 	{
 		return Arrays.stream( Objects.requireNonNull( attribute ) )

@@ -28,13 +28,17 @@ import io.coala.math.Range;
 import io.coala.math.WeightedValue;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.ProbabilityDistribution.Parser;
+import io.coala.time.Instant;
+import io.coala.time.Scheduler;
+import io.coala.time.Timing;
 import io.coala.util.FileUtil;
 import io.coala.util.InputStreamConverter;
 import io.coala.util.Instantiator;
 import io.reactivex.internal.functions.Functions;
 import nl.rivm.cib.epidemes.cbs.json.CBSRegionType;
 import nl.rivm.cib.epidemes.cbs.json.Cbs71486json;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile;
+import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
 
 /**
  * {@link HHConfig}
@@ -42,10 +46,13 @@ import nl.rivm.cib.morphine.pienter.HesitancyProfile;
  * @version $Id$
  * @author Rick van Krevelen
  */
-@Sources( { /*"${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-		"${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,*/
+@Sources( { /*
+			 * "${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
+			 * "${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
+			 */
 //		"classpath:" + 
-		"file:/C:/Users/Joram%20Hoogink/Documents/Morphine/Source/morphine-episim/episim-morphine/"+HHConfig.MORPHINE_CONFIG_YAML_FILE } )
+		"file:/C:/Users/Joram%20Hoogink/Documents/Morphine/Source/morphine-episim/episim-morphine/"
+				+ HHConfig.MORPHINE_CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
 
@@ -68,6 +75,12 @@ public interface HHConfig extends GlobalConfig
 	/** configuration key */
 	String HESITANCY_PREFIX = POPULATION_PREFIX + "hesitancy"
 			+ ConfigUtil.CONFIG_KEY_SEP;
+	/** configuration key */
+	String EPIDEMIC_PREFIX = POPULATION_PREFIX + "epidemic"
+			+ ConfigUtil.CONFIG_KEY_SEP;
+	/** configuration key */
+	String VACCINATION_PREFIX = POPULATION_PREFIX + "vaccination"
+			+ ConfigUtil.CONFIG_KEY_SEP;
 
 	String DATASOURCE_JNDI = "jdbc/hhDB";
 
@@ -84,6 +97,13 @@ public interface HHConfig extends GlobalConfig
 	@Key( STATISTICS_PREFIX + "recurrence" )
 	@DefaultValue( "0 0 0 14 * ? *" )
 	String statisticsRecurrence();
+
+	default Iterable<Instant> statisticsRecurrence( final Scheduler scheduler )
+		throws ParseException
+	{
+		return Timing.of( statisticsRecurrence() ).offset( scheduler.offset() )
+				.iterate();
+	}
 
 //	"jdbc:neo4j:bolt://192.168.99.100:7687/db/data" 
 //	"jdbc:mysql://localhost/hhdb" 
@@ -126,18 +146,80 @@ public interface HHConfig extends GlobalConfig
 				.blockingGet();
 	}
 
+	@Key( VACCINATION_PREFIX + "recurrence" )
+	@DefaultValue( "0 0 0 7 * ? *" )
+	String vaccinationRecurrence();
+
+	default Iterable<Instant> vaccinationRecurrence( final Scheduler scheduler )
+		throws ParseException
+	{
+		return Timing.of( vaccinationRecurrence() )
+				.offset( scheduler.now().toJava8( scheduler.offset() ) )
+				.iterate();
+	}
+
+	/** @see VaxOccasion#utility() */
+	@Key( VACCINATION_PREFIX + "utility-dist" )
+	@DefaultValue( "const(0.5)" )
+	String vaccinationUtilityDist();
+
+	default ProbabilityDistribution<Number>
+		vaccinationUtilityDist( final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( vaccinationUtilityDist() );
+	}
+
+	/** @see VaxOccasion#proximity() */
+	@Key( VACCINATION_PREFIX + "proximity-dist" )
+	@DefaultValue( "const(0.5)" )
+	String vaccinationProximityDist();
+
+	default ProbabilityDistribution<Number> vaccinationProximityDist(
+		final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( vaccinationProximityDist() );
+	}
+
+	/** @see VaxOccasion#clarity() */
+	@Key( VACCINATION_PREFIX + "clarity-dist" )
+	@DefaultValue( "const(0.5)" )
+	String vaccinationClarityDist();
+
+	default ProbabilityDistribution<Number>
+		vaccinationClarityDist( final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( vaccinationClarityDist() );
+	}
+
+	/** @see VaxOccasion#affinity() */
+	@Key( VACCINATION_PREFIX + "affinity-dist" )
+	@DefaultValue( "const(0.5)" )
+	String vaccinationAffinityDist();
+
+	default ProbabilityDistribution<Number>
+		vaccinationAffinityDist( final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( vaccinationAffinityDist() );
+	}
+
+	@Key(HESITANCY_PREFIX+"oracle-factory")
+	@DefaultValue("nl.rivm.cib.morphine.household.HHOracle$Factory$Simple")
+	Class<? extends HHOracle.Factory> hesitancyOracleFactory();
+	
+	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profile-data" )
 	@DefaultValue( "conf/hesitancy-univariate.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfiles();
 
-	default ProbabilityDistribution<HesitancyProfile>
+	default ProbabilityDistribution<HesitancyProfileJson>
 		hesitancyProfiles( final ProbabilityDistribution.Factory distFactory )
 	{
-		return distFactory.createCategorical( HesitancyProfile
+		return distFactory.createCategorical( HesitancyProfileJson
 				.parse( this::hesitancyProfiles ).toList().blockingGet() );
 	}
 
+	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "calculation-dist" )
 	@DefaultValue( "const(0.5)" )
 	String hesitancyCalculationDist();
@@ -149,13 +231,24 @@ public interface HHConfig extends GlobalConfig
 				.map( DecimalUtil::valueOf );
 	}
 
-	@Key( HESITANCY_PREFIX + "barrier-evaluator" )
-	@DefaultValue( "nl.rivm.cib.morphine.household.HHBarrierEvaluator$Average" )
-	Class<? extends HHBarrierEvaluator> barrierEvaluatorType();
+	/** @see HHAttitudeEvaluator */
+	@Key( HESITANCY_PREFIX + "evaluator" )
+	@DefaultValue( "nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average" )
+	Class<? extends HHAttitudeEvaluator> attitudeEvaluatorType();
 
-	default HHBarrierEvaluator barrierEvaluator()
+	default HHAttitudeEvaluator attitudeEvaluator()
 	{
-		return Instantiator.instantiate( barrierEvaluatorType() );
+		return Instantiator.instantiate( attitudeEvaluatorType() );
+	}
+
+	/** @see HHAttitudePropagator */
+	@Key( HESITANCY_PREFIX + "propagator" )
+	@DefaultValue( "nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted" )
+	Class<? extends HHAttitudePropagator> attitudePropagatorType();
+
+	default HHAttitudePropagator attitudePropagator()
+	{
+		return Instantiator.instantiate( attitudePropagatorType() );
 	}
 
 //	@Key( "morphine.measles.contact-period" )
@@ -249,4 +342,5 @@ public interface HHConfig extends GlobalConfig
 		}
 
 	}
+
 }

@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -36,24 +37,33 @@ import io.coala.util.FileUtil;
 import io.reactivex.Observable;
 
 /**
- * {@link HesitancyProfile}
+ * {@link HesitancyProfileJson} contains hesitancy distribution parameters,
+ * fitted to e.g. PIENTER2 data
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
-public class HesitancyProfile extends Identified.SimpleOrdinal<String>
+public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 {
-	public static Observable<WeightedValue<HesitancyProfile>>
+	public static Observable<WeightedValue<HesitancyProfileJson>>
 		parse( final String fileName )
 	{
 		return parse( () -> FileUtil.toInputStream( fileName ) );
 	}
 
-	public static Observable<WeightedValue<HesitancyProfile>>
+	public static Observable<WeightedValue<HesitancyProfileJson>> parse(
+		final Callable<InputStream> input,
+		Function<HesitancyProfileJson, Number> weighter )
+	{
+		return JsonUtil.readArrayAsync( input, HesitancyProfileJson.class )
+				.map( profile -> WeightedValue.of( profile,
+						weighter.apply( profile ) ) );
+	}
+
+	public static Observable<WeightedValue<HesitancyProfileJson>>
 		parse( final Callable<InputStream> input )
 	{
-		return JsonUtil.readArrayAsync( input, HesitancyProfile.class )
-				.map( p -> WeightedValue.of( p, p.fraction ) );
+		return parse( input, profile -> profile.fraction );
 	}
 
 	/** the initial religious persuasion */
@@ -122,7 +132,7 @@ public class HesitancyProfile extends Identified.SimpleOrdinal<String>
 	public static class DistParams
 	{
 		/** the fitted distribution type */
-		public HesitancyProfile.DistType type;
+		public HesitancyProfileJson.DistType type;
 
 		/** the minimum observable value */
 		public Double min;
@@ -131,10 +141,10 @@ public class HesitancyProfile extends Identified.SimpleOrdinal<String>
 		public Double max;
 
 		/** the distribution parameter estimate */
-		public Map<HesitancyProfile.DistParam, BigDecimal> est;
+		public Map<HesitancyProfileJson.DistParam, BigDecimal> est;
 
 		/** the distribution parameter error (standard deviation) */
-		public Map<HesitancyProfile.DistParam, BigDecimal> sd;
+		public Map<HesitancyProfileJson.DistParam, BigDecimal> sd;
 
 		private ProbabilityDistribution<Double> distCache;
 

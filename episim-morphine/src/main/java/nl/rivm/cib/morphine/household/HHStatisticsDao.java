@@ -56,6 +56,10 @@ import io.coala.time.TimeUnits;
 public class HHStatisticsDao implements Persistable.Dao
 {
 
+	private static final String TIME_COL_DEF = "DECIMAL(10,4)";
+
+	private static final String ATTITUDE_COL_DEF = "DECIMAL(10,8)";
+
 	/**
 	 * @param now current virtual time {@link Instant} for calculating age
 	 * @param households household data {@link Matrix} per {@link HHAttribute}
@@ -70,9 +74,9 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.context = context;
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		result.time = now.decimal();
-		result.placeRef = households.getAsInt( rowIndex,
-				HHAttribute.PLACE_REF.ordinal() );
+		result.time = now.to( TimeUnits.DAYS ).decimal();
+		result.homeRef = households.getAsInt( rowIndex,
+				HHAttribute.HOME_REF.ordinal() );
 		result.religious = households.getAsBoolean( rowIndex,
 				HHAttribute.RELIGIOUS.ordinal() );
 		result.alternative = households.getAsBoolean( rowIndex,
@@ -83,8 +87,8 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.CONFIDENCE.ordinal() );
 		result.complacency = households.getAsBigDecimal( rowIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
-		result.barrier = households.getAsBigDecimal( rowIndex,
-				HHAttribute.BARRIER.ordinal() );
+//		result.barrier = households.getAsBigDecimal( rowIndex,
+//				HHAttribute.BARRIER.ordinal() );
 		result.referent = MemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.REFERENT_REF.ordinal() ) );
 		result.partner = MemberDao.create( now, members, households
@@ -120,8 +124,8 @@ public class HHStatisticsDao implements Persistable.Dao
 							HHMemberAttribute.BIRTH.ordinal() ) );
 			result.status = data.getAsInt( rowIndex,
 					HHMemberAttribute.STATUS.ordinal() );
-			result.behavior = data.getAsInt( rowIndex,
-					HHMemberAttribute.BEHAVIOR.ordinal() );
+//			result.behavior = data.getAsInt( rowIndex,
+//					HHMemberAttribute.BEHAVIOR.ordinal() );
 			return result;
 		}
 
@@ -129,7 +133,7 @@ public class HHStatisticsDao implements Persistable.Dao
 
 		public static final String STATUS_ATTR = "status";
 
-		public static final String BEHAVIOR_ATTR = "behavior";
+//		public static final String BEHAVIOR_ATTR = "behavior";
 
 		@Column
 		protected BigDecimal age;
@@ -137,8 +141,8 @@ public class HHStatisticsDao implements Persistable.Dao
 		@Column
 		protected int status;
 
-		@Column
-		protected int behavior;
+//		@Column
+//		protected int behavior;
 
 	}
 
@@ -162,11 +166,12 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "HH", nullable = false, updatable = false )
 	protected int hh;
 
-	@Column( name = "TIME", nullable = false, updatable = false )
-	protected BigDecimal time; // TODO scale/precision?
+	@Column( name = "TIME", nullable = false, updatable = false,
+		columnDefinition = TIME_COL_DEF )
+	protected BigDecimal time;
 
-	@Column( name = "PLACE_REF", nullable = false, updatable = false )
-	protected int placeRef;
+	@Column( name = "HOME_REF", nullable = false, updatable = false )
+	protected int homeRef;
 
 	@Column( name = "RELIGIOUS", nullable = false, updatable = false )
 	protected boolean religious;
@@ -174,80 +179,89 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "ALTERNATIVE", nullable = false, updatable = false )
 	protected boolean alternative;
 
-	@Column( name = "CALCULATION", nullable = false, updatable = false )
-	protected BigDecimal calculation; // TODO scale/precision?
+	@Column( name = "CALCULATION", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal calculation;
 
-	@Column( name = "CONFIDENCE", nullable = false, updatable = false )
-	protected BigDecimal confidence; // TODO scale/precision?
+	@Column( name = "CONFIDENCE", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal confidence;
 
-	@Column( name = "COMPLACENCY", nullable = false, updatable = false )
-	protected BigDecimal complacency; // TODO scale/precision?
+	@Column( name = "COMPLACENCY", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal complacency;
 
-	@Column( name = "BARRIER", nullable = true, updatable = false )
-	protected BigDecimal barrier; // TODO scale/precision?
+//	@Column( name = "BARRIER", nullable = true, updatable = false,
+//		columnDefinition = ATTITUDE_COL_DEF )
+//	protected BigDecimal barrier;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "REFERENT_AGE", nullable = false,
-					updatable = false ) ),
+					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "REFERENT_STATUS", nullable = false,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-				column = @Column( name = "REFERENT_BEHAVIOR", nullable = false,
-					updatable = false ) ) } )
+//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+//				column = @Column( name = "REFERENT_BEHAVIOR", nullable = false,
+//					updatable = false ) )
+	} )
 	@Embedded
 	protected MemberDao referent;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "PARTNER_AGE", nullable = true,
-					updatable = false ) ),
+					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "PARTNER_STATUS", nullable = true,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
-					updatable = false ) ) } )
+//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+//				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
+//					updatable = false ) )
+	} )
 	@Embedded
 	protected MemberDao partner;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "CHILD1_AGE", nullable = true,
-					updatable = false ) ),
+					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD1_STATUS", nullable = true,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-				column = @Column( name = "CHILD1_BEHAVIOR", nullable = true,
-					updatable = false ) ) } )
+//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+//				column = @Column( name = "CHILD1_BEHAVIOR", nullable = true,
+//					updatable = false ) ) 
+	} )
 	@Embedded
 	protected MemberDao child1;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "CHILD2_AGE", nullable = true,
-					updatable = false ) ),
+					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD2_STATUS", nullable = true,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
-					updatable = false ) ) } )
+//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+//				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
+//					updatable = false ) ) 
+	} )
 	@Embedded
 	protected MemberDao child2;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "CHILD3_AGE", nullable = true,
-					updatable = false ) ),
+					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD3_STATUS", nullable = true,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
-					updatable = false ) ) } )
+//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+//				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
+//					updatable = false ) ) 
+	} )
 	@Embedded
 	protected MemberDao child3;
 

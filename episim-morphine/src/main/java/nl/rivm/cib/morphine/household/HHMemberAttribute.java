@@ -35,10 +35,16 @@ import org.ujmp.core.Matrix;
  */
 public enum HHMemberAttribute
 {
+	/** population-unique identifier (may be replaced upon death/emigration) */
+	IDENTIFIER,
+
+	/** {@link BigDecimal} time of birth in years since simulation start (0) */
 	BIRTH,
 
+	/** the ordinal of a {@link HHMemberStatus} constant */
 	STATUS,
 
+	/** the ordinal of a {@link HHMemberBehavior} constant */
 	BEHAVIOR,
 
 	;
@@ -48,7 +54,7 @@ public enum HHMemberAttribute
 		return data.getAsObject( hhIndex, ordinal() );
 	}
 
-	public static Map<HHMemberAttribute, Object> get( final Matrix data,
+	public static Map<HHMemberAttribute, Object> toMap( final Matrix data,
 		final long hhIndex, final HHMemberAttribute... attribute )
 	{
 		return Arrays.stream( Objects.requireNonNull( attribute ) )

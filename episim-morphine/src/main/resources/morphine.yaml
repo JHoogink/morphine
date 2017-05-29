@@ -20,7 +20,8 @@ morphine:
     hesitancy:
       profile-data: conf/hesitancy-univariate.json
       calculation-dist: const(0.5)
-      barrier-evaluator: nl.rivm.cib.morphine.household.HHBarrierEvaluator$Average
+      
+#      barrier-evaluator: nl.rivm.cib.morphine.household.HHBarrierEvaluator$Average
 #      barrier-evaluator: nl.rivm.cib.morphine.household.HHBarrierEvaluator$Difference
 
 #  measles:

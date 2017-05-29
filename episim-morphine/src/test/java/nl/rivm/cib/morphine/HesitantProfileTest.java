@@ -35,9 +35,9 @@ import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile.HesitancyDimension;
-import nl.rivm.cib.morphine.pienter.HesitancyProfile.VaccineStatus;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.HesitancyDimension;
+import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.VaccineStatus;
 
 /**
  * {@link HesitantProfileTest}
@@ -74,14 +74,14 @@ public class HesitantProfileTest
 	@Test
 	public void testJsonParsing() throws IOException
 	{
-		LOG.info( "Testing {}", HesitancyProfile.class.getSimpleName() );
+		LOG.info( "Testing {}", HesitancyProfileJson.class.getSimpleName() );
 		final ProbabilityDistribution.Factory distFact = this.binder
 				.inject( ProbabilityDistribution.Factory.class );
 
-		final List<WeightedValue<HesitancyProfile>> profileDensity = HesitancyProfile
+		final List<WeightedValue<HesitancyProfileJson>> profileDensity = HesitancyProfileJson
 				.parse( PROFILES_FILE ).toList().blockingGet();
 		LOG.trace( "Parsed dists/weights: {}", profileDensity );
-		final ProbabilityDistribution<HesitancyProfile> profileDist = distFact
+		final ProbabilityDistribution<HesitancyProfileJson> profileDist = distFact
 				.createCategorical( profileDensity );
 
 		final VaccineStatus reportStatus = VaccineStatus.some;
@@ -89,7 +89,7 @@ public class HesitantProfileTest
 		for( ; i < n; i++ )
 		{
 			// step 1. draw profile (empirical)
-			final HesitancyProfile hes = profileDist.draw();
+			final HesitancyProfileJson hes = profileDist.draw();
 			// step 2. draw values for each (univariate) distribution
 			final Double conf = hes.distParams
 					.get( HesitancyDimension.confidence ).createDist( distFact )
