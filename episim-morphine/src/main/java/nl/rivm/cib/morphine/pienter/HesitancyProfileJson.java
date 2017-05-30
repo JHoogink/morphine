@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.coala.json.JsonUtil;
@@ -43,27 +44,20 @@ import io.reactivex.Observable;
  * @version $Id$
  * @author Rick van Krevelen
  */
-public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
-{
-	public static Observable<WeightedValue<HesitancyProfileJson>>
-		parse( final String fileName )
-	{
-		return parse( () -> FileUtil.toInputStream( fileName ) );
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class HesitancyProfileJson extends Identified.SimpleOrdinal<String> {
+	public static Observable<WeightedValue<HesitancyProfileJson>> parse(final String fileName) {
+		return parse(() -> FileUtil.toInputStream(fileName));
 	}
 
-	public static Observable<WeightedValue<HesitancyProfileJson>> parse(
-		final Callable<InputStream> input,
-		Function<HesitancyProfileJson, Number> weighter )
-	{
-		return JsonUtil.readArrayAsync( input, HesitancyProfileJson.class )
-				.map( profile -> WeightedValue.of( profile,
-						weighter.apply( profile ) ) );
+	public static Observable<WeightedValue<HesitancyProfileJson>> parse(final Callable<InputStream> input,
+			Function<HesitancyProfileJson, Number> weighter) {
+		return JsonUtil.readArrayAsync(input, HesitancyProfileJson.class)
+				.map(profile -> WeightedValue.of(profile, weighter.apply(profile)));
 	}
 
-	public static Observable<WeightedValue<HesitancyProfileJson>>
-		parse( final Callable<InputStream> input )
-	{
-		return parse( input, profile -> profile.fraction );
+	public static Observable<WeightedValue<HesitancyProfileJson>> parse(final Callable<InputStream> input) {
+		return parse(input, profile -> profile.fraction);
 	}
 
 	/** the initial religious persuasion */
@@ -81,47 +75,45 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	/** the original profile density/fraction */
 	public BigDecimal fraction;
 
+	/** reference index to hesitancy-initial.json */
+	@JsonProperty("indices")
+	public EnumMap<HesitancyDimension, Integer> indices;
+
 	/** the initial attitude distributions per hesitancy dimension */
-	@JsonProperty( "distributions" )
-	public EnumMap<HesitancyDimension, DistParams> distParams;
+//	@JsonProperty("distributions")
+//	public EnumMap<HesitancyDimension, DistParams> distParams;
 
 	@Override
-	public String id()
-	{
-		return this.id == null ? (this.id = (this.religious ? "Reli" : "Sec")
-				+ "|" + (this.alternative ? "Alto" : "Reg") + "|" + this.status)
-				: this.id;
+	public String id() {
+		return this.id == null ? (this.id = (this.religious ? "Reli" : "Sec") + "|"
+				+ (this.alternative ? "Alto" : "Reg") + "|" + this.status) : this.id;
 	}
 
 	/**
 	 * {@link HesitancyDimension} is a 3C/4C dimension of attitude
 	 */
-	public enum HesitancyDimension
-	{
+	public enum HesitancyDimension {
 		complacency, confidence, attitude, calculation;
 	}
 
 	/**
 	 * {@link VaccineStatus} is a possible vaccination status
 	 */
-	public static enum VaccineStatus
-	{
+	public static enum VaccineStatus {
 		all, some, none;
 	}
 
 	/**
 	 * {@link DistType} is a type of (R-fitted) distribution
 	 */
-	public static enum DistType
-	{
+	public static enum DistType {
 		weibull;
 	}
 
 	/**
 	 * {@link DistParam} is a (R-fitted) distribution parameter name
 	 */
-	public static enum DistParam
-	{
+	public static enum DistParam {
 		shape, scale;
 	}
 
@@ -129,8 +121,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	 * {@link DistParams} describes and instantiates a (R-fitted) distribution
 	 * of attitude values
 	 */
-	public static class DistParams
-	{
+	public static class DistParams {
 		/** the fitted distribution type */
 		public HesitancyProfileJson.DistType type;
 
@@ -149,26 +140,21 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 		private ProbabilityDistribution<Double> distCache;
 
 		/**
-		 * @param distFact a {@link ProbabilityDistribution.Factory}
+		 * @param distFact
+		 *            a {@link ProbabilityDistribution.Factory}
 		 * @return a (cached) {@link ProbabilityDistribution} of {@link Double}s
 		 */
-		public ProbabilityDistribution<Double>
-			createDist( final ProbabilityDistribution.Factory distFact )
-		{
-			if( this.distCache == null )
-			{
-				// avoid compl==conf, e.g. min: .5 -> .505,  max: .5 -> .497
-				final Range<Double> range = Range.of( this.min * 1.01,
-						Math.pow( this.max, 1.01 ) );
-				switch( this.type )
-				{
+		public ProbabilityDistribution<Double> createDist(final ProbabilityDistribution.Factory distFact) {
+			if (this.distCache == null) {
+				// avoid compl==conf, e.g. min: .5 -> .505, max: .5 -> .497
+				final Range<Double> range = Range.of(this.min * 1.01, Math.pow(this.max, 1.01));
+				switch (this.type) {
 				default:
 					// TODO map other distribution types
 				case weibull:
 					this.distCache = distFact
-							.createWeibull( this.est.get( DistParam.shape ),
-									this.est.get( DistParam.scale ) )
-							.map( range::crop );
+							.createWeibull(this.est.get(DistParam.shape), this.est.get(DistParam.scale))
+							.map(range::crop);
 				}
 			}
 			return this.distCache;
@@ -176,8 +162,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	}
 
 	@Override
-	public String toString()
-	{
-		return JsonUtil.stringify( this );
+	public String toString() {
+		return JsonUtil.stringify(this);
 	};
 }
