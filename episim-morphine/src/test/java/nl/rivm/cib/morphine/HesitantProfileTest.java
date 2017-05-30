@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
+import io.coala.json.JsonUtil;
 import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.WeightedValue;
@@ -35,6 +36,7 @@ import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
+import io.coala.util.FileUtil;
 import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
 import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.HesitancyDimension;
 import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.VaccineStatus;
@@ -51,7 +53,7 @@ public class HesitantProfileTest
 	private static final Logger LOG = LogUtil
 			.getLogger( HesitantProfileTest.class );
 
-	private static final String PROFILES_FILE = "hesitancy-dists.json";
+	private static final String PROFILES_FILE = "conf/hesitancy-univariate.json";
 
 	private LocalBinder binder;
 
@@ -84,19 +86,22 @@ public class HesitantProfileTest
 		final ProbabilityDistribution<HesitancyProfileJson> profileDist = distFact
 				.createCategorical( profileDensity );
 
-		final VaccineStatus reportStatus = VaccineStatus.some;
-		int i = 0, j = 0, k = 0, n = 100000;
+		final float[][] initial = JsonUtil.valueOf(
+				FileUtil.toInputStream( "conf/hesitancy-initial.json" ),
+				float[][].class );
+		final VaccineStatus reportStatus = VaccineStatus.all;
+		int i = 0, j = 0, k = 0, l = 0, n = 100000;
 		for( ; i < n; i++ )
 		{
 			// step 1. draw profile (empirical)
 			final HesitancyProfileJson hes = profileDist.draw();
 			// step 2. draw values for each (univariate) distribution
-			final Double conf = hes.distParams
-					.get( HesitancyDimension.confidence ).createDist( distFact )
-					.draw();
-			final Double comp = hes.distParams
-					.get( HesitancyDimension.complacency )
-					.createDist( distFact ).draw();
+			int confCol = hes.indices.get( HesitancyDimension.confidence ) - 1;
+			int compCol = hes.indices.get( HesitancyDimension.complacency ) - 1;
+			int row = distFact.getStream().nextInt( initial.length );
+
+			final Double conf = (double) initial[row][confCol];//hes.distParams.get(HesitancyDimension.confidence).createDist(distFact).draw();
+			final Double comp = (double) initial[row][compCol];//hes.distParams.get(HesitancyDimension.complacency).createDist(distFact).draw();
 			// step 3. calculate the attitude: (conf + (1-comp))/2
 			final Double att = (conf + 1 - comp) / 2;
 			// step 4. update stats
@@ -104,14 +109,16 @@ public class HesitantProfileTest
 			{
 				j++;
 				if( att >= .5 ) k++; // is positive attitude?
+				if( hes.religious ) l++;
 			}
 		}
 		LOG.info(
 				"Of n={} profile draws, {} ({}%) have status '{}'"
-						+ ", of which {} ({}%) have a 'positive' attitude",
+						+ ", of which {} ({}%) have a 'positive' attitude and of which {} person are religious",
 				n, j,
 				DecimalUtil.toScale( DecimalUtil.multiply( j, 100. / i ), 1 ),
 				reportStatus, k,
-				DecimalUtil.toScale( DecimalUtil.multiply( k, 100. / j ), 1 ) );
+				DecimalUtil.toScale( DecimalUtil.multiply( k, 100. / j ), 1 ),
+				l );
 	}
 }

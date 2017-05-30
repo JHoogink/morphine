@@ -20,6 +20,7 @@ import io.coala.bind.LocalBinder;
 import io.coala.config.ConfigUtil;
 import io.coala.config.GlobalConfig;
 import io.coala.config.YamlUtil;
+import io.coala.json.JsonUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.Range;
 import io.coala.math.WeightedValue;
@@ -212,7 +213,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see HesitancyProfileJson */
-	@Key( HESITANCY_PREFIX + "profile-data" )
+	@Key( HESITANCY_PREFIX + "profiles" )
 	@DefaultValue( "conf/hesitancy-univariate.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfiles();
@@ -222,6 +223,17 @@ public interface HHConfig extends GlobalConfig
 	{
 		return distFactory.createCategorical( HesitancyProfileJson
 				.parse( this::hesitancyProfiles ).toList().blockingGet() );
+	}
+
+	/** @see HesitancyProfileJson */
+	@Key( HESITANCY_PREFIX + "profile-sample" )
+	@DefaultValue( "conf/hesitancy-initial.json" )
+	@ConverterClass( InputStreamConverter.class )
+	InputStream hesitancyProfileSample();
+
+	default <T> T hesitancyProfileSample( final Class<T> arrayType2D )
+	{
+		return JsonUtil.valueOf( hesitancyProfileSample(), arrayType2D );
 	}
 
 	/**

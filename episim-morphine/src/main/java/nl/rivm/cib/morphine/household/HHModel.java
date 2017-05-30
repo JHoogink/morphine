@@ -1,5 +1,6 @@
 package nl.rivm.cib.morphine.household;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.time.LocalDate;
@@ -24,7 +25,6 @@ import io.coala.bind.InjectConfig.Scope;
 import io.coala.bind.LocalBinder;
 import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
-import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityUtil;
 import io.coala.math.Range;
 import io.coala.persist.JPAUtil;
@@ -96,11 +96,15 @@ public class HHModel implements Scenario
 	private transient HHAttitudeEvaluator attitudeEvaluator;
 	private transient HHAttitudePropagator attitudePropagator;
 
+	/** reference to json indices */
+	private float[][] initial;
+	private ProbabilityDistribution<float[]> hesDist;
+
 	private transient ProbabilityDistribution<VaxOccasion> vaxOccasionDist;
 
 	@Override
-	public void init()
-		throws ParseException, InstantiationException, IllegalAccessException
+	public void init() throws ParseException, InstantiationException,
+		IllegalAccessException, IOException
 	{
 		final int n = this.config.populationSize();
 		this.hhAttributes = SparseMatrix.Factory.zeros( n,
@@ -131,7 +135,7 @@ public class HHModel implements Scenario
 				vaccinationUtilityDist.draw(), vaccinationProximityDist.draw(),
 				vaccinationClarityDist.draw(), vaccinationAffinityDist.draw() );
 
-//		final HHOracle.Factory oracleFact = 
+		// final HHOracle.Factory oracleFact =
 		this.config.hesitancyOracles( this.binder ).forEach( oracle ->
 		{
 			final long index = this.households.getAndIncrement();
@@ -143,6 +147,8 @@ public class HHModel implements Scenario
 			}, this::logError );
 		} );
 		this.oracleCount = this.households.get();
+
+		this.initial = this.config.hesitancyProfileSample( float[][].class );
 
 		// populate households
 		for( long time = System
@@ -173,7 +179,7 @@ public class HHModel implements Scenario
 		LOG.info( "Initialized {} pp ({}%) across {} hh", this.persons.get(),
 				this.persons.get() * 100 / n, this.households.get() );
 
-//		final Pathogen measles = this.pathogens.create( "MV-1" );
+		// final Pathogen measles = this.pathogens.create( "MV-1" );
 
 		atEach( this.config.statisticsRecurrence( scheduler() ) )
 				.subscribe( this::exportStatistics, this::logError );
@@ -190,8 +196,8 @@ public class HHModel implements Scenario
 	}
 
 	private static final HHAttribute[] CHILD_REF_COLUMN_INDICES = {
-//			HHAttribute.REFERENT_REF, 
-//			HHAttribute.PARTNER_REF, 
+			// HHAttribute.REFERENT_REF,
+			// HHAttribute.PARTNER_REF,
 			HHAttribute.CHILD1_REF, HHAttribute.CHILD2_REF,
 			HHAttribute.CHILD3_REF };
 
@@ -297,12 +303,22 @@ public class HHModel implements Scenario
 						expressingRef );
 
 		final BigDecimal initialCalculation = this.calculationDist.draw();
-		final BigDecimal initialConfidence = DecimalUtil.valueOf(
-				hesProf.distParams.get( HesitancyDimension.confidence )
-						.createDist( this.distFactory ).draw() );
-		final BigDecimal initialComplacency = DecimalUtil.valueOf(
-				hesProf.distParams.get( HesitancyDimension.complacency )
-						.createDist( this.distFactory ).draw() );
+		this.hesDist = () ->
+		{
+			final int row = this.distFactory.getStream()
+					.nextInt( this.initial.length );
+			final HesitancyProfileJson hes = this.hesitancyDist.draw();
+			return new float[] {
+					this.initial[row][hes.indices
+							.get( HesitancyDimension.confidence ) - 1],
+					this.initial[row][hes.indices
+							.get( HesitancyDimension.complacency ) - 1] };
+		};
+//		final BigDecimal initialConfidence = DecimalUtil
+//				.valueOf(hesProf.distParams.get(HesitancyDimension.confidence).createDist(this.distFactory).draw());
+//		final BigDecimal initialComplacency = DecimalUtil
+//				.valueOf(hesProf.distParams.get(HesitancyDimension.complacency).createDist(this.distFactory).draw());
+		final float[] initial = this.hesDist.draw();
 
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
@@ -317,9 +333,9 @@ public class HHModel implements Scenario
 				HHAttribute.REGISTERED.ordinal() );
 		this.hhAttributes.setAsBigDecimal( initialCalculation, hhIndex,
 				HHAttribute.CALCULATION.ordinal() );
-		this.hhAttributes.setAsBigDecimal( initialConfidence, hhIndex,
+		this.hhAttributes.setAsFloat( initial[0], hhIndex,
 				HHAttribute.CONFIDENCE.ordinal() );
-		this.hhAttributes.setAsBigDecimal( initialComplacency, hhIndex,
+		this.hhAttributes.setAsFloat( initial[1], hhIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
 		this.hhAttributes.setAsLong( referentRef, hhIndex,
 				HHAttribute.REFERENT_REF.ordinal() );
@@ -333,10 +349,10 @@ public class HHModel implements Scenario
 				HHAttribute.CHILD3_REF.ordinal() );
 
 		// evaluate current barrier value
-//		this.hhAttributes.setAsBigDecimal(
-//				this.barrierEvaluator.barrierOf(
-//						this.hhAttributes.selectRows( Ret.LINK, hhIndex ) ),
-//				hhIndex, HHAttribute.BARRIER.ordinal() );
+		// this.hhAttributes.setAsBigDecimal(
+		// this.barrierEvaluator.barrierOf(
+		// this.hhAttributes.selectRows( Ret.LINK, hhIndex ) ),
+		// hhIndex, HHAttribute.BARRIER.ordinal() );
 
 		return hhType.size();
 	}
@@ -388,13 +404,13 @@ public class HHModel implements Scenario
 				key -> (long) this.ppIndex.size() );
 	}
 
-//	private final Map<Region.ID, Long> placeIndex = new HashMap<>();
+	// private final Map<Region.ID, Long> placeIndex = new HashMap<>();
 
 	private long toPlaceIndex( final Region.ID placeRef )
 	{
 		return Long.valueOf( placeRef.unwrap().substring( 2 ) );
-//		return this.placeIndex.computeIfAbsent( placeRef,
-//				key -> (long) this.placeIndex.size() );
+		// return this.placeIndex.computeIfAbsent( placeRef,
+		// key -> (long) this.placeIndex.size() );
 	}
 
 	private void exportStatistics( final Instant t )

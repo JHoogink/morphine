@@ -22,10 +22,11 @@ package nl.rivm.cib.morphine.pienter;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.EnumMap;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.coala.json.JsonUtil;
@@ -43,6 +44,7 @@ import io.reactivex.Observable;
  * @version $Id$
  * @author Rick van Krevelen
  */
+@JsonIgnoreProperties( ignoreUnknown = true )
 public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 {
 	public static Observable<WeightedValue<HesitancyProfileJson>>
@@ -81,6 +83,10 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	/** the original profile density/fraction */
 	public BigDecimal fraction;
 
+	/** reference index to hesitancy-initial.json */
+	@JsonProperty( "indices" )
+	public EnumMap<HesitancyDimension, Integer> indices;
+
 	/** the initial attitude distributions per hesitancy dimension */
 	@JsonProperty( "distributions" )
 	public EnumMap<HesitancyDimension, DistParams> distParams;
@@ -104,7 +110,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	/**
 	 * {@link VaccineStatus} is a possible vaccination status
 	 */
-	public static enum VaccineStatus
+	public enum VaccineStatus
 	{
 		all, some, none;
 	}
@@ -112,7 +118,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	/**
 	 * {@link DistType} is a type of (R-fitted) distribution
 	 */
-	public static enum DistType
+	public enum DistType
 	{
 		weibull;
 	}
@@ -120,7 +126,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	/**
 	 * {@link DistParam} is a (R-fitted) distribution parameter name
 	 */
-	public static enum DistParam
+	public enum DistParam
 	{
 		shape, scale;
 	}
@@ -129,6 +135,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	 * {@link DistParams} describes and instantiates a (R-fitted) distribution
 	 * of attitude values
 	 */
+	@JsonIgnoreProperties( ignoreUnknown = true )
 	public static class DistParams
 	{
 		/** the fitted distribution type */
@@ -141,10 +148,10 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 		public Double max;
 
 		/** the distribution parameter estimate */
-		public Map<HesitancyProfileJson.DistParam, BigDecimal> est;
+		public List<BigDecimal> est;
 
 		/** the distribution parameter error (standard deviation) */
-		public Map<HesitancyProfileJson.DistParam, BigDecimal> sd;
+		public List<BigDecimal> sd;
 
 		private ProbabilityDistribution<Double> distCache;
 
@@ -157,7 +164,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 		{
 			if( this.distCache == null )
 			{
-				// avoid compl==conf, e.g. min: .5 -> .505,  max: .5 -> .497
+				// avoid compl==conf, e.g. min: .5 -> .505, max: .5 -> .497
 				final Range<Double> range = Range.of( this.min * 1.01,
 						Math.pow( this.max, 1.01 ) );
 				switch( this.type )
@@ -166,8 +173,9 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 					// TODO map other distribution types
 				case weibull:
 					this.distCache = distFact
-							.createWeibull( this.est.get( DistParam.shape ),
-									this.est.get( DistParam.scale ) )
+							.createWeibull(
+									this.est.get( DistParam.shape.ordinal() ),
+									this.est.get( DistParam.scale.ordinal() ) )
 							.map( range::crop );
 				}
 			}
