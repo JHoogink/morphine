@@ -17,7 +17,6 @@ import javax.persistence.EntityManagerFactory;
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
-import org.ujmp.core.calculation.Calculation.Ret;
 
 import io.coala.bind.InjectConfig;
 import io.coala.bind.InjectConfig.Scope;
@@ -86,6 +85,7 @@ public class HHModel implements Scenario
 	private Matrix ppAttributes;
 	private final AtomicLong households = new AtomicLong();
 	private final AtomicLong persons = new AtomicLong();
+//	private long oracleCount;
 
 	/** empirical household compositions and referent ages, see CBS 71486 */
 	private transient ConditionalDistribution<Cbs71486json.Category, LocalDate> localHouseholdDist;
@@ -93,7 +93,7 @@ public class HHModel implements Scenario
 	private transient ProbabilityDistribution<HesitancyProfileJson> hesitancyDist;
 	private transient ProbabilityDistribution<BigDecimal> calculationDist;
 	private transient HHAttitudeEvaluator attitudeEvaluator;
-	private transient HHAttitudePropagator attitudePropagator;
+//	private transient HHAttitudePropagator attitudePropagator;
 
 	private transient ProbabilityDistribution<VaxOccasion> vaxOccasionDist;
 
@@ -130,6 +130,19 @@ public class HHModel implements Scenario
 				vaccinationUtilityDist.draw(), vaccinationProximityDist.draw(),
 				vaccinationClarityDist.draw(), vaccinationAffinityDist.draw() );
 
+//		final HHOracle.Factory oracleFact = 
+		this.config.hesitancyOracles( this.binder ).forEach( oracle ->
+		{
+			final long index = this.households.getAndIncrement();
+			oracle.position().subscribe( map ->
+			{
+				map.forEach( ( att, val ) -> this.hhAttributes
+						.setAsBigDecimal( val, index, att.ordinal() ) );
+				LOG.info( "t={}, oracle {}: {}", dt(), index, map );
+			} );
+		} );
+//		this.oracleCount = this.households.get();
+
 		// populate households
 		for( long time = System
 				.currentTimeMillis(), i = 0, agPrev = 0; i < n; i++ )
@@ -149,14 +162,10 @@ public class HHModel implements Scenario
 
 		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
 				.newInstance();
-		this.attitudePropagator = this.config.attitudePropagatorType()
-				.newInstance();
+//		this.attitudePropagator = this.config.attitudePropagatorType()
+//				.newInstance();
 		atEach( this.config.vaccinationRecurrence( scheduler() ) )
 				.subscribe( this::vaccinate, this::logError );
-		
-		final HHOracle.Factory oracleFact = 
-		this.config.hesitancyOracleFactory().newInstance();
-		
 
 		// TODO add expressingRefs from own / neighboring / global placeRef dist
 
@@ -169,15 +178,15 @@ public class HHModel implements Scenario
 				.subscribe( this::exportStatistics, this::logError );
 	}
 
-	private void impress( final Instant t, final long... hhFilter )
-	{
-		this.attitudePropagator.propagate(
-				hhFilter == null ? // impress all  
-						this.hhPressure
-						// impress selected only
-						: this.hhPressure.selectRows( Ret.LINK, hhFilter ),
-				this.hhAttributes );
-	}
+//	private void impress( final Instant t, final long... hhFilter )
+//	{
+//		this.attitudePropagator.propagate(
+//				hhFilter == null ? // impress all  
+//						this.hhPressure
+//						// impress selected only
+//						: this.hhPressure.selectRows( Ret.LINK, hhFilter ),
+//				this.hhAttributes );
+//	}
 
 	private static final HHAttribute[] CHILD_REF_COLUMN_INDICES = {
 //			HHAttribute.REFERENT_REF, 
@@ -356,6 +365,7 @@ public class HHModel implements Scenario
 
 	protected LocalDate dt()
 	{
+		// FIXME fix daylight savings adjustment, seems to adjust the wrong way
 		return now().equals( this.dtInstant ) ? this.dtCache
 				: (this.dtCache = (this.dtInstant = now())
 						.toJava8( scheduler().offset().toLocalDate() ));

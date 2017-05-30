@@ -1,25 +1,22 @@
 package nl.rivm.cib.morphine.household;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Properties;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
-import org.aeonbits.owner.Config.Sources;
-import org.aeonbits.owner.ConfigFactory;
+import org.aeonbits.owner.ConfigCache;
 import org.aeonbits.owner.Converter;
-import org.aeonbits.owner.loaders.Loader;
 
+import io.coala.bind.LocalBinder;
 import io.coala.config.ConfigUtil;
 import io.coala.config.GlobalConfig;
 import io.coala.config.YamlUtil;
@@ -33,7 +30,7 @@ import io.coala.time.Scheduler;
 import io.coala.time.Timing;
 import io.coala.util.FileUtil;
 import io.coala.util.InputStreamConverter;
-import io.coala.util.Instantiator;
+import io.reactivex.Observable;
 import io.reactivex.internal.functions.Functions;
 import nl.rivm.cib.epidemes.cbs.json.CBSRegionType;
 import nl.rivm.cib.epidemes.cbs.json.Cbs71486json;
@@ -46,13 +43,9 @@ import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
  * @version $Id$
  * @author Rick van Krevelen
  */
-@Sources( { /*
-			 * "${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-			 * "${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-			 */
-//		"classpath:" + 
-		"file:/C:/Users/Joram%20Hoogink/Documents/Morphine/Source/morphine-episim/episim-morphine/"
-				+ HHConfig.MORPHINE_CONFIG_YAML_FILE } )
+//@Sources( { "${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
+//		"${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
+//		"classpath:" + HHConfig.MORPHINE_CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
 
@@ -202,10 +195,22 @@ public interface HHConfig extends GlobalConfig
 		return distParser.parse( vaccinationAffinityDist() );
 	}
 
-	@Key(HESITANCY_PREFIX+"oracle-factory")
-	@DefaultValue("nl.rivm.cib.morphine.household.HHOracle$Factory$Simple")
+	@Key( HESITANCY_PREFIX + "oracle-factory" )
+	@DefaultValue( "nl.rivm.cib.morphine.household.HHOracle$Factory$SimpleBinding" )
 	Class<? extends HHOracle.Factory> hesitancyOracleFactory();
-	
+
+	default Observable<HHOracle> hesitancyOracles( final LocalBinder binder )
+	{
+		try
+		{
+			return hesitancyOracleFactory().newInstance().createAll(
+					toJSON( HESITANCY_PREFIX + "oracles" ), binder );
+		} catch( final Exception e )
+		{
+			return Observable.error( e );
+		}
+	}
+
 	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profile-data" )
 	@DefaultValue( "conf/hesitancy-univariate.json" )
@@ -219,7 +224,11 @@ public interface HHConfig extends GlobalConfig
 				.parse( this::hesitancyProfiles ).toList().blockingGet() );
 	}
 
-	/** @see HesitancyProfileJson */
+	/**
+	 * TODO from profile-data
+	 * 
+	 * @see HesitancyProfileJson
+	 */
 	@Key( HESITANCY_PREFIX + "calculation-dist" )
 	@DefaultValue( "const(0.5)" )
 	String hesitancyCalculationDist();
@@ -237,8 +246,9 @@ public interface HHConfig extends GlobalConfig
 	Class<? extends HHAttitudeEvaluator> attitudeEvaluatorType();
 
 	default HHAttitudeEvaluator attitudeEvaluator()
+		throws InstantiationException, IllegalAccessException
 	{
-		return Instantiator.instantiate( attitudeEvaluatorType() );
+		return attitudeEvaluatorType().newInstance();
 	}
 
 	/** @see HHAttitudePropagator */
@@ -247,16 +257,40 @@ public interface HHConfig extends GlobalConfig
 	Class<? extends HHAttitudePropagator> attitudePropagatorType();
 
 	default HHAttitudePropagator attitudePropagator()
+		throws InstantiationException, IllegalAccessException
 	{
-		return Instantiator.instantiate( attitudePropagatorType() );
+		return attitudePropagatorType().newInstance();
+	}
+
+	String CONF_ARG = "conf";
+
+	/**
+	 * provide a universal approach for loading the {@link HHConfig}
+	 * 
+	 * @param args the command-line arguments, any "..=.." will be imported as
+	 *            override to the , if any
+	 * @return a (cached) {@link HHConfig} instance
+	 * @throws IOException
+	 */
+	static HHConfig getOrCreate( final String... args ) throws IOException
+	{
+		// convert command-line arguments to map
+		final Map<String, String> argMap = Arrays.stream( args )
+				.filter( arg -> arg.contains( "=" ) )
+				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length == 2 )
+				.collect( Collectors.toMap( arr -> arr[0], arr -> arr[1] ) );
+		argMap.computeIfAbsent( CONF_ARG,
+				key -> "conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE );
+
+		// merge arguments into configuration imported from YAML file
+		return ConfigCache.getOrCreate( HHConfig.class, argMap,
+				YamlUtil.flattenYaml(
+						FileUtil.toInputStream( argMap.get( CONF_ARG ) ) ) );
 	}
 
 //	@Key( "morphine.measles.contact-period" )
 //	@DefaultValue( "10 h" )
 //	Duration contactPeriod();
-//
-//	@DefaultValue( "uniform-discrete(-5;0)" )
-//	String birthDist();
 //
 //	@DefaultValue( "2 day" )
 //	Duration latentPeriodConst();
@@ -292,55 +326,4 @@ public interface HHConfig extends GlobalConfig
 			return LocalDate.parse( input );
 		}
 	}
-
-	/** {@link YamlLoader} is a {@link Loader} for YAML format configurations */
-	class YamlLoader implements Loader
-	{
-		private static final long serialVersionUID = 1L;
-
-		private static boolean registered = false;
-
-		public synchronized static void register()
-		{
-			if( !registered )
-			{
-				ConfigFactory.registerLoader( new YamlLoader() );
-				registered = true;
-			}
-		}
-
-		@Override
-		public boolean accept( final URI uri )
-		{
-			final String path = uri.toASCIIString();
-			if( !path.toLowerCase().contains( "yaml" ) ) return false;
-			try
-			{
-				uri.toURL();
-				return true;
-			} catch( final MalformedURLException ex )
-			{
-				return new File( path ).exists() || Thread.currentThread()
-						.getContextClassLoader().getResource( path ) != null;
-			}
-		}
-
-		@Override
-		public void load( final Properties result, final URI uri )
-			throws IOException
-		{
-			try( final InputStream is = FileUtil.toInputStream( uri ) )
-			{
-				result.putAll( YamlUtil.flattenYaml( is ) );
-			}
-		}
-
-		@Override
-		public String defaultSpecFor( final String uriPrefix )
-		{
-			return uriPrefix + ".yaml";
-		}
-
-	}
-
 }

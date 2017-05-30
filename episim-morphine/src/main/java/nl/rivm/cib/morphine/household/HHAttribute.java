@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 
 import org.ujmp.core.Matrix;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * {@link HHAttribute}
  * 
@@ -90,5 +92,14 @@ public enum HHAttribute
 				.collect( Collectors.toMap( att -> att,
 						att -> att.get( data, hhIndex ), ( att1, att2 ) -> att1,
 						() -> new EnumMap<>( HHAttribute.class ) ) );
+	}
+
+	private String json = null;
+
+	@JsonValue
+	public String jsonValue()
+	{
+		return this.json == null ? (this.json = name().toLowerCase())
+				: this.json;
 	}
 }

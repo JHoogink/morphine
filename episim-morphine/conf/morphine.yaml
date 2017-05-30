@@ -19,7 +19,24 @@ morphine:
     hesitancy:
       profile-data: conf/hesitancy-univariate.json
       calculation-dist: const(0.5)
-#      barrier-evaluator: nl.rivm.cib.morphine.household.HHBarrierEvaluator$Average
+      oracles:
+      # e.g. RIVM
+      - religious: 1
+        alternative: 0
+        confidence: 1
+        complacency: 0
+        type: nl.rivm.cib.morphine.household.HHOracle$SignalSchedule
+        schedule: 
+        # trigger monthly disturbance and 5-day recovery to original values
+        - recurrence: 0 0 0 1 * ? *
+          interval: 1 day
+          series:
+            confidence:  [.5, .6, .7, .8, .9, 1]
+            complacency: [.5, .4, .3, .2, .1, 0]
+      # e.g. some other HHOracle implementation
+      - d: e
+        f: 3
+
 #  measles:
 #    contact-period: 2 day
     

@@ -22,9 +22,7 @@ package nl.rivm.cib.morphine.household;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
@@ -36,7 +34,6 @@ import org.hibernate.cfg.AvailableSettings;
 import org.hsqldb.jdbc.JDBCDataSource;
 
 import io.coala.bind.LocalConfig;
-import io.coala.config.YamlUtil;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
@@ -49,7 +46,6 @@ import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
-import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import nl.rivm.cib.episim.cbs.TimeUtil;
 
@@ -75,20 +71,9 @@ public class HHSimulator
 	public static void main( final String[] args )
 		throws NamingException, IOException
 	{
-		// convert command-line arguments to map
-		final Map<String, String> argMap = Arrays.stream( args )
-				.filter( arg -> arg.contains( "=" ) )
-				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length == 2 )
-				.collect( Collectors.toMap( arr -> arr[0], arr -> arr[1] ) );
-		argMap.computeIfAbsent( CONF_ARG, key -> "conf/morphine.yaml" );
-
-		// merge arguments into configuration imported from YAML file
-		HHConfig.YamlLoader.register();
-		final HHConfig hhConfig = ConfigCache.getOrCreate( HHConfig.class,
-				argMap, YamlUtil.flattenYaml(
-						FileUtil.toInputStream( argMap.get( CONF_ARG ) ) ) );
+		final HHConfig hhConfig = HHConfig.getOrCreate( args );
 		LOG.info( "Starting {}, args: {} -> config: {}",
-				HHSimulator.class.getSimpleName(), argMap, hhConfig );
+				HHSimulator.class.getSimpleName(), args, hhConfig );
 
 		// bind a local HSQL data source for exporting statistics
 		JndiUtil.bindLocally( HHConfig.DATASOURCE_JNDI, '/', () ->
