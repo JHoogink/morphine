@@ -22,11 +22,7 @@ package nl.rivm.cib.morphine.household;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -36,15 +32,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.coala.bind.LocalBinder;
 import io.coala.exception.ExceptionFactory;
-import io.coala.json.JsonUtil;
 import io.coala.log.LogUtil.Pretty;
-import io.coala.time.Duration;
-import io.coala.time.Proactive;
 import io.coala.time.Scheduler;
-import io.coala.time.Timing;
 import io.reactivex.Observable;
-import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.Subject;
 
 /**
  * {@link HHOracle} adds special proactive entities acting as special
@@ -55,7 +45,7 @@ import io.reactivex.subjects.Subject;
  * @version $Id$
  * @author Rick van Krevelen
  */
-public interface HHOracle
+public interface HHOracle extends HHScenarioConfigurable
 {
 	/**
 	 * @return an {@link Observable} stream of {@link HHAttribute} values
@@ -64,40 +54,16 @@ public interface HHOracle
 	Observable<Map<HHAttribute, BigDecimal>> position();
 
 	/**
-	 * @param config a {@link JsonNode} configuration
-	 * @return this {@link HHOracle} for chaining
-	 */
-	HHOracle reset( JsonNode config ) throws ParseException;
-
-	/**
 	 * {@link SignalSchedule} executes simple position updates configured as
-	 * {@link SignalSchedule.SignalJson} entries
+	 * {@link SignalSchedule.SignalYaml} entries
 	 */
-	class SignalSchedule implements HHOracle, Proactive
+	class SignalSchedule implements HHOracle
 	{
-		/** {@link SignalJson} specifies position update rule configurations */
-		public static class SignalJson
-		{
-			public String recurrence;
-			public Duration interval;
-			public EnumMap<HHAttribute, SortedMap<Integer, BigDecimal>> series;
-		}
 
-		public static final String SCHEDULE_KEY = "schedule";
-
-		public static final String SERIES_SEP = Pattern.quote( ";" );
-
-		private transient BehaviorSubject<Map<HHAttribute, BigDecimal>> position;
+		private JsonNode config;
 
 		@Inject
 		private Scheduler scheduler;
-
-		@Override
-		public String toString()
-		{
-			return getClass().getSimpleName() + "@"
-					+ Integer.toHexString( hashCode() );
-		}
 
 		@Override
 		public Scheduler scheduler()
@@ -108,60 +74,38 @@ public interface HHOracle
 		@Override
 		public Observable<Map<HHAttribute, BigDecimal>> position()
 		{
-			return this.position;
+			if( this.config == null ) return Observable.empty();
+
+			final Map<HHAttribute, BigDecimal> initial = Arrays
+					.stream( HHAttribute.values() )
+					.filter( attr -> this.config.has( attr.jsonValue() ) )
+					.collect(
+							Collectors.toMap( attr -> attr, attr -> this.config
+									.get( attr.jsonValue() ).decimalValue() ) );
+
+			if( !this.config.has( SCHEDULE_KEY ) )
+				return Observable.just( initial );
+
+			return Observable.create( sub ->
+			{
+				sub.onNext( initial );
+				iterate( this.config.get( SCHEDULE_KEY ), HHAttribute.class,
+						BigDecimal.class ).subscribe( sub::onNext,
+								sub::onError );
+			} );
 		}
 
 		@Override
-		public HHOracle reset( final JsonNode config )
+		public HHOracle reset( final JsonNode config ) throws ParseException
 		{
-			if( this.position != null ) this.position.onComplete();
-
-			// set default position (attribute values) from config
-			final BehaviorSubject<Map<HHAttribute, BigDecimal>> position = BehaviorSubject
-					.createDefault( Arrays.stream( HHAttribute.values() )
-							.filter( att -> config.has( att.jsonValue() ) )
-							.collect( Collectors.toMap( att -> att,
-									att -> config
-											.get( att.jsonValue() )
-											.decimalValue(),
-									( k1, k2 ) -> k1, () -> new EnumMap<>(
-											HHAttribute.class ) ) ) );
-
-			// schedule specified attribute value schedules, if any
-			if( config.has( SCHEDULE_KEY ) )
-			{
-				Observable.fromIterable( config.get( SCHEDULE_KEY ) ).map(
-						node -> JsonUtil.valueOf( node, SignalJson.class ) )
-						.blockingSubscribe( item ->
-						{
-							atEach( Timing.of( item.recurrence ).iterate(),
-									t -> updatePosition( position,
-											item.interval, item.series, 0 ) );
-						} );
-			}
-			this.position = position;
+			this.config = config;
 			return this;
 		}
 
-		// this method repeatedly schedules itself until the series are complete
-		protected void updatePosition(
-			final Subject<Map<HHAttribute, BigDecimal>> position,
-			final Duration interval,
-			final Map<HHAttribute, SortedMap<Integer, BigDecimal>> series,
-			final int index )
+		@Override
+		public String toString()
 		{
-			if( series.isEmpty() || position.hasComplete() ) return;
-			final EnumMap<HHAttribute, BigDecimal> newPosition = series
-					.entrySet().parallelStream()
-					.filter( e -> index < e.getValue().size() )
-					.collect( Collectors.toMap( Entry::getKey,
-							e -> e.getValue().get( index ), ( k1,
-								k2 ) -> k1,
-							() -> new EnumMap<>( HHAttribute.class ) ) );
-			if( newPosition.isEmpty() ) return;
-			position.onNext( newPosition );
-			after( interval ).call( t -> updatePosition( position, interval,
-					series, index + 1 ) );
+			return getClass().getSimpleName() + this.config;
 		}
 	}
 
