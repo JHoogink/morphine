@@ -1,734 +1,614 @@
 [
-	{
-		"religious" : false,
-		"alternative" : false,
-		"status" : "all",
-		"count" : 877,
-		"fraction" : 0.5443823712,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.585259017,
-					"scale" : 0.753827048
-				},
-				"sd" : {
-					"shape" : 0.2086062049,
-					"scale" : 0.003521936767
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 8.45563962,
-					"scale" : 0.7527844999
-				},
-				"sd" : {
-					"shape" : 0.2181629466,
-					"scale" : 0.003175241978
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 8.912543201,
-					"scale" : 0.7489266886
-				},
-				"sd" : {
-					"shape" : 0.234045238,
-					"scale" : 0.002992425816
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.987244845,
-					"scale" : 0.7171632558
-				},
-				"sd" : {
-					"shape" : 0.08542592485,
-					"scale" : 0.008471767584
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : false,
-		"alternative" : false,
-		"status" : "some",
-		"count" : 22,
-		"fraction" : 0.01365611421,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.719643904,
-					"scale" : 0.575023465
-				},
-				"sd" : {
-					"shape" : 0.4849314924,
-					"scale" : 0.04707770106
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.399898027,
-					"scale" : 0.5797707277
-				},
-				"sd" : {
-					"shape" : 0.9160221047,
-					"scale" : 0.02421203992
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.943731011,
-					"scale" : 0.5797253534
-				},
-				"sd" : {
-					"shape" : 0.6781950508,
-					"scale" : 0.03304154131
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 15.56622456,
-					"scale" : 0.9617950255
-				},
-				"sd" : {
-					"shape" : 2.766494023,
-					"scale" : 0.01390891741
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : false,
-		"alternative" : false,
-		"status" : "none",
-		"count" : 19,
-		"fraction" : 0.01179391682,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 0.6256449151,
-					"scale" : 0.2442706738
-				},
-				"sd" : {
-					"shape" : 0.1335367674,
-					"scale" : 0.09104635155
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.783384349,
-					"scale" : 0.42452212
-				},
-				"sd" : {
-					"shape" : 0.4641695941,
-					"scale" : 0.03718255518
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.082749042,
-					"scale" : 0.3739402747
-				},
-				"sd" : {
-					"shape" : 0.3529123918,
-					"scale" : 0.04366428808
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 8.626693143,
-					"scale" : 0.965747836
-				},
-				"sd" : {
-					"shape" : 1.856959967,
-					"scale" : 0.02612131203
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : false,
-		"alternative" : true,
-		"status" : "all",
-		"count" : 276,
-		"fraction" : 0.1713221601,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 6.480946951,
-					"scale" : 0.7113244935
-				},
-				"sd" : {
-					"shape" : 0.3153765376,
-					"scale" : 0.006926447235
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.208612065,
-					"scale" : 0.7057591931
-				},
-				"sd" : {
-					"shape" : 0.3361051689,
-					"scale" : 0.006212366711
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.467746857,
-					"scale" : 0.7049849623
-				},
-				"sd" : {
-					"shape" : 0.352371951,
-					"scale" : 0.005975301272
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.308954893,
-					"scale" : 0.7608854439
-				},
-				"sd" : {
-					"shape" : 0.1705674623,
-					"scale" : 0.01442942919
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : false,
-		"alternative" : true,
-		"status" : "some",
-		"count" : 41,
-		"fraction" : 0.02545003104,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 1.431003499,
-					"scale" : 0.4074212055
-				},
-				"sd" : {
-					"shape" : 0.1928473241,
-					"scale" : 0.04555967644
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.499848301,
-					"scale" : 0.454694672
-				},
-				"sd" : {
-					"shape" : 0.4163769405,
-					"scale" : 0.02148717902
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.769003054,
-					"scale" : 0.4456584577
-				},
-				"sd" : {
-					"shape" : 0.3336091355,
-					"scale" : 0.02655272241
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 14.67369629,
-					"scale" : 0.9681007669
-				},
-				"sd" : {
-					"shape" : 2.013447121,
-					"scale" : 0.01075865897
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : false,
-		"alternative" : true,
-		"status" : "none",
-		"count" : 48,
-		"fraction" : 0.02979515829,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 0.5117113129,
-					"scale" : 0.1301431401
-				},
-				"sd" : {
-					"shape" : 0.07017457321,
-					"scale" : 0.03740640729
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.419308369,
-					"scale" : 0.3306672448
-				},
-				"sd" : {
-					"shape" : 0.3644916041,
-					"scale" : 0.0148079479
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.607286587,
-					"scale" : 0.2608118018
-				},
-				"sd" : {
-					"shape" : 0.2850632307,
-					"scale" : 0.01526467696
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 9.323838927,
-					"scale" : 0.9662826233
-				},
-				"sd" : {
-					"shape" : 1.247474025,
-					"scale" : 0.01521456197
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : false,
-		"status" : "all",
-		"count" : 139,
-		"fraction" : 0.08628181254,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.24102598,
-					"scale" : 0.7255019694
-				},
-				"sd" : {
-					"shape" : 0.4888645352,
-					"scale" : 0.008937245215
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.717976816,
-					"scale" : 0.7327774964
-				},
-				"sd" : {
-					"shape" : 0.4760649268,
-					"scale" : 0.008514081269
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 8.226003612,
-					"scale" : 0.7254038976
-				},
-				"sd" : {
-					"shape" : 0.5271019156,
-					"scale" : 0.007899860571
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.327645337,
-					"scale" : 0.7354875617
-				},
-				"sd" : {
-					"shape" : 0.2409276636,
-					"scale" : 0.01956980207
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : false,
-		"status" : "some",
-		"count" : 7,
-		"fraction" : 0.00434512725,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 0.5230135749,
-					"scale" : 0.4447338795
-				},
-				"sd" : {
-					"shape" : 0.1961462673,
-					"scale" : 0.3252555186
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 10.68648308,
-					"scale" : 0.5957963862
-				},
-				"sd" : {
-					"shape" : 3.279557186,
-					"scale" : 0.02215083876
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.684852501,
-					"scale" : 0.5878520605
-				},
-				"sd" : {
-					"shape" : 1.843030208,
-					"scale" : 0.04066713215
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.920519565,
-					"scale" : 0.8590392287
-				},
-				"sd" : {
-					"shape" : 1.75869157,
-					"scale" : 0.05805820852
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : false,
-		"status" : "none",
-		"count" : 32,
-		"fraction" : 0.01986343886,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.007629413,
-					"scale" : 0.274117288
-				},
-				"sd" : {
-					"shape" : 0.2856944784,
-					"scale" : 0.0253417098
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.236067045,
-					"scale" : 0.451030305
-				},
-				"sd" : {
-					"shape" : 0.7304308305,
-					"scale" : 0.0160676323
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 4.069080894,
-					"scale" : 0.3632555837
-				},
-				"sd" : {
-					"shape" : 0.5665958859,
-					"scale" : 0.01663879304
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.020190977,
-					"scale" : 0.6688732247
-				},
-				"sd" : {
-					"shape" : 0.3071651414,
-					"scale" : 0.06126282735
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : true,
-		"status" : "all",
-		"count" : 101,
-		"fraction" : 0.0626939789,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 6.633668953,
-					"scale" : 0.719398069
-				},
-				"sd" : {
-					"shape" : 0.5313134048,
-					"scale" : 0.01134681307
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 7.27622658,
-					"scale" : 0.6876982531
-				},
-				"sd" : {
-					"shape" : 0.5387889942,
-					"scale" : 0.009961890718
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 8.069299539,
-					"scale" : 0.6976426827
-				},
-				"sd" : {
-					"shape" : 0.6128057918,
-					"scale" : 0.009087302533
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.718618155,
-					"scale" : 0.7788977203
-				},
-				"sd" : {
-					"shape" : 0.3139575593,
-					"scale" : 0.02175695084
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : true,
-		"status" : "some",
-		"count" : 14,
-		"fraction" : 0.0086902545,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 4.52692775,
-					"scale" : 0.6063230103
-				},
-				"sd" : {
-					"shape" : 1.011176826,
-					"scale" : 0.03759288896
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.240073069,
-					"scale" : 0.5537725279
-				},
-				"sd" : {
-					"shape" : 1.156678342,
-					"scale" : 0.02965226003
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 5.370543855,
-					"scale" : 0.5766442184
-				},
-				"sd" : {
-					"shape" : 1.198232137,
-					"scale" : 0.03011597332
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 12.12417442,
-					"scale" : 0.9245156904
-				},
-				"sd" : {
-					"shape" : 2.480568947,
-					"scale" : 0.02159961176
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	},
-	{
-		"religious" : true,
-		"alternative" : true,
-		"status" : "none",
-		"count" : 35,
-		"fraction" : 0.02172563625,
-		"distributions" : {
-			"complacency" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 0.8537212889,
-					"scale" : 0.2300051653
-				},
-				"sd" : {
-					"shape" : 0.1383288107,
-					"scale" : 0.04591710137
-				},
-				"min" : 0.5,
-				"max" : 1
-			},
-			"confidence" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 4.231687929,
-					"scale" : 0.3738952179
-				},
-				"sd" : {
-					"shape" : 0.5554346648,
-					"scale" : 0.01580596066
-				},
-				"min" : 0,
-				"max" : 0.5
-			},
-			"attitude" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 3.523777559,
-					"scale" : 0.3198351242
-				},
-				"sd" : {
-					"shape" : 0.4624375813,
-					"scale" : 0.01619679324
-				},
-				"min" : 0,
-				"max" : 1
-			},
-			"calculation" : {
-				"type" : "weibull",
-				"est" : {
-					"shape" : 2.784260766,
-					"scale" : 0.7979177229
-				},
-				"sd" : {
-					"shape" : 0.4264813223,
-					"scale" : 0.0500759445
-				},
-				"min" : 0,
-				"max" : 1
-			}
-		}
-	}
+  {
+    "religious": [false],
+    "alternative": [false],
+    "status": ["all"],
+    "count": [877],
+    "fraction": [0.5443823712],
+    "frac.Confi.gt.Compl": [0.518],
+    "corrConfComp": [0.53963771269],
+    "indices": {
+      "complacency": [1],
+      "confidence": [2]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [7.5852590167, 0.75382704801],
+        "sd": [0.20860620488, 0.003521936767],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.28571428571],
+        "trueMax": [0.85714285714]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [8.4556396197, 0.75278449988],
+        "sd": [0.21816294664, 0.0031752419781],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.38571428571],
+        "trueMax": [0.91428571429]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [8.9125432007, 0.74892668861],
+        "sd": [0.23404523797, 0.0029924258156],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.375],
+        "trueMax": [0.88571428571]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [2.9872448451, 0.71716325581],
+        "sd": [0.085425924851, 0.0084717675841],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [false],
+    "alternative": [false],
+    "status": ["some"],
+    "count": [22],
+    "fraction": [0.013656114215],
+    "frac.Confi.gt.Compl": [0.545],
+    "corrConfComp": [0.81055875014],
+    "indices": {
+      "complacency": [3],
+      "confidence": [4]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [2.7196439035, 0.57502346505],
+        "sd": [0.48493149242, 0.047077701062],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.071428571429],
+        "trueMax": [0.82142857143]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [5.3998980266, 0.57977072767],
+        "sd": [0.91602210468, 0.024212039924],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.37142857143],
+        "trueMax": [0.71428571429]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [3.9437310114, 0.57972535339],
+        "sd": [0.67819505083, 0.03304154131],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.25714285714],
+        "trueMax": [0.76785714286]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [15.5662245632, 0.96179502553],
+        "sd": [2.7664940231, 0.013908917406],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.85714285714],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [false],
+    "alternative": [false],
+    "status": ["none"],
+    "count": [19],
+    "fraction": [0.011793916822],
+    "frac.Confi.gt.Compl": [0.789],
+    "corrConfComp": [0.79471299175],
+    "indices": {
+      "complacency": [5],
+      "confidence": [6]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [0.62564491506, 0.24427067381],
+        "sd": [0.13353676744, 0.09104635155],
+        "min": [0],
+        "max": [1],
+        "trueMin": [1e-006],
+        "trueMax": [0.85714285714]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [2.7833843487, 0.42452211998],
+        "sd": [0.46416959412, 0.037182555184],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.21428571429],
+        "trueMax": [0.74285714286]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [2.082749042, 0.37394027466],
+        "sd": [0.35291239184, 0.043664288084],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.11428571429],
+        "trueMax": [0.8]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [8.6266931434, 0.96574783596],
+        "sd": [1.856959967, 0.026121312026],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.28571428571],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [false],
+    "alternative": [true],
+    "status": ["all"],
+    "count": [276],
+    "fraction": [0.17132216015],
+    "frac.Confi.gt.Compl": [0.496],
+    "corrConfComp": [0.67216649294],
+    "indices": {
+      "complacency": [7],
+      "confidence": [8]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [6.4809469506, 0.71132449353],
+        "sd": [0.31537653764, 0.0069264472347],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.17857142857],
+        "trueMax": [0.85714285714]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [7.2086120653, 0.70575919314],
+        "sd": [0.33610516886, 0.0062123667109],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.3],
+        "trueMax": [0.9]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [7.4677468568, 0.70498496232],
+        "sd": [0.35237195098, 0.0059753012719],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.23928571429],
+        "trueMax": [0.87857142857]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [3.3089548933, 0.76088544393],
+        "sd": [0.17056746227, 0.014429429189],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [false],
+    "alternative": [true],
+    "status": ["some"],
+    "count": [41],
+    "fraction": [0.025450031037],
+    "frac.Confi.gt.Compl": [0.512],
+    "corrConfComp": [0.73659750176],
+    "indices": {
+      "complacency": [9],
+      "confidence": [10]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [1.4310034991, 0.40742120555],
+        "sd": [0.19284732414, 0.045559676435],
+        "min": [0],
+        "max": [1],
+        "trueMin": [1e-006],
+        "trueMax": [0.75]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [3.4998483009, 0.45469467199],
+        "sd": [0.41637694046, 0.021487179025],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.18571428571],
+        "trueMax": [0.71428571429]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [2.7690030543, 0.44565845775],
+        "sd": [0.33360913548, 0.02655272241],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.11428571429],
+        "trueMax": [0.73214285714]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [14.6736962895, 0.96810076689],
+        "sd": [2.0134471211, 0.010758658973],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.71428571429],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [false],
+    "alternative": [true],
+    "status": ["none"],
+    "count": [48],
+    "fraction": [0.029795158287],
+    "frac.Confi.gt.Compl": [0.833],
+    "corrConfComp": [0.56804345355],
+    "indices": {
+      "complacency": [11],
+      "confidence": [12]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [0.51171131292, 0.13014314011],
+        "sd": [0.070174573205, 0.037406407286],
+        "min": [0],
+        "max": [1],
+        "trueMin": [1e-006],
+        "trueMax": [0.46428571429]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [3.4193083693, 0.33066724481],
+        "sd": [0.36449160414, 0.014807947898],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [0.52857142857]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [2.6072865865, 0.26081180184],
+        "sd": [0.2850632307, 0.015264676957],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.071428571429],
+        "trueMax": [0.49642857143]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [9.3238389273, 0.96628262326],
+        "sd": [1.2474740247, 0.015214561972],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [false],
+    "status": ["all"],
+    "count": [139],
+    "fraction": [0.086281812539],
+    "frac.Confi.gt.Compl": [0.547],
+    "corrConfComp": [0.59002900063],
+    "indices": {
+      "complacency": [13],
+      "confidence": [14]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [7.2410259797, 0.72550196942],
+        "sd": [0.48886453519, 0.008937245215],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.32142857143],
+        "trueMax": [0.85714285714]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [7.7179768161, 0.73277749643],
+        "sd": [0.47606492677, 0.0085140812692],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.41428571429],
+        "trueMax": [1]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [8.226003612, 0.72540389759],
+        "sd": [0.52710191559, 0.0078998605705],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.39642857143],
+        "trueMax": [0.92857142857]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [3.3276453373, 0.73548756167],
+        "sd": [0.24092766361, 0.019569802073],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [false],
+    "status": ["some"],
+    "count": [7],
+    "fraction": [0.0043451272502],
+    "frac.Confi.gt.Compl": [0.429],
+    "corrConfComp": [0.16528204846],
+    "indices": {
+      "complacency": [15],
+      "confidence": [16]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [0.52301357494, 0.4447338795],
+        "sd": [0.19614626728, 0.32525551856],
+        "min": [0],
+        "max": [1],
+        "trueMin": [1e-006],
+        "trueMax": [0.78571428571]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [10.6864830831, 0.59579638616],
+        "sd": [3.2795571857, 0.02215083876],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.44285714286],
+        "trueMax": [0.65714285714]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [5.6848525009, 0.58785206049],
+        "sd": [1.8430302085, 0.04066713215],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.27857142857],
+        "trueMax": [0.67857142857]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [5.920519565, 0.8590392287],
+        "sd": [1.7586915696, 0.058058208518],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.57142857143],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [false],
+    "status": ["none"],
+    "count": [32],
+    "fraction": [0.019863438858],
+    "frac.Confi.gt.Compl": [0.906],
+    "corrConfComp": [0.41443445462],
+    "indices": {
+      "complacency": [17],
+      "confidence": [18]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [2.0076294129, 0.27411728805],
+        "sd": [0.28569447838, 0.025341709796],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.035714285714],
+        "trueMax": [0.5]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [5.2360670451, 0.45103030504],
+        "sd": [0.73043083045, 0.016067632302],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.21428571429],
+        "trueMax": [0.58571428571]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [4.069080894, 0.3632555837],
+        "sd": [0.56659588591, 0.016638793043],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.175],
+        "trueMax": [0.51785714286]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [2.020190977, 0.66887322471],
+        "sd": [0.30716514139, 0.061262827345],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [true],
+    "status": ["all"],
+    "count": [101],
+    "fraction": [0.062693978895],
+    "frac.Confi.gt.Compl": [0.406],
+    "corrConfComp": [0.43001117256],
+    "indices": {
+      "complacency": [19],
+      "confidence": [20]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [6.6336689527, 0.71939806897],
+        "sd": [0.5313134048, 0.011346813071],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.39285714286],
+        "trueMax": [0.85714285714]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [7.2762265801, 0.6876982531],
+        "sd": [0.53878899422, 0.009961890718],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.42857142857],
+        "trueMax": [0.87142857143]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [8.0692995393, 0.69764268272],
+        "sd": [0.61280579185, 0.0090873025327],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.41785714286],
+        "trueMax": [0.86428571429]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [3.7186181551, 0.77889772034],
+        "sd": [0.31395755935, 0.021756950844],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [true],
+    "status": ["some"],
+    "count": [14],
+    "fraction": [0.0086902545003],
+    "frac.Confi.gt.Compl": [0.357],
+    "corrConfComp": [0.67170826262],
+    "indices": {
+      "complacency": [21],
+      "confidence": [22]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [4.5269277502, 0.60632301035],
+        "sd": [1.0111768258, 0.037592888959],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.28571428571],
+        "trueMax": [0.75]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [5.2400730687, 0.55377252792],
+        "sd": [1.1566783417, 0.029652260035],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.25714285714],
+        "trueMax": [0.65714285714]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [5.3705438549, 0.57664421836],
+        "sd": [1.1982321365, 0.030115973317],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.27142857143],
+        "trueMax": [0.68928571429]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [12.1241744206, 0.92451569038],
+        "sd": [2.4805689473, 0.021599611761],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.71428571429],
+        "trueMax": [1]
+      }
+    }
+  },
+  {
+    "religious": [true],
+    "alternative": [true],
+    "status": ["none"],
+    "count": [35],
+    "fraction": [0.021725636251],
+    "frac.Confi.gt.Compl": [0.829],
+    "corrConfComp": [0.58255044881],
+    "indices": {
+      "complacency": [23],
+      "confidence": [24]
+    },
+    "distributions": {
+      "complacency": {
+        "type": ["weibull"],
+        "est": [0.85372128894, 0.23000516525],
+        "sd": [0.13832881067, 0.045917101373],
+        "min": [0],
+        "max": [1],
+        "trueMin": [1e-006],
+        "trueMax": [0.42857142857]
+      },
+      "confidence": {
+        "type": ["weibull"],
+        "est": [4.2316879295, 0.37389521788],
+        "sd": [0.55543466478, 0.015805960663],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.2],
+        "trueMax": [0.51428571429]
+      },
+      "attitude": {
+        "type": ["weibull"],
+        "est": [3.5237775585, 0.31983512418],
+        "sd": [0.46243758127, 0.016196793235],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.10714285714],
+        "trueMax": [0.45357142857]
+      },
+      "calculation": {
+        "type": ["weibull"],
+        "est": [2.7842607657, 0.79791772287],
+        "sd": [0.42648132228, 0.050075944501],
+        "min": [0],
+        "max": [1],
+        "trueMin": [0.14285714286],
+        "trueMax": [1]
+      }
+    }
+  }
 ]
