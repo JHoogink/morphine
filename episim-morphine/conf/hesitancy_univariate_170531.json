@@ -1,0 +1,854 @@
+[
+	{
+		"religious" : false,
+		"alternative" : false,
+		"status" : "all",
+		"count" : 877,
+		"fraction" : 0.5443823712,
+		"frac.Confi.gt.Compl" : 0.469,
+		"corrConfComp" : 0.8498899425,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.696801502,
+					"scale" : 0.3308129142
+				},
+				"sd" : {
+					"shape" : 0.0683973793,
+					"scale" : 0.004386798144
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 0.7142857143
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.45563962,
+					"scale" : 0.7527844999
+				},
+				"sd" : {
+					"shape" : 0.2181629466,
+					"scale" : 0.003175241978
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.3857142857,
+				"trueMax" : 0.9142857143
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.912543201,
+					"scale" : 0.7489266886
+				},
+				"sd" : {
+					"shape" : 0.234045238,
+					"scale" : 0.002992425816
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.375,
+				"trueMax" : 0.8857142857
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.987244845,
+					"scale" : 0.7171632558
+				},
+				"sd" : {
+					"shape" : 0.08542592485,
+					"scale" : 0.008471767584
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : false,
+		"alternative" : false,
+		"status" : "some",
+		"count" : 22,
+		"fraction" : 0.01365611421,
+		"frac.Confi.gt.Compl" : 0.455,
+		"corrConfComp" : 0.9177344988,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.572176471,
+					"scale" : 0.5501547272
+				},
+				"sd" : {
+					"shape" : 0.4322922677,
+					"scale" : 0.04812620324
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1785714286,
+				"trueMax" : 0.9285714286
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.399898027,
+					"scale" : 0.5797707277
+				},
+				"sd" : {
+					"shape" : 0.9160221047,
+					"scale" : 0.02421203992
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.3714285714,
+				"trueMax" : 0.7142857143
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.943731011,
+					"scale" : 0.5797253534
+				},
+				"sd" : {
+					"shape" : 0.6781950508,
+					"scale" : 0.03304154131
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2571428571,
+				"trueMax" : 0.7678571429
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 15.56622456,
+					"scale" : 0.9617950255
+				},
+				"sd" : {
+					"shape" : 2.766494023,
+					"scale" : 0.01390891741
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.8571428571,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : false,
+		"alternative" : false,
+		"status" : "none",
+		"count" : 19,
+		"fraction" : 0.01179391682,
+		"frac.Confi.gt.Compl" : 0.211,
+		"corrConfComp" : 0.9233563108,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 4.02610492,
+					"scale" : 0.7895507292
+				},
+				"sd" : {
+					"shape" : 0.7806262417,
+					"scale" : 0.04667365408
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.783384349,
+					"scale" : 0.42452212
+				},
+				"sd" : {
+					"shape" : 0.4641695941,
+					"scale" : 0.03718255518
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.2142857143,
+				"trueMax" : 0.7428571429
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.082749042,
+					"scale" : 0.3739402747
+				},
+				"sd" : {
+					"shape" : 0.3529123918,
+					"scale" : 0.04366428808
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1142857143,
+				"trueMax" : 0.8
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.626693143,
+					"scale" : 0.965747836
+				},
+				"sd" : {
+					"shape" : 1.856959967,
+					"scale" : 0.02612131203
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2857142857,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : false,
+		"alternative" : true,
+		"status" : "all",
+		"count" : 276,
+		"fraction" : 0.1713221601,
+		"frac.Confi.gt.Compl" : 0.496,
+		"corrConfComp" : 0.8985417898,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.846938817,
+					"scale" : 0.3800447391
+				},
+				"sd" : {
+					"shape" : 0.1270447827,
+					"scale" : 0.008509953909
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 0.8214285714
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.208612065,
+					"scale" : 0.7057591931
+				},
+				"sd" : {
+					"shape" : 0.3361051689,
+					"scale" : 0.006212366711
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.3,
+				"trueMax" : 0.9
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.467746857,
+					"scale" : 0.7049849623
+				},
+				"sd" : {
+					"shape" : 0.352371951,
+					"scale" : 0.005975301272
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2392857143,
+				"trueMax" : 0.8785714286
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.308954893,
+					"scale" : 0.7608854439
+				},
+				"sd" : {
+					"shape" : 0.1705674623,
+					"scale" : 0.01442942919
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : false,
+		"alternative" : true,
+		"status" : "some",
+		"count" : 41,
+		"fraction" : 0.02545003104,
+		"frac.Confi.gt.Compl" : 0.488,
+		"corrConfComp" : 0.8947719712,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.434397884,
+					"scale" : 0.6875603987
+				},
+				"sd" : {
+					"shape" : 0.433599764,
+					"scale" : 0.03286087919
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.25,
+				"trueMax" : 1
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.499848301,
+					"scale" : 0.454694672
+				},
+				"sd" : {
+					"shape" : 0.4163769405,
+					"scale" : 0.02148717902
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1857142857,
+				"trueMax" : 0.7142857143
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.769003054,
+					"scale" : 0.4456584577
+				},
+				"sd" : {
+					"shape" : 0.3336091355,
+					"scale" : 0.02655272241
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1142857143,
+				"trueMax" : 0.7321428571
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 14.67369629,
+					"scale" : 0.9681007669
+				},
+				"sd" : {
+					"shape" : 2.013447121,
+					"scale" : 0.01075865897
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.7142857143,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : false,
+		"alternative" : true,
+		"status" : "none",
+		"count" : 48,
+		"fraction" : 0.02979515829,
+		"frac.Confi.gt.Compl" : 0.146,
+		"corrConfComp" : 0.8476796022,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.314596421,
+					"scale" : 0.8863069326
+				},
+				"sd" : {
+					"shape" : 0.969337785,
+					"scale" : 0.01618901053
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.5357142857,
+				"trueMax" : 1
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.419308369,
+					"scale" : 0.3306672448
+				},
+				"sd" : {
+					"shape" : 0.3644916041,
+					"scale" : 0.0148079479
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 0.5285714286
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.607286587,
+					"scale" : 0.2608118018
+				},
+				"sd" : {
+					"shape" : 0.2850632307,
+					"scale" : 0.01526467696
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.07142857143,
+				"trueMax" : 0.4964285714
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 9.323838927,
+					"scale" : 0.9662826233
+				},
+				"sd" : {
+					"shape" : 1.247474025,
+					"scale" : 0.01521456197
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : false,
+		"status" : "all",
+		"count" : 139,
+		"fraction" : 0.08628181254,
+		"frac.Confi.gt.Compl" : 0.439,
+		"corrConfComp" : 0.872356944,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.035260861,
+					"scale" : 0.359439108
+				},
+				"sd" : {
+					"shape" : 0.1935439409,
+					"scale" : 0.01062746439
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 0.6785714286
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.717976816,
+					"scale" : 0.7327774964
+				},
+				"sd" : {
+					"shape" : 0.4760649268,
+					"scale" : 0.008514081269
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.4142857143,
+				"trueMax" : 1
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.226003612,
+					"scale" : 0.7254038976
+				},
+				"sd" : {
+					"shape" : 0.5271019156,
+					"scale" : 0.00789986057
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.3964285714,
+				"trueMax" : 0.9285714286
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.327645337,
+					"scale" : 0.7354875617
+				},
+				"sd" : {
+					"shape" : 0.2409276636,
+					"scale" : 0.01956980207
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : false,
+		"status" : "some",
+		"count" : 7,
+		"fraction" : 0.00434512725,
+		"frac.Confi.gt.Compl" : 0.571,
+		"corrConfComp" : 0.4170077002,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.229326706,
+					"scale" : 0.5496928328
+				},
+				"sd" : {
+					"shape" : 0.6078949091,
+					"scale" : 0.09907393518
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2142857143,
+				"trueMax" : 1
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 10.68648308,
+					"scale" : 0.5957963862
+				},
+				"sd" : {
+					"shape" : 3.279557186,
+					"scale" : 0.02215083876
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.4428571429,
+				"trueMax" : 0.6571428571
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.684852501,
+					"scale" : 0.5878520605
+				},
+				"sd" : {
+					"shape" : 1.843030209,
+					"scale" : 0.04066713215
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2785714286,
+				"trueMax" : 0.6785714286
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.920519565,
+					"scale" : 0.8590392287
+				},
+				"sd" : {
+					"shape" : 1.75869157,
+					"scale" : 0.05805820852
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.5714285714,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : false,
+		"status" : "none",
+		"count" : 32,
+		"fraction" : 0.01986343886,
+		"frac.Confi.gt.Compl" : 0.094,
+		"corrConfComp" : 0.7801013783,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.070016666,
+					"scale" : 0.8091225731
+				},
+				"sd" : {
+					"shape" : 0.9869557387,
+					"scale" : 0.02132147974
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.5,
+				"trueMax" : 0.9642857143
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.236067045,
+					"scale" : 0.451030305
+				},
+				"sd" : {
+					"shape" : 0.7304308305,
+					"scale" : 0.0160676323
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.2142857143,
+				"trueMax" : 0.5857142857
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 4.069080894,
+					"scale" : 0.3632555837
+				},
+				"sd" : {
+					"shape" : 0.5665958861,
+					"scale" : 0.01663879304
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.175,
+				"trueMax" : 0.5178571429
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.020190977,
+					"scale" : 0.6688732247
+				},
+				"sd" : {
+					"shape" : 0.3071651414,
+					"scale" : 0.06126282735
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : true,
+		"status" : "all",
+		"count" : 101,
+		"fraction" : 0.0626939789,
+		"frac.Confi.gt.Compl" : 0.584,
+		"corrConfComp" : 0.8008742901,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.93462152,
+					"scale" : 0.3709713125
+				},
+				"sd" : {
+					"shape" : 0.2244000225,
+					"scale" : 0.0133040173
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 0.6071428571
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.27622658,
+					"scale" : 0.6876982531
+				},
+				"sd" : {
+					"shape" : 0.5387889942,
+					"scale" : 0.009961890718
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.4285714286,
+				"trueMax" : 0.8714285714
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 8.069299539,
+					"scale" : 0.6976426827
+				},
+				"sd" : {
+					"shape" : 0.6128057918,
+					"scale" : 0.009087302533
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.4178571429,
+				"trueMax" : 0.8642857143
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.718618155,
+					"scale" : 0.7788977203
+				},
+				"sd" : {
+					"shape" : 0.3139575593,
+					"scale" : 0.02175695084
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : true,
+		"status" : "some",
+		"count" : 14,
+		"fraction" : 0.0086902545,
+		"frac.Confi.gt.Compl" : 0.643,
+		"corrConfComp" : 0.8936195577,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.373798382,
+					"scale" : 0.5014519396
+				},
+				"sd" : {
+					"shape" : 0.7044131946,
+					"scale" : 0.04206044822
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.25,
+				"trueMax" : 0.7142857143
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.240073069,
+					"scale" : 0.5537725279
+				},
+				"sd" : {
+					"shape" : 1.156678342,
+					"scale" : 0.02965226003
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2571428571,
+				"trueMax" : 0.6571428571
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 5.370543855,
+					"scale" : 0.5766442184
+				},
+				"sd" : {
+					"shape" : 1.198232137,
+					"scale" : 0.03011597332
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.2714285714,
+				"trueMax" : 0.6892857143
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 12.12417442,
+					"scale" : 0.9245156904
+				},
+				"sd" : {
+					"shape" : 2.480568947,
+					"scale" : 0.02159961176
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.7142857143,
+				"trueMax" : 1
+			}
+		}
+	},
+	{
+		"religious" : true,
+		"alternative" : true,
+		"status" : "none",
+		"count" : 35,
+		"fraction" : 0.02172563625,
+		"frac.Confi.gt.Compl" : 0.171,
+		"corrConfComp" : 0.8593742427,
+		"distributions" : {
+			"complacency" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 7.140989608,
+					"scale" : 0.8135851584
+				},
+				"sd" : {
+					"shape" : 0.8911136442,
+					"scale" : 0.02040814294
+				},
+				"min" : 0.5,
+				"max" : 1,
+				"trueMin" : 0.5714285714,
+				"trueMax" : 1
+			},
+			"confidence" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 4.231687929,
+					"scale" : 0.3738952179
+				},
+				"sd" : {
+					"shape" : 0.5554346648,
+					"scale" : 0.01580596066
+				},
+				"min" : 0,
+				"max" : 0.5,
+				"trueMin" : 0.2,
+				"trueMax" : 0.5142857143
+			},
+			"attitude" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 3.523777559,
+					"scale" : 0.3198351242
+				},
+				"sd" : {
+					"shape" : 0.4624375814,
+					"scale" : 0.01619679324
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1071428571,
+				"trueMax" : 0.4535714286
+			},
+			"calculation" : {
+				"type" : "weibull",
+				"est" : {
+					"shape" : 2.784260766,
+					"scale" : 0.7979177229
+				},
+				"sd" : {
+					"shape" : 0.4264813223,
+					"scale" : 0.0500759445
+				},
+				"min" : 0,
+				"max" : 1,
+				"trueMin" : 0.1428571429,
+				"trueMax" : 1
+			}
+		}
+	}
+]
