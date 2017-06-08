@@ -17,10 +17,11 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine.pienter;
+package nl.rivm.cib.morphine.profile;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -31,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.coala.json.JsonUtil;
 import io.coala.math.Range;
+import io.coala.math.Tuple;
 import io.coala.math.WeightedValue;
 import io.coala.name.Identified;
 import io.coala.random.ProbabilityDistribution;
@@ -47,6 +49,34 @@ import io.reactivex.Observable;
 @JsonIgnoreProperties( ignoreUnknown = true )
 public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 {
+	/**
+	 * {@link Category}
+	 */
+	public static class Category extends Tuple
+	{
+		public Category( final Boolean religious, //final Boolean alternative,
+			final VaccineStatus status )
+		{
+			super( Arrays.<Comparable<?>>asList( religious, //alternative,
+					status ) );
+		}
+
+		public Boolean religious()
+		{
+			return (Boolean) values().get( 0 );
+		}
+
+//		public Boolean alternative()
+//		{
+//			return (Boolean) values().get( 1 );
+//		}
+
+		public VaccineStatus status()
+		{
+			return (VaccineStatus) values().get( 1 );
+		}
+	}
+
 	public static Observable<WeightedValue<HesitancyProfileJson>>
 		parse( final String fileName )
 	{
@@ -97,6 +127,12 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 		return this.id == null ? (this.id = (this.religious ? "Reli" : "Sec")
 				+ "|" + (this.alternative ? "Alto" : "Reg") + "|" + this.status)
 				: this.id;
+	}
+
+	public Category toCategory()
+	{
+		return new Category( this.religious, //this.alternative, 
+				this.status );
 	}
 
 	/**

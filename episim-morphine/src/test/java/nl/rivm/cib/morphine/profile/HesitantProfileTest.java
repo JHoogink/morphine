@@ -17,7 +17,7 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine;
+package nl.rivm.cib.morphine.profile;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,12 +37,12 @@ import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.util.FileUtil;
-import nl.rivm.cib.morphine.pienter.HesitancyProfileJson;
-import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.HesitancyDimension;
-import nl.rivm.cib.morphine.pienter.HesitancyProfileJson.VaccineStatus;
+import nl.rivm.cib.morphine.profile.HesitancyProfileJson;
+import nl.rivm.cib.morphine.profile.HesitancyProfileJson.HesitancyDimension;
+import nl.rivm.cib.morphine.profile.HesitancyProfileJson.VaccineStatus;
 
 /**
- * {@link HesitantProfileTest}
+ * {@link HesitantProfileTest} tests {@link HesitancyProfileJson}
  * 
  * @version $Id$
  * @author Rick van Krevelen
