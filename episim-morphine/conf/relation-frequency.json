@@ -148,27 +148,6 @@
 	},
 	{
 		"gender": "male",
-		"relation": "family",
-		"age": "total",
-		"daily": 0.226,
-		"weekly": 0.561,
-		"monthly": 0.15,
-		"less": 0.04,
-		"never": 0.023,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 1.9923,
-				"sdlog": 1.5315
-			},
-			"sd": {
-				"meanlog": 0.0485,
-				"sdlog": 0.0343
-			}
-		}
-	},
-	{
-		"gender": "male",
 		"relation": "friends",
 		"age": "15-25",
 		"daily": 0.7089,
@@ -316,27 +295,6 @@
 	},
 	{
 		"gender": "male",
-		"relation": "friends",
-		"age": "total",
-		"daily": 0.288,
-		"weekly": 0.462,
-		"monthly": 0.165,
-		"less": 0.054,
-		"never": 0.031,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 1.9903,
-				"sdlog": 1.7405
-			},
-			"sd": {
-				"meanlog": 0.0551,
-				"sdlog": 0.039
-			}
-		}
-	},
-	{
-		"gender": "male",
 		"relation": "neighbors",
 		"age": "15-25",
 		"daily": 0.1113,
@@ -479,27 +437,6 @@
 			"sd": {
 				"meanlog": 0.0646,
 				"sdlog": 0.0456
-			}
-		}
-	},
-	{
-		"gender": "male",
-		"relation": "neighbors",
-		"age": "total",
-		"daily": 0.15,
-		"weekly": 0.454,
-		"monthly": 0.203,
-		"less": 0.074,
-		"never": 0.118,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 2.8274,
-				"sdlog": 2.0688
-			},
-			"sd": {
-				"meanlog": 0.0655,
-				"sdlog": 0.0463
 			}
 		}
 	},
@@ -652,27 +589,6 @@
 	},
 	{
 		"gender": "female",
-		"relation": "family",
-		"age": "total",
-		"daily": 0.376,
-		"weekly": 0.498,
-		"monthly": 0.085,
-		"less": 0.024,
-		"never": 0.017,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 1.518,
-				"sdlog": 1.4875
-			},
-			"sd": {
-				"meanlog": 0.0471,
-				"sdlog": 0.0333
-			}
-		}
-	},
-	{
-		"gender": "female",
 		"relation": "friends",
 		"age": "15-25",
 		"daily": 0.7507,
@@ -820,27 +736,6 @@
 	},
 	{
 		"gender": "female",
-		"relation": "friends",
-		"age": "total",
-		"daily": 0.305,
-		"weekly": 0.482,
-		"monthly": 0.15,
-		"less": 0.036,
-		"never": 0.027,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 1.8464,
-				"sdlog": 1.6398
-			},
-			"sd": {
-				"meanlog": 0.0519,
-				"sdlog": 0.0367
-			}
-		}
-	},
-	{
-		"gender": "female",
 		"relation": "neighbors",
 		"age": "15-25",
 		"daily": 0.1187,
@@ -983,27 +878,6 @@
 			"sd": {
 				"meanlog": 0.0636,
 				"sdlog": 0.045
-			}
-		}
-	},
-	{
-		"gender": "female",
-		"relation": "neighbors",
-		"age": "total",
-		"daily": 0.16,
-		"weekly": 0.458,
-		"monthly": 0.197,
-		"less": 0.068,
-		"never": 0.117,
-		"dist": {
-			"type": "lnorm",
-			"params": {
-				"meanlog": 2.7705,
-				"sdlog": 2.0698
-			},
-			"sd": {
-				"meanlog": 0.0655,
-				"sdlog": 0.0463
 			}
 		}
 	}
