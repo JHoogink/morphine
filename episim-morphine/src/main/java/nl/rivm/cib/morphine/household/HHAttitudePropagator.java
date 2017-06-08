@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import org.ujmp.core.Matrix;
+import org.ujmp.core.SparseMatrix;
 import org.ujmp.core.calculation.Calculation.Ret;
 
 import io.coala.math.MatrixUtil;
@@ -74,7 +75,8 @@ public interface HHAttitudePropagator
 				Objects.requireNonNull( attributePressuredCols ).length );
 
 		// apply calculation threshold function
-		final Matrix weights = Matrix.Factory.zeros( hhPressure.getSize() );
+		final Matrix weights = SparseMatrix.Factory
+				.zeros( hhPressure.getSize() );
 		MatrixUtil.coordinateStream( hhPressure.getSize() ).parallel().forEach(
 				coords -> weights.setAsBigDecimal( filteredAppreciation(
 						hhPressure.getAsBigDecimal( coords ),
@@ -82,7 +84,7 @@ public interface HHAttitudePropagator
 								HHAttribute.CALCULATION.ordinal() ) ) ) );
 
 		// calculate new attributes based on all current (weighted) information
-		LongStream.range( 0, hhPressure.getRowCount() ).parallel()
+		LongStream.range( 0, hhPressure.getRowCount() )//.parallel()
 				.forEach( row ->
 				{
 					final Matrix rowPressure = weights.selectRows( Ret.LINK,

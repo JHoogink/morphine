@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.coala.bind.LocalBinder;
 import io.coala.exception.ExceptionFactory;
 import io.coala.log.LogUtil.Pretty;
+import io.coala.time.Duration;
 import io.coala.time.Scheduler;
 import io.reactivex.Observable;
 
@@ -88,7 +89,7 @@ public interface HHOracle extends HHScenarioConfigurable
 
 			return Observable.create( sub ->
 			{
-				sub.onNext( initial );
+				after( Duration.ZERO ).call( t -> sub.onNext( initial ) );
 				iterate( this.config.get( SCHEDULE_KEY ), HHAttribute.class,
 						BigDecimal.class ).subscribe( sub::onNext,
 								sub::onError );

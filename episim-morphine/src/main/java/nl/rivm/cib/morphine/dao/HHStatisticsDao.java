@@ -17,7 +17,7 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine.household;
+package nl.rivm.cib.morphine.dao;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -44,6 +44,8 @@ import io.coala.persist.Persistable;
 import io.coala.persist.UUIDToByteConverter;
 import io.coala.time.Instant;
 import io.coala.time.TimeUnits;
+import nl.rivm.cib.morphine.household.HHAttribute;
+import nl.rivm.cib.morphine.household.HHMemberAttribute;
 
 /**
  * {@link HHStatisticsDao} with JPA MetaModel in {@link HouseholdDao_}?
@@ -122,6 +124,8 @@ public class HHStatisticsDao implements Persistable.Dao
 			result.age = now.to( TimeUnits.ANNUM ).decimal()
 					.subtract( data.getAsBigDecimal( rowIndex,
 							HHMemberAttribute.BIRTH.ordinal() ) );
+			result.male = data.getAsBoolean( rowIndex,
+					HHMemberAttribute.MALE.ordinal() );
 			result.status = data.getAsInt( rowIndex,
 					HHMemberAttribute.STATUS.ordinal() );
 //			result.behavior = data.getAsInt( rowIndex,
@@ -133,6 +137,8 @@ public class HHStatisticsDao implements Persistable.Dao
 
 		public static final String STATUS_ATTR = "status";
 
+		public static final String MALE_ATTR = "male";
+
 //		public static final String BEHAVIOR_ATTR = "behavior";
 
 		@Column
@@ -140,6 +146,9 @@ public class HHStatisticsDao implements Persistable.Dao
 
 		@Column
 		protected int status;
+
+		@Column
+		protected boolean male;
 
 //		@Column
 //		protected int behavior;
@@ -202,6 +211,9 @@ public class HHStatisticsDao implements Persistable.Dao
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "REFERENT_STATUS", nullable = false,
 					updatable = false ) ),
+			@AttributeOverride( name = MemberDao.MALE_ATTR,
+				column = @Column( name = "REFERENT_MALE", nullable = false,
+					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "REFERENT_BEHAVIOR", nullable = false,
 //					updatable = false ) )
@@ -215,6 +227,9 @@ public class HHStatisticsDao implements Persistable.Dao
 					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "PARTNER_STATUS", nullable = true,
+					updatable = false ) ),
+			@AttributeOverride( name = MemberDao.MALE_ATTR,
+				column = @Column( name = "PARTNER_MALE", nullable = true,
 					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
@@ -230,6 +245,9 @@ public class HHStatisticsDao implements Persistable.Dao
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD1_STATUS", nullable = true,
 					updatable = false ) ),
+			@AttributeOverride( name = MemberDao.MALE_ATTR,
+				column = @Column( name = "CHILD1_MALE", nullable = true,
+					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "CHILD1_BEHAVIOR", nullable = true,
 //					updatable = false ) ) 
@@ -244,6 +262,9 @@ public class HHStatisticsDao implements Persistable.Dao
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD2_STATUS", nullable = true,
 					updatable = false ) ),
+			@AttributeOverride( name = MemberDao.MALE_ATTR,
+				column = @Column( name = "CHILD2_MALE", nullable = true,
+					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
 //					updatable = false ) ) 
@@ -257,6 +278,9 @@ public class HHStatisticsDao implements Persistable.Dao
 					updatable = false, columnDefinition = TIME_COL_DEF ) ),
 			@AttributeOverride( name = MemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD3_STATUS", nullable = true,
+					updatable = false ) ),
+			@AttributeOverride( name = MemberDao.MALE_ATTR,
+				column = @Column( name = "CHILD3_MALE", nullable = true,
 					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,

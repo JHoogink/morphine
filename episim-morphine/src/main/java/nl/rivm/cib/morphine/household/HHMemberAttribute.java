@@ -41,6 +41,9 @@ public enum HHMemberAttribute
 	/** {@link BigDecimal} time of birth in years since simulation start (0) */
 	BIRTH,
 
+	/** boolean indicating gender is male or not */
+	MALE,
+
 	/** the ordinal of a {@link HHMemberStatus} constant */
 	STATUS,
 
