@@ -34,7 +34,6 @@ import io.coala.persist.JPAUtil;
 import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.QuantityDistribution;
-import io.coala.time.Duration;
 import io.coala.time.Instant;
 import io.coala.time.Scenario;
 import io.coala.time.Scheduler;
@@ -133,7 +132,7 @@ public class HHModel implements Scenario
 	/** */
 	private transient ProbabilityDistribution<VaxOccasion> vaxOccasionDist;
 
-	private transient ConditionalDistribution<Quantity<Time>, GenderAge> peerPressureIntervalDist;
+//	private transient ConditionalDistribution<Quantity<Time>, GenderAge> peerPressureIntervalDist;
 
 	/**
 	 * {@link RegionBroker} assigns regions to households
@@ -215,8 +214,8 @@ public class HHModel implements Scenario
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
 		this.hhRefAgeDist = this.config
 				.householdReferentAgeDist( this.distParser );
-		this.peerPressureIntervalDist = this.config
-				.peerPressureInterval( this.distFactory );
+//		this.peerPressureIntervalDist = this.config
+//				.peerPressureInterval( this.distFactory );
 
 		this.hesitancyProfileDist = this.config.hesitancyProfilesGrouped(
 				this.distFactory, HesitancyProfileJson::toCategory );
@@ -462,7 +461,7 @@ public class HHModel implements Scenario
 		this.hhAttributes.setAsLong( child3Ref, hhIndex,
 				HHAttribute.CHILD3_REF.ordinal() );
 
-		after( Duration.ZERO ).call( t -> peerPressure( hhIndex ) );
+//		after( Duration.ZERO ).call( t -> peerPressure( hhIndex ) );
 
 		// evaluate current barrier value
 		// this.hhAttributes.setAsBigDecimal(
@@ -481,20 +480,20 @@ public class HHModel implements Scenario
 		return hhType.size();
 	}
 
-	private void peerPressure( final long hhIndex )
-	{
-		final long refRef = this.hhAttributes.getAsLong( hhIndex,
-				HHAttribute.REFERENT_REF.ordinal() );
-		final BigDecimal age = now().to( TimeUnits.ANNUM ).decimal()
-				.subtract( this.ppAttributes.getAsBigDecimal( refRef,
-						HHMemberAttribute.BIRTH.ordinal() ) );
-		final CBSGender gender = this.ppAttributes.getAsBoolean( refRef,
-				HHMemberAttribute.MALE.ordinal() ) ? CBSGender.MALE
-						: CBSGender.FEMALE;
-		after( this.peerPressureIntervalDist
-				.draw( new GenderAge( gender, age ) ) )
-						.call( t -> peerPressure( hhIndex ) );
-	}
+//	private void peerPressure( final long hhIndex )
+//	{
+//		final long refRef = this.hhAttributes.getAsLong( hhIndex,
+//				HHAttribute.REFERENT_REF.ordinal() );
+//		final BigDecimal age = now().to( TimeUnits.ANNUM ).decimal()
+//				.subtract( this.ppAttributes.getAsBigDecimal( refRef,
+//						HHMemberAttribute.BIRTH.ordinal() ) );
+//		final CBSGender gender = this.ppAttributes.getAsBoolean( refRef,
+//				HHMemberAttribute.MALE.ordinal() ) ? CBSGender.MALE
+//						: CBSGender.FEMALE;
+//		after( this.peerPressureIntervalDist
+//				.draw( new GenderAge( gender, age ) ) )
+//						.call( t -> peerPressure( hhIndex ) );
+//	}
 
 	private long createPerson( final Quantity<Time> initialAge,
 		final HHMemberStatus status )

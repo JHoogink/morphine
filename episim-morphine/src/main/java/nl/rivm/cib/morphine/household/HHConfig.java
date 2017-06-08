@@ -401,18 +401,18 @@ public interface HHConfig extends GlobalConfig
 		return attitudePropagatorType().newInstance();
 	}
 
-	@Key( HESITANCY_PREFIX + "mean-interval-days" )
-	@DefaultValue( "2" )
-	BigDecimal peerPressureMeanWeeklyRate();
-
-	default ConditionalDistribution<Quantity<Time>, GenderAge>
-		peerPressureInterval( final Factory distFactory )
-	{
-		final QuantityDistribution<Time> intervalDist = distFactory
-				.createExponential( peerPressureMeanWeeklyRate() )
-				.toQuantities( TimeUnits.WEEK );
-		return ConditionalDistribution.of( any -> intervalDist );
-	}
+//	@Key( HESITANCY_PREFIX + "mean-interval-days" )
+//	@DefaultValue( "2" )
+//	BigDecimal peerPressureMeanWeeklyRate();
+//
+//	default ConditionalDistribution<Quantity<Time>, GenderAge>
+//		peerPressureInterval( final Factory distFactory )
+//	{
+//		final QuantityDistribution<Time> intervalDist = distFactory
+//				.createExponential( peerPressureMeanWeeklyRate() )
+//				.toQuantities( TimeUnits.WEEK );
+//		return ConditionalDistribution.of( any -> intervalDist );
+//	}
 
 //	@DefaultValue( "conf/pc6_buurt.json" )
 //	@ConverterClass( InputStreamConverter.class )

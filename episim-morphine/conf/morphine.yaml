@@ -5,6 +5,7 @@
 
 morphine:
   replication:
+    duration-period: P1Y
     offset-date: 2012-01-01
     statistics:
       recurrence: 0 0 0 1 * ? *
@@ -14,6 +15,10 @@ morphine:
         password:
   population:
     size: 100000
+    hh-type-dist: const(SOLO_1KID)
+    hh-ref-age-dist: uniform(20;40)
+    hh-replace-ref-age: 40 yr
+    hh-replace-rate: .02 annual
 #    cbs-region-type: COROP
 #    cbs-71486ned-data: conf/71486ned-TS-2010-2016.json
     vaccination:
@@ -25,6 +30,8 @@ morphine:
     hesitancy:
       profiles: conf/hesitancy-univariate.json # incl. covariate sample indices
       profile-sample: conf/hesitancy-initial.json
+      evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
+      propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
       calculation-dist: const(0.5)
       oracles:
       # local pressure, mainly from e.g. Health Services
