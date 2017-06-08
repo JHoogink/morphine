@@ -235,7 +235,7 @@ public interface HHConfig extends GlobalConfig
 //				map );
 //	}
 
-	@Key( VACCINATION_PREFIX + "recurrence" )
+	@Key( VACCINATION_PREFIX + "occasion-recurrence" )
 	@DefaultValue( "0 0 0 7 * ? *" )
 	String vaccinationRecurrence();
 
@@ -248,7 +248,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see VaxOccasion#utility() */
-	@Key( VACCINATION_PREFIX + "utility-dist" )
+	@Key( VACCINATION_PREFIX + "occasion-utility-dist" )
 	@DefaultValue( "const(0.5)" )
 	String vaccinationUtilityDist();
 
@@ -259,7 +259,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see VaxOccasion#proximity() */
-	@Key( VACCINATION_PREFIX + "proximity-dist" )
+	@Key( VACCINATION_PREFIX + "occasion-proximity-dist" )
 	@DefaultValue( "const(0.5)" )
 	String vaccinationProximityDist();
 
@@ -270,7 +270,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see VaxOccasion#clarity() */
-	@Key( VACCINATION_PREFIX + "clarity-dist" )
+	@Key( VACCINATION_PREFIX + "occasion-clarity-dist" )
 	@DefaultValue( "const(0.5)" )
 	String vaccinationClarityDist();
 
@@ -281,7 +281,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see VaxOccasion#affinity() */
-	@Key( VACCINATION_PREFIX + "affinity-dist" )
+	@Key( VACCINATION_PREFIX + "occasion-affinity-dist" )
 	@DefaultValue( "const(0.5)" )
 	String vaccinationAffinityDist();
 
