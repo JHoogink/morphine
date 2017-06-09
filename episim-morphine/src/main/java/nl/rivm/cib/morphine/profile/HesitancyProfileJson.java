@@ -54,11 +54,9 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 	 */
 	public static class Category extends Tuple
 	{
-		public Category( final Boolean religious, //final Boolean alternative,
-			final VaccineStatus status )
+		public Category( final Boolean religious, final Boolean alternative )
 		{
-			super( Arrays.<Comparable<?>>asList( religious, //alternative,
-					status ) );
+			super( Arrays.<Comparable<?>>asList( religious, alternative ) );
 		}
 
 		public Boolean religious()
@@ -66,15 +64,15 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 			return (Boolean) values().get( 0 );
 		}
 
-//		public Boolean alternative()
-//		{
-//			return (Boolean) values().get( 1 );
-//		}
-
-		public VaccineStatus status()
+		public Boolean alternative()
 		{
-			return (VaccineStatus) values().get( 1 );
+			return (Boolean) values().get( 1 );
 		}
+
+//		public VaccineStatus status()
+//		{
+//			return (VaccineStatus) values().get( 1 );
+//		}
 	}
 
 	public static Observable<WeightedValue<HesitancyProfileJson>>
@@ -131,8 +129,7 @@ public class HesitancyProfileJson extends Identified.SimpleOrdinal<String>
 
 	public Category toCategory()
 	{
-		return new Category( this.religious, //this.alternative, 
-				this.status );
+		return new Category( this.religious, this.alternative );
 	}
 
 	/**

@@ -16,6 +16,7 @@ import javax.measure.Quantity;
 import javax.measure.quantity.Frequency;
 import javax.measure.quantity.Time;
 
+import org.aeonbits.owner.Config.Sources;
 import org.aeonbits.owner.ConfigCache;
 
 import io.coala.bind.LocalBinder;
@@ -41,7 +42,6 @@ import io.coala.util.MapBuilder;
 import io.reactivex.Observable;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
-import nl.rivm.cib.morphine.household.HHModel.GenderAge;
 import nl.rivm.cib.morphine.profile.HesitancyProfileJson;
 import nl.rivm.cib.morphine.profile.HesitancyProfileJson.HesitancyDimension;
 import nl.rivm.cib.util.LocalDateConverter;
@@ -53,14 +53,16 @@ import nl.rivm.cib.util.PeriodConverter;
  * @version $Id$
  * @author Rick van Krevelen
  */
-//@Sources( { "${user.dir}/conf/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-//		"${user.home}/" + HHConfig.MORPHINE_CONFIG_YAML_FILE,
-//		"classpath:" + HHConfig.MORPHINE_CONFIG_YAML_FILE } )
+@Sources( { "file:" + HHConfig.CONFIG_BASE_DIR + HHConfig.CONFIG_YAML_FILE,
+		"${user.home}/" + HHConfig.CONFIG_YAML_FILE,
+		"classpath:" + HHConfig.CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
 
 	/** configuration file name */
-	String MORPHINE_CONFIG_YAML_FILE = "morphine.yaml";
+	String CONFIG_BASE_DIR = "conf/";
+
+	String CONFIG_YAML_FILE = "morphine.yaml";
 
 	String DATASOURCE_JNDI = "jdbc/hhDB";
 
@@ -108,8 +110,7 @@ public interface HHConfig extends GlobalConfig
 				.filter( arg -> arg.contains( "=" ) )
 				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length == 2 )
 				.collect( Collectors.toMap( arr -> arr[0], arr -> arr[1] ) );
-		argMap.computeIfAbsent( CONF_ARG,
-				key -> "conf/" + MORPHINE_CONFIG_YAML_FILE );
+		argMap.computeIfAbsent( CONF_ARG, key -> "conf/" + CONFIG_YAML_FILE );
 
 		// merge arguments into configuration imported from YAML file
 		return ConfigCache.getOrCreate( HHConfig.class, argMap,
@@ -121,7 +122,7 @@ public interface HHConfig extends GlobalConfig
 //	"jdbc:mysql://localhost/hhdb" 
 //	"jdbc:hsqldb:mem:hhdb" 
 	@Key( JDBC_PREFIX + "url" )
-	@DefaultValue( "jdbc:hsqldb:file:target/hhdb" )
+	@DefaultValue( "jdbc:hsqldb:file:target/hh_testdb" )
 	String hsqlUrl();
 
 	@Key( JDBC_PREFIX + "username" )
@@ -191,24 +192,33 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/** @see TimeUnits#ANNUM_LABEL */
-	@Key( POPULATION_PREFIX + "hh-replace-ref-age" )
-	@DefaultValue( "40 yr" )
+	@Key( POPULATION_PREFIX + "hh-leavehome-age" )
+	@DefaultValue( "20 yr" )
 	@ConverterClass( QuantityConfigConverter.class )
-	Quantity<Time> householdReplacementAge();
+	Quantity<Time> householdLeaveHomeAge();
 
 	/** @see TimeUnits#ANNUAL_LABEL */
-	@Key( POPULATION_PREFIX + "hh-replace-rate" )
+	@Key( POPULATION_PREFIX + "hh-migrate-rate" )
 	@DefaultValue( ".02 annual" )
 	@ConverterClass( QuantityConfigConverter.class )
-	Quantity<Frequency> householdReplacementRate();
+	Quantity<Frequency> householdMigrationRate();
 
 	default QuantityDistribution<Time> householdReplacementDist(
 		final Factory distFactory, final long hhTotal )
 	{
+		final Quantity<?> rate = householdMigrationRate().multiply( hhTotal )
+				.to( TimeUnits.DAILY );
 		return distFactory
-				.createExponential( householdReplacementRate()
-						.multiply( hhTotal ).to( TimeUnits.DAILY ).getValue() )
+				.createExponential( // mean <- 1/rate
+						DecimalUtil.divide( BigDecimal.ONE,
+								DecimalUtil.valueOf( rate.getValue() ) ) )
 				.toQuantities( TimeUnits.DAYS );
+	}
+
+	static BigDecimal inverse( final Number value )
+	{
+		return DecimalUtil.divide( BigDecimal.ONE,
+				DecimalUtil.valueOf( value ) );
 	}
 
 //	@Key( POPULATION_PREFIX + "cbs-region-type" )
@@ -216,7 +226,7 @@ public interface HHConfig extends GlobalConfig
 //	CBSRegionType cbsRegionLevel();
 //
 //	@Key( POPULATION_PREFIX + "cbs-71486ned-data" )
-//	@DefaultValue( "conf/71486ned-TS-2010-2016.json" )
+//	@DefaultValue( CONFIG_BASE_DIR + "71486ned-TS-2010-2016.json" )
 //	@ConverterClass( InputStreamConverter.class )
 //	InputStream cbs71486Data();
 //
@@ -291,25 +301,37 @@ public interface HHConfig extends GlobalConfig
 		return distParser.parse( vaccinationAffinityDist() );
 	}
 
-	@Key( HESITANCY_PREFIX + "oracle-factory" )
-	@DefaultValue( "nl.rivm.cib.morphine.household.HHOracle$Factory$SimpleBinding" )
-	Class<? extends HHOracle.Factory> hesitancyOracleFactory();
+	@Key( HESITANCY_PREFIX + "attractor-factory" )
+	@DefaultValue( "nl.rivm.cib.morphine.household.HHAttractor$Factory$SimpleBinding" )
+	Class<? extends HHAttractor.Factory> hesitancyAttractorFactory();
 
-	default Observable<HHOracle> hesitancyOracles( final LocalBinder binder )
+	default Observable<HHAttractor>
+		hesitancyAttractors( final LocalBinder binder )
 	{
 		try
 		{
-			return hesitancyOracleFactory().newInstance().createAll(
-					toJSON( HESITANCY_PREFIX + "oracles" ), binder );
+			return hesitancyAttractorFactory().newInstance().createAll(
+					toJSON( HESITANCY_PREFIX + "attractors" ), binder );
 		} catch( final Exception e )
 		{
 			return Observable.error( e );
 		}
 	}
 
+	@Key( HESITANCY_PREFIX + "calculation-dist" )
+	@DefaultValue( "const(1)" )
+	String hesitancyAttractorWeightDist();
+
+	default ProbabilityDistribution<BigDecimal> hesitancyAttractorWeightDist(
+		final Parser distParser ) throws ParseException
+	{
+		return distParser.<Number>parse( hesitancyCalculationDist() )
+				.map( DecimalUtil::valueOf );
+	}
+
 	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profiles" )
-	@DefaultValue( "conf/hesitancy-univariate.json" )
+	@DefaultValue( CONFIG_BASE_DIR + "hesitancy-univariate.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfiles();
 
@@ -333,7 +355,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	@Key( HESITANCY_PREFIX + "profile-sample" )
-	@DefaultValue( "conf/hesitancy-initial.json" )
+	@DefaultValue( CONFIG_BASE_DIR + "hesitancy-initial.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfileSample();
 
@@ -400,59 +422,6 @@ public interface HHConfig extends GlobalConfig
 	{
 		return attitudePropagatorType().newInstance();
 	}
-
-//	@Key( HESITANCY_PREFIX + "mean-interval-days" )
-//	@DefaultValue( "2" )
-//	BigDecimal peerPressureMeanWeeklyRate();
-//
-//	default ConditionalDistribution<Quantity<Time>, GenderAge>
-//		peerPressureInterval( final Factory distFactory )
-//	{
-//		final QuantityDistribution<Time> intervalDist = distFactory
-//				.createExponential( peerPressureMeanWeeklyRate() )
-//				.toQuantities( TimeUnits.WEEK );
-//		return ConditionalDistribution.of( any -> intervalDist );
-//	}
-
-//	@DefaultValue( "conf/pc6_buurt.json" )
-//	@ConverterClass( InputStreamConverter.class )
-//	InputStream cbsNeighborhoodsData();
-//
-//	@DefaultValue( "GM0363" )
-//	Region.ID fallbackRegionRef();
-//
-//	default ConditionalDistribution<CbsNeighborhood, Region.ID>
-//		neighborhoodDist( final Factory distFactory,
-//			//final Map<String, Map<CBSRegionType, String>> regionTypes,
-//			final Function<Region.ID, Region.ID> fallback )
-//	{
-//		final CBSRegionType cbsRegionLevel = cbsRegionLevel();
-////		final io.reactivex.functions.Function<? super CbsNeighborhood, Region.ID> regional;
-////		if( regionTypes != null && cbsRegionLevel != CBSRegionType.MUNICIPAL
-////				&& cbsRegionLevel != CBSRegionType.WARD
-////				&& cbsRegionLevel != CBSRegionType.BOROUGH )
-////			regional = bu -> Region.ID
-////					.of( regionTypes
-////							.computeIfAbsent( bu.municipalRef().unwrap(),
-////									key -> new EnumMap<>(
-////											CBSRegionType.class ) )
-////							.computeIfAbsent( cbsRegionLevel,
-////									key -> "unknown" ) );
-////		else // municipal / ward / borough already in neighborhood data
-////			regional = bu -> bu.regionRef( cbsRegionLevel );
-//
-//		final Map<Region.ID, ProbabilityDistribution<CbsNeighborhood>> async = CbsNeighborhood
-//				.readAsync( this::cbsNeighborhoodsData )
-//				.groupBy( bu -> bu.regionRef( cbsRegionLevel ) )
-//				.toMap( GroupedObservable::getKey,
-//						group -> distFactory.createCategorical( group
-//								.map( CbsNeighborhood::toWeightedValue )
-//								.toList( HashSet::new ).blockingGet() ) )
-//				.blockingGet();
-//
-//		return ConditionalDistribution.of( id -> async.computeIfAbsent( id,
-//				key -> async.get( fallback.apply( key ) ) ) );
-//	}
 
 //	@Key( "morphine.measles.contact-period" )
 //	@DefaultValue( "10 h" )

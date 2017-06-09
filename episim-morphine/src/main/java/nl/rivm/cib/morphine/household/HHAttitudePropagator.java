@@ -23,11 +23,13 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import java.util.stream.StreamSupport;
 
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
 import org.ujmp.core.calculation.Calculation.Ret;
 
+import io.coala.math.DecimalUtil;
 import io.coala.math.MatrixUtil;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
 
@@ -37,8 +39,8 @@ import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
 public interface HHAttitudePropagator
 {
 
-	BigDecimal filteredAppreciation( final BigDecimal appreciation,
-		final BigDecimal calculationLevel );
+	BigDecimal filteredAppreciation( BigDecimal appreciation,
+		BigDecimal calculationLevel );
 
 	/**
 	 * propagate the new weighted averages of default social attributes:
@@ -77,22 +79,47 @@ public interface HHAttitudePropagator
 		// apply calculation threshold function
 		final Matrix weights = SparseMatrix.Factory
 				.zeros( hhPressure.getSize() );
-		MatrixUtil.coordinateStream( hhPressure.getSize() ).parallel().forEach(
-				coords -> weights.setAsBigDecimal( filteredAppreciation(
-						hhPressure.getAsBigDecimal( coords ),
-						hhAttributes.getAsBigDecimal( coords[0],
-								HHAttribute.CALCULATION.ordinal() ) ) ) );
+		StreamSupport
+				.stream( hhPressure.availableCoordinates().spliterator(), true )
+				.parallel() // really?
+				.forEach(
+						coords -> weights.setAsBigDecimal( filteredAppreciation(
+								hhPressure.getAsBigDecimal(
+										coords ),
+								hhAttributes.getAsBigDecimal( coords[0],
+										HHAttribute.CALCULATION
+												.ordinal() ) ) ) );
 
 		// calculate new attributes based on all current (weighted) information
-		LongStream.range( 0, hhPressure.getRowCount() )//.parallel()
+		LongStream.range( 0, hhPressure.getRowCount() ) //
+				.parallel() // really?
 				.forEach( row ->
 				{
+					// row = impression weights of a household
 					final Matrix rowPressure = weights.selectRows( Ret.LINK,
 							row );
+					
+					// reset household's attractor weight to zero
+					final long attractorIndex = hhAttributes.getAsLong( row,
+							HHAttribute.ATTRACTOR_REF.ordinal() );
+					rowPressure.setAsBigDecimal( BigDecimal.ZERO, 0,
+							attractorIndex );
+					
+					final double sum = rowPressure.getValueSum();
+					
+					// add attractor weight, matched using (calculation) factor
+					final BigDecimal attractorWeightFactor = hhAttributes
+							.getAsBigDecimal( attractorIndex,
+									HHAttribute.CALCULATION.ordinal() );
+					final BigDecimal attractorWeight = DecimalUtil
+							.multiply( attractorWeightFactor, sum );
+					rowPressure.setAsBigDecimal( attractorWeight, 0,
+							attractorIndex );
+
+					// get current hesitancy values and insert transformed
 					final Matrix rowAttributes = hhAttributes
 							.selectRows( Ret.LINK, row )
 							.selectColumns( Ret.LINK, attributePressuredCols );
-					final double sum = rowPressure.getValueSum();
 					MatrixUtil.insertBigDecimal( newAttributes, sum > 0
 							? rowPressure.mtimes( rowAttributes ).divide( sum )
 							: rowAttributes, row, 0 );

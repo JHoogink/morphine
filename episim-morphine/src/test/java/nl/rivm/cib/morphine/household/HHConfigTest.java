@@ -62,7 +62,7 @@ public class HHConfigTest
 		LOG.info( "{} started", HHConfigTest.class.getSimpleName() );
 		final HHConfig conf = HHConfig.getOrCreate();
 		final Scheduler scheduler = this.binder.inject( Scheduler.class );
-		scheduler.onReset( () -> conf.hesitancyOracles( this.binder )
+		scheduler.onReset( () -> conf.hesitancyAttractors( this.binder )
 				.blockingSubscribe( oracle -> oracle.position()
 						.subscribe( pos -> LOG.trace( "t={}, oracle {} {}",
 								scheduler.now().prettify( TimeUnits.DAYS, 1 ),

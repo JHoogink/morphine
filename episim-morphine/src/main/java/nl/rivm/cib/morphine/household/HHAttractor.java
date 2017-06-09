@@ -38,7 +38,7 @@ import io.coala.time.Scheduler;
 import io.reactivex.Observable;
 
 /**
- * {@link HHOracle} adds special proactive entities acting as special
+ * {@link HHAttractor} adds special proactive entities acting as special
  * households, representing the nationally or locally communicated (dynamic)
  * positions of e.g. public health, religious, alternative medicinal
  * authorities, or socially observed disease or adverse events, and determining
@@ -46,7 +46,7 @@ import io.reactivex.Observable;
  * @version $Id$
  * @author Rick van Krevelen
  */
-public interface HHOracle extends HHScenarioConfigurable
+public interface HHAttractor extends HHScenarioConfigurable
 {
 	/**
 	 * @return an {@link Observable} stream of {@link HHAttribute} values
@@ -58,7 +58,7 @@ public interface HHOracle extends HHScenarioConfigurable
 	 * {@link SignalSchedule} executes simple position updates configured as
 	 * {@link SignalSchedule.SignalYaml} entries
 	 */
-	class SignalSchedule implements HHOracle
+	class SignalSchedule implements HHAttractor
 	{
 
 		private JsonNode config;
@@ -97,7 +97,7 @@ public interface HHOracle extends HHScenarioConfigurable
 		}
 
 		@Override
-		public HHOracle reset( final JsonNode config ) throws ParseException
+		public HHAttractor reset( final JsonNode config ) throws ParseException
 		{
 			this.config = config;
 			return this;
@@ -114,19 +114,22 @@ public interface HHOracle extends HHScenarioConfigurable
 	{
 		String TYPE_KEY = "type";
 
-		HHOracle create( JsonNode config ) throws Exception;
+		HHAttractor create( JsonNode config ) throws Exception;
 
-		default Observable<HHOracle> createAll( final JsonNode config,
+		default Observable<HHAttractor> createAll( final JsonNode config,
 			final LocalBinder binder )
 		{
 			return Observable.fromIterable( config ).flatMap( node ->
 			{
 				try
 				{
-					final Class<? extends HHOracle> type = node.has( TYPE_KEY )
-							? Class.forName( node.get( TYPE_KEY ).textValue() )
-									.asSubclass( HHOracle.class )
-							: SignalSchedule.class;
+					final Class<? extends HHAttractor> type = node
+							.has( TYPE_KEY )
+									? Class
+											.forName( node.get( TYPE_KEY )
+													.textValue() )
+											.asSubclass( HHAttractor.class )
+									: SignalSchedule.class;
 					return Observable
 							.just( binder.inject( type ).reset( node ) );
 				} catch( final Exception e )
@@ -145,12 +148,12 @@ public interface HHOracle extends HHScenarioConfigurable
 			private LocalBinder binder;
 
 			@Override
-			public HHOracle create( final JsonNode config )
+			public HHAttractor create( final JsonNode config )
 				throws ClassNotFoundException
 			{
 				return this.binder.inject(
 						Class.forName( config.get( TYPE_KEY ).textValue() )
-								.asSubclass( HHOracle.class ) );
+								.asSubclass( HHAttractor.class ) );
 			}
 		}
 	}

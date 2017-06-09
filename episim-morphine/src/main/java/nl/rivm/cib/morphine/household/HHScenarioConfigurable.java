@@ -48,9 +48,9 @@ public interface HHScenarioConfigurable extends Proactive
 
 	/**
 	 * @param config a {@link JsonNode} configuration
-	 * @return this {@link HHOracle} for chaining
+	 * @return this {@link HHAttractor} for chaining
 	 */
-	HHOracle reset( JsonNode config ) throws ParseException;
+	HHAttractor reset( JsonNode config ) throws ParseException;
 
 	String SCHEDULE_KEY = "schedule";
 

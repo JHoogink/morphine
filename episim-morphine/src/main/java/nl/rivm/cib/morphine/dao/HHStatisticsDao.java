@@ -70,15 +70,16 @@ public class HHStatisticsDao implements Persistable.Dao
 	 * @return a {@link MemberDao}
 	 */
 	public static HHStatisticsDao create( final UUID context, final Instant now,
-		final Matrix households, final long rowIndex, final Matrix members )
+		final int time, final Matrix households, final long rowIndex,
+		final Matrix members )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
 		result.context = context;
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		result.time = now.to( TimeUnits.DAYS ).decimal();
+		result.time = time;
 		result.homeRef = households.getAsInt( rowIndex,
-				HHAttribute.HOME_REF.ordinal() );
+				HHAttribute.ATTRACTOR_REF.ordinal() );
 		result.religious = households.getAsBoolean( rowIndex,
 				HHAttribute.RELIGIOUS.ordinal() );
 		result.alternative = households.getAsBoolean( rowIndex,
@@ -89,18 +90,16 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.CONFIDENCE.ordinal() );
 		result.complacency = households.getAsBigDecimal( rowIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
-//		result.barrier = households.getAsBigDecimal( rowIndex,
-//				HHAttribute.BARRIER.ordinal() );
 		result.referent = MemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.REFERENT_REF.ordinal() ) );
-		result.partner = MemberDao.create( now, members, households
-				.getAsLong( rowIndex, HHAttribute.PARTNER_REF.ordinal() ) );
+//		result.partner = MemberDao.create( now, members, households
+//				.getAsLong( rowIndex, HHAttribute.PARTNER_REF.ordinal() ) );
 		result.child1 = MemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.CHILD1_REF.ordinal() ) );
-		result.child2 = MemberDao.create( now, members, households
-				.getAsLong( rowIndex, HHAttribute.CHILD2_REF.ordinal() ) );
-		result.child3 = MemberDao.create( now, members, households
-				.getAsLong( rowIndex, HHAttribute.CHILD3_REF.ordinal() ) );
+//		result.child2 = MemberDao.create( now, members, households
+//				.getAsLong( rowIndex, HHAttribute.CHILD2_REF.ordinal() ) );
+//		result.child3 = MemberDao.create( now, members, households
+//				.getAsLong( rowIndex, HHAttribute.CHILD3_REF.ordinal() ) );
 		return result;
 	}
 
@@ -177,7 +176,7 @@ public class HHStatisticsDao implements Persistable.Dao
 
 	@Column( name = "TIME", nullable = false, updatable = false,
 		columnDefinition = TIME_COL_DEF )
-	protected BigDecimal time;
+	protected int time;
 
 	@Column( name = "HOME_REF", nullable = false, updatable = false )
 	protected int homeRef;
@@ -200,10 +199,6 @@ public class HHStatisticsDao implements Persistable.Dao
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal complacency;
 
-//	@Column( name = "BARRIER", nullable = true, updatable = false,
-//		columnDefinition = ATTITUDE_COL_DEF )
-//	protected BigDecimal barrier;
-
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
 				column = @Column( name = "REFERENT_AGE", nullable = false,
@@ -221,22 +216,22 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Embedded
 	protected MemberDao referent;
 
-	@AttributeOverrides( {
-			@AttributeOverride( name = MemberDao.AGE_ATTR,
-				column = @Column( name = "PARTNER_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = MemberDao.STATUS_ATTR,
-				column = @Column( name = "PARTNER_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.MALE_ATTR,
-				column = @Column( name = "PARTNER_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
-//					updatable = false ) )
-	} )
-	@Embedded
-	protected MemberDao partner;
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = MemberDao.AGE_ATTR,
+//				column = @Column( name = "PARTNER_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = MemberDao.STATUS_ATTR,
+//				column = @Column( name = "PARTNER_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = MemberDao.MALE_ATTR,
+//				column = @Column( name = "PARTNER_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
+////					updatable = false ) )
+//	} )
+//	@Embedded
+//	protected MemberDao partner;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = MemberDao.AGE_ATTR,
@@ -255,39 +250,39 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Embedded
 	protected MemberDao child1;
 
-	@AttributeOverrides( {
-			@AttributeOverride( name = MemberDao.AGE_ATTR,
-				column = @Column( name = "CHILD2_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = MemberDao.STATUS_ATTR,
-				column = @Column( name = "CHILD2_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.MALE_ATTR,
-				column = @Column( name = "CHILD2_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
-//					updatable = false ) ) 
-	} )
-	@Embedded
-	protected MemberDao child2;
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = MemberDao.AGE_ATTR,
+//				column = @Column( name = "CHILD2_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = MemberDao.STATUS_ATTR,
+//				column = @Column( name = "CHILD2_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = MemberDao.MALE_ATTR,
+//				column = @Column( name = "CHILD2_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
+////					updatable = false ) ) 
+//	} )
+//	@Embedded
+//	protected MemberDao child2;
 
-	@AttributeOverrides( {
-			@AttributeOverride( name = MemberDao.AGE_ATTR,
-				column = @Column( name = "CHILD3_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = MemberDao.STATUS_ATTR,
-				column = @Column( name = "CHILD3_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.MALE_ATTR,
-				column = @Column( name = "CHILD3_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
-//					updatable = false ) ) 
-	} )
-	@Embedded
-	protected MemberDao child3;
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = MemberDao.AGE_ATTR,
+//				column = @Column( name = "CHILD3_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = MemberDao.STATUS_ATTR,
+//				column = @Column( name = "CHILD3_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = MemberDao.MALE_ATTR,
+//				column = @Column( name = "CHILD3_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
+////					updatable = false ) ) 
+//	} )
+//	@Embedded
+//	protected MemberDao child3;
 
 	@Override
 	public String toString()

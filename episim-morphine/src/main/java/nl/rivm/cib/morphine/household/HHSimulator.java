@@ -71,6 +71,8 @@ public class HHSimulator
 	public static void main( final String[] args )
 		throws NamingException, IOException
 	{
+		
+		
 		final HHConfig hhConfig = HHConfig.getOrCreate( args );
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), args, hhConfig );

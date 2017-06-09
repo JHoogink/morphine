@@ -40,17 +40,30 @@ public enum HHAttribute
 	/** population-unique identifier (may be replaced upon death/emigration) */
 	IDENTIFIER,
 
-	/** home region code */
-	HOME_REF,
+	/** in-group identifier determines oracle/authority/attractor */
+	ATTRACTOR_REF,
 
-	/** {@link Boolean} */
-	REGISTERED,
-
-	/** {@link Boolean} */
+	/** {@link Boolean} determines hesitancy profile */
 	RELIGIOUS,
 
-	/** {@link Boolean} */
+	/** {@link Boolean} determines hesitancy profile */
 	ALTERNATIVE,
+
+	/**
+	 * social <a
+	 * href=https://www.wikiwand.com/en/Assortativity>assortativity</a> &isin;
+	 * [0,1] representing <a
+	 * href=https://www.wikiwand.com/en/Homophily>homophily</a> in peer pressure
+	 */
+	SOCIAL_ASSORTATIVITY,
+
+	/**
+	 * school <a
+	 * href=https://www.wikiwand.com/en/Assortativity>assortativity</a> &isin;
+	 * [0,1] representing <a
+	 * href=https://www.wikiwand.com/en/Homophily>homophily</a> in transmission
+	 */
+	SCHOOL_ASSORTATIVITY,
 
 	/** {@link BigDecimal} &isin; [0,1] */
 	CALCULATION,
@@ -66,17 +79,17 @@ public enum HHAttribute
 	/** {@link Long} member row-index */
 	REFERENT_REF,
 
-	/** {@link Long} member row-index, or -1 for N/A */
-	PARTNER_REF,
+//	/** {@link Long} member row-index, or -1 for N/A */
+//	PARTNER_REF,
 
 	/** {@link Long} member row-index, or -1 for N/A */
 	CHILD1_REF,
 
-	/** {@link Long} member row-index, or -1 for N/A */
-	CHILD2_REF,
-
-	/** {@link Long} member row-index, or -1 for N/A */
-	CHILD3_REF,
+//	/** {@link Long} member row-index, or -1 for N/A */
+//	CHILD2_REF,
+//
+//	/** {@link Long} member row-index, or -1 for N/A */
+//	CHILD3_REF,
 
 	;
 
