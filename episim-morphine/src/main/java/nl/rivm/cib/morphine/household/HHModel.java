@@ -6,6 +6,7 @@ import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -15,23 +16,22 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.measure.Quantity;
 import javax.measure.quantity.Time;
-import javax.persistence.EntityManagerFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
 import org.ujmp.core.enums.ValueType;
 
+import com.eaio.uuid.UUID;
+
 import io.coala.bind.InjectConfig;
 import io.coala.bind.InjectConfig.Scope;
 import io.coala.bind.LocalBinder;
 import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
-import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityUtil;
 import io.coala.math.Range;
 import io.coala.math.Tuple;
-import io.coala.persist.JPAUtil;
 import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.QuantityDistribution;
@@ -39,6 +39,7 @@ import io.coala.time.Instant;
 import io.coala.time.Scenario;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
+import io.reactivex.Observable;
 import nl.rivm.cib.epidemes.cbs.json.CBSGender;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
 import nl.rivm.cib.episim.model.locate.Region;
@@ -84,9 +85,6 @@ public class HHModel implements Scenario
 
 	@Inject
 	private transient ProbabilityDistribution.Parser distParser;
-
-	@Inject
-	private transient EntityManagerFactory emf;
 
 	/** current (cached) virtual time instant */
 	private transient Instant dtInstant = null;
@@ -280,27 +278,40 @@ public class HHModel implements Scenario
 
 		// final Pathogen measles = this.pathogens.create( "MV-1" );
 
-		atEach( this.config.statisticsRecurrence( scheduler() ) )
-				.subscribe( this::exportStatistics, this::logError );
 	}
 
-	private void exportStatistics( final Instant t )
+	public Observable<HHStatisticsDao> statistics()
 	{
-		final int i = this.statsIteration.getAndIncrement();
-		final long start = System.currentTimeMillis();
-		JPAUtil.session( this.emf ).subscribe(
-				em -> this.hhIndex
-						.forEach( ( id,
-							index ) -> em.persist(
-									HHStatisticsDao.create( id.contextRef(), t,
-											i, this.hhAttributes, index,
-											this.ppAttributes ) ) ),
-				this::logError,
-				() -> LOG.info( "t={}, persisted {} households in {}s",
-						t.prettify( scheduler().offset() ), this.hhIndex.size(),
-						DecimalUtil.toScale(
-								(System.currentTimeMillis() - start) / 1000.,
-								1 ) ) );
+		final UUID contextRef = this.binder.id().contextRef();
+		return Observable.create( sub ->
+		{
+			scheduler().onReset( scheduler ->
+			{
+				scheduler.time().lastOrError().subscribe( t -> sub.onComplete(),
+						sub::onError );
+				final Iterable<Instant> when;
+				try
+				{
+					when = this.config.statisticsRecurrence( scheduler() );
+				} catch( final ParseException e )
+				{
+					sub.onError( e );
+					return;
+				}
+				scheduler.atEach( when ).subscribe( t ->
+				{
+					final int i = this.statsIteration.getAndIncrement();
+					final Matrix hhAttributes = this.hhAttributes.clone();
+					final Matrix ppAttributes = this.ppAttributes.clone();
+					Observable
+							.fromIterable(
+									new HashSet<Long>( this.hhIndex.values() ) )
+							.map( index -> HHStatisticsDao.create( contextRef,
+									t, i, hhAttributes, index, ppAttributes ) )
+							.subscribe( sub::onNext, sub::onError );
+				}, sub::onError, sub::onComplete );
+			} );
+		} );
 	}
 
 	private void migrateHousehold( final Instant t )
@@ -388,7 +399,6 @@ public class HHModel implements Scenario
 //				Region.ID.of( hhCat.regionRef() );
 				this.oracleRegionBroker.next( hhIndex );
 
-		// TODO from localized dist
 		final long placeIndex = toPlaceIndex( placeRef );
 		final boolean religious = this.hhAttributes.getAsBoolean( placeIndex,
 				HHAttribute.RELIGIOUS.ordinal() );

@@ -70,14 +70,14 @@ public class HHStatisticsDao implements Persistable.Dao
 	 * @return a {@link MemberDao}
 	 */
 	public static HHStatisticsDao create( final UUID context, final Instant now,
-		final int time, final Matrix households, final long rowIndex,
+		final int seq, final Matrix households, final long rowIndex,
 		final Matrix members )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
 		result.context = context;
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		result.time = time;
+		result.seq = seq;
 		result.homeRef = households.getAsInt( rowIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		result.religious = households.getAsBoolean( rowIndex,
@@ -174,9 +174,8 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "HH", nullable = false, updatable = false )
 	protected int hh;
 
-	@Column( name = "TIME", nullable = false, updatable = false,
-		columnDefinition = TIME_COL_DEF )
-	protected int time;
+	@Column( name = "SEQ", nullable = false, updatable = false )
+	protected int seq;
 
 	@Column( name = "HOME_REF", nullable = false, updatable = false )
 	protected int homeRef;

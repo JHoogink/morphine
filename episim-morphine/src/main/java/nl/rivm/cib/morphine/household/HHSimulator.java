@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
@@ -36,17 +38,20 @@ import org.hsqldb.jdbc.JDBCDataSource;
 import io.coala.bind.LocalConfig;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
+import io.coala.math.DecimalUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
 import io.coala.name.JndiUtil;
 import io.coala.persist.HibernateJPAConfig;
 import io.coala.persist.JPAConfig;
+import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.util.MapBuilder;
+import io.reactivex.schedulers.Schedulers;
 import nl.rivm.cib.episim.cbs.TimeUtil;
 
 /**
@@ -67,12 +72,12 @@ public class HHSimulator
 	 * @param args arguments from the command line
 	 * @throws NamingException
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
 	public static void main( final String[] args )
-		throws NamingException, IOException
+		throws NamingException, IOException, InterruptedException
 	{
-		
-		
+
 		final HHConfig hhConfig = HHConfig.getOrCreate( args );
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), args, hhConfig );
@@ -120,16 +125,43 @@ public class HHSimulator
 				// match unit name from persistence.xml
 				.put( JPAConfig.JPA_UNIT_NAMES_KEY, "hh_pu" ).build();
 
-		binderConfig// create binder from config(s)
-				.createBinder( MapBuilder.<Class<?>, Object>unordered()
-						.put(
-								// bind singleton EntityManagerFactory
-								EntityManagerFactory.class,
-								ConfigFactory.create( HibernateJPAConfig.class,
-										jpaConfig ).createEMF() )
-						.build() )
-				.inject( HHModel.class ) // inject model with configured tooling
-				.run(); // run injected (Singleton) model
+		final int bufferSize = 10000; // TODO optimize trade-off
+		final HHModel model = binderConfig.createBinder()
+				.inject( HHModel.class );
+
+		final EntityManagerFactory emf = ConfigFactory
+				.create( HibernateJPAConfig.class, jpaConfig ).createEMF();
+		final CountDownLatch latch = new CountDownLatch( 1 );
+		final AtomicLong pending = new AtomicLong();
+		// TODO hold simulator when pending exceeds some maximum ?
+		model.statistics().doOnNext( dao -> pending.incrementAndGet() )
+				.buffer( bufferSize ).observeOn( Schedulers.io()
+				/* .from( Executors.newFixedThreadPool( 4 ) ) */ ).subscribe( list ->
+				{
+					final long start = System.currentTimeMillis();
+					final long n = pending.addAndGet( -list.size() );
+					JPAUtil.session( emf ).subscribe(
+							em -> list.forEach( em::persist ),
+							e -> LOG.error( "Problem persisting stats", e ),
+							() -> LOG.trace(
+									"Persisted {} rows in {}s, {} pending", list
+											.size(),
+									DecimalUtil.toScale(
+											(System.currentTimeMillis() - start)
+													/ 1000.,
+											1 ),
+									n ) );
+				}, e ->
+				{
+					LOG.error( "Problem generating household stats", e );
+					latch.countDown();
+				}, () ->
+				{
+					LOG.trace( "All household stats are persisted" );
+					latch.countDown();
+				} );
+		model.run(); // run injected (Singleton) model
+		latch.await();
 
 		LOG.info( "Completed {}", HHSimulator.class.getSimpleName() );
 	}
