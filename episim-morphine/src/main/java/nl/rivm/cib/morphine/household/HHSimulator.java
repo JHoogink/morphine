@@ -22,18 +22,14 @@ package nl.rivm.cib.morphine.household;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
 
 import org.aeonbits.owner.ConfigCache;
-import org.aeonbits.owner.ConfigFactory;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.cfg.AvailableSettings;
-import org.hsqldb.jdbc.JDBCDataSource;
 
 import io.coala.bind.LocalConfig;
 import io.coala.dsol3.Dsol3Scheduler;
@@ -41,9 +37,7 @@ import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
-import io.coala.name.JndiUtil;
 import io.coala.persist.HibernateJPAConfig;
-import io.coala.persist.JPAConfig;
 import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
@@ -70,44 +64,21 @@ public class HHSimulator
 
 	/**
 	 * @param args arguments from the command line
-	 * @throws NamingException
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
 	public static void main( final String[] args )
-		throws NamingException, IOException, InterruptedException
+		throws IOException, InterruptedException
 	{
-
 		final HHConfig hhConfig = HHConfig.getOrCreate( args );
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), args, hhConfig );
-
-		// bind a local HSQL data source for exporting statistics
-		JndiUtil.bindLocally( HHConfig.DATASOURCE_JNDI, '/', () ->
-		{
-			final JDBCDataSource ds = new JDBCDataSource();
-			ds.setUrl( hhConfig.hsqlUrl() );
-			ds.setUser( hhConfig.hsqlUser() );
-			ds.setPassword( hhConfig.hsqlPassword() );
-			return ds;
-		} );
-
-		// (re)configure replication run length
-		final ZonedDateTime offset = hhConfig.offset()
-				.atStartOfDay( TimeUtil.NL_TZ );
-		final long durationDays = Duration
-				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
-		ConfigCache.getOrCreate( ReplicateConfig.class,
-				MapBuilder.unordered()
-						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
-						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
-						.build() );
 
 		// configure tooling
 		final LocalConfig binderConfig = LocalConfig.builder()
 				.withId( "morphine" ) // replication name, sets random seeds
 
-				// configure simulator
+				// configure event scheduler
 				.withProvider( Scheduler.class, Dsol3Scheduler.class )
 
 				// configure randomness
@@ -120,32 +91,65 @@ public class HHSimulator
 
 				.build();
 
-		final Map<?, ?> jpaConfig = MapBuilder.unordered()
-				.put( AvailableSettings.DATASOURCE, HHConfig.DATASOURCE_JNDI )
-				// match unit name from persistence.xml
-				.put( JPAConfig.JPA_UNIT_NAMES_KEY, "hh_pu" ).build();
+		// (re)configure replication run length FIXME via binder config
+		final ZonedDateTime offset = hhConfig.offset()
+				.atStartOfDay( TimeUtil.NL_TZ );
+		final long durationDays = Duration
+				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
+		ConfigCache.getOrCreate( ReplicateConfig.class,
+				MapBuilder.unordered()
+						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
+						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
+						.build() );
 
-		final int bufferSize = 10000; // TODO optimize trade-off
 		final HHModel model = binderConfig.createBinder()
 				.inject( HHModel.class );
 
-		final EntityManagerFactory emf = ConfigFactory
-				.create( HibernateJPAConfig.class, jpaConfig ).createEMF();
-		final CountDownLatch latch = new CountDownLatch( 1 );
-		final AtomicLong pending = new AtomicLong();
-		// TODO hold simulator when pending exceeds some maximum ?
-		model.statistics().doOnNext( dao -> pending.incrementAndGet() )
-				.buffer( bufferSize ).observeOn( Schedulers.io()
-				/* .from( Executors.newFixedThreadPool( 4 ) ) */ ).subscribe( list ->
+		// persist statistics
+		final CountDownLatch dbLatch = new CountDownLatch( 1 );
+		// trade-off; see https://stackoverflow.com/a/30347287/1418999
+		final int jdbcBatchSize = 25;
+		// trade-off; >~10K per session seems to flood the stack
+		final int rowsPerTx = 10000;
+		final EntityManagerFactory emf = hhConfig.toJPAConfig(
+				HibernateJPAConfig.class,
+				// add vendor-specific JPA settings (i.e. Hibernate)
+				MapBuilder.unordered()
+						.put( AvailableSettings.STATEMENT_BATCH_SIZE,
+								"" + jdbcBatchSize )
+						.put( AvailableSettings.BATCH_VERSIONED_DATA,
+								"" + true )
+						.put( AvailableSettings.ORDER_INSERTS, "" + true )
+						.put( AvailableSettings.ORDER_UPDATES, "" + true )
+						.build() )
+				.createEMF();
+		// shared between threads generating (sim) and flushing (db) rows
+		final AtomicLong rowsPending = new AtomicLong();
+		model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
+				.buffer( rowsPerTx )
+				.observeOn(
+						// Schedulers.from( Executors.newFixedThreadPool( 4 ) )
+						Schedulers.io() )
+				.subscribe( buffer ->
 				{
+					// TODO hold simulator while pending exceeds a maximum ?
 					final long start = System.currentTimeMillis();
-					final long n = pending.addAndGet( -list.size() );
-					JPAUtil.session( emf ).subscribe(
-							em -> list.forEach( em::persist ),
-							e -> LOG.error( "Problem persisting stats", e ),
+					final long n = rowsPending.addAndGet( -buffer.size() );
+					JPAUtil.session( emf ).subscribe( em ->
+					{
+						for( int i = 0; i < buffer.size(); i++ )
+						{
+							em.persist( buffer.get( i ) );
+							if( i > 0 && i % jdbcBatchSize == 0 )
+							{
+								em.flush();
+								em.clear();
+							}
+						}
+					}, e -> LOG.error( "Problem persisting stats", e ),
 							() -> LOG.trace(
-									"Persisted {} rows in {}s, {} pending", list
-											.size(),
+									"Persisted {} rows in {}s, {} pending",
+									buffer.size(),
 									DecimalUtil.toScale(
 											(System.currentTimeMillis() - start)
 													/ 1000.,
@@ -154,16 +158,22 @@ public class HHSimulator
 				}, e ->
 				{
 					LOG.error( "Problem generating household stats", e );
-					latch.countDown();
+					dbLatch.countDown();
 				}, () ->
 				{
-					LOG.trace( "All household stats are persisted" );
-					latch.countDown();
+					LOG.trace( "Database persistence completed" );
+					dbLatch.countDown();
 				} );
-		model.run(); // run injected (Singleton) model
-		latch.await();
 
-		LOG.info( "Completed {}", HHSimulator.class.getSimpleName() );
+		// run injected (Singleton) model; start generating the statistics
+		model.run();
+		LOG.info( "{} completed...",
+				model.scheduler().getClass().getSimpleName() );
+
+		// wait until all statistics persisted, then clean up connections
+		dbLatch.await();
+		emf.close();
+
+		LOG.info( "Completed {}", model.getClass().getSimpleName() );
 	}
-
 }

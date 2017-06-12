@@ -17,7 +17,7 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine.profile;
+package nl.rivm.cib.morphine.json;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,6 +36,7 @@ import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.util.FileUtil;
+import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 
 /**
  * {@link RelationFrequencyTest} tests {@link RelationFrequencyJson}

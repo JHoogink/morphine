@@ -45,8 +45,8 @@ import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
 import nl.rivm.cib.episim.model.locate.Region;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
 import nl.rivm.cib.morphine.dao.HHStatisticsDao;
-import nl.rivm.cib.morphine.profile.HesitancyProfileJson;
-import nl.rivm.cib.morphine.profile.HesitancyProfileJson.VaccineStatus;
+import nl.rivm.cib.morphine.json.HesitancyProfileJson;
+import nl.rivm.cib.morphine.json.HesitancyProfileJson.VaccineStatus;
 
 /**
  * {@link HHModel} is a simple example {@link Scenario} implementation, of which
@@ -99,7 +99,7 @@ public class HHModel implements Scenario
 	/** */
 	private Matrix ppAttributes;
 	/** */
-	private final AtomicLong edges = new AtomicLong();
+	private final AtomicLong hhCount = new AtomicLong();
 	/** */
 	private final AtomicLong persons = new AtomicLong();
 	/** number of top rows (0..n) in {@link #hhNetwork} reserved for oracles */
@@ -112,7 +112,7 @@ public class HHModel implements Scenario
 //	private transient ConditionalDistribution<CbsNeighborhood, Region.ID> hoodDist;
 
 	/** */
-	private RegionBroker oracleRegionBroker;
+	private RegionBroker attractorBroker;
 	/** */
 	private ProbabilityDistribution<CBSHousehold> hhTypeDist;
 	/** */
@@ -195,7 +195,7 @@ public class HHModel implements Scenario
 
 		oracles.forEach( oracle ->
 		{
-			final long index = this.edges.getAndIncrement();
+			final long index = this.hhCount.getAndIncrement();
 			oracle.position().subscribe( map ->
 			{
 				LOG.info( "t={}, oracle {}: {}", dt(), index, map );
@@ -212,7 +212,7 @@ public class HHModel implements Scenario
 //		this.hoodDist = this.config.neighborhoodDist( this.distFactory,
 //				regRef -> fallbackRegRef );
 		final Map<Long, Region.ID> regions = new HashMap<>();
-		this.oracleRegionBroker = hhIndex -> regions.computeIfAbsent(
+		this.attractorBroker = hhIndex -> regions.computeIfAbsent(
 				hhIndex % this.oracleCount, key -> Region.ID.of( "or" + key ) );
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
 		this.hhRefAgeDist = this.config
@@ -254,11 +254,11 @@ public class HHModel implements Scenario
 			if( System.currentTimeMillis() - time > 1000 )
 			{
 				time = System.currentTimeMillis();
-				long agNow = this.persons.get() + this.edges.get();
+				long agNow = this.persons.get() + this.hhCount.get();
 				LOG.info(
 						"Initialized {} pp ({}%) across {} hh (= +{} actors/sec)",
 						this.persons.get(), this.persons.get() * 100 / ppTotal,
-						this.edges.get(), agNow - agPrev );
+						this.hhCount.get(), agNow - agPrev );
 				agPrev = agNow;
 			}
 		}
@@ -272,9 +272,9 @@ public class HHModel implements Scenario
 
 		// TODO add expressingRefs from own / neighboring / global placeRef dist
 
-		LOG.info( "Initialized {} pp ({}%) across {} hh in {} oracles/regions",
+		LOG.info( "Initialized {} pp ({}%) across {} hh & {} attractor regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
-				this.edges.get() - this.oracleCount, this.oracleCount );
+				this.hhCount.get() - this.oracleCount, this.oracleCount );
 
 		// final Pathogen measles = this.pathogens.create( "MV-1" );
 
@@ -287,6 +287,7 @@ public class HHModel implements Scenario
 		{
 			scheduler().onReset( scheduler ->
 			{
+				// TODO copy/move completion trigger to Scheduler
 				scheduler.time().lastOrError().subscribe( t -> sub.onComplete(),
 						sub::onError );
 				final Iterable<Instant> when;
@@ -318,10 +319,12 @@ public class HHModel implements Scenario
 	{
 		final long hhIndex = this.oracleCount + this.distFactory.getStream()
 				.nextLong( this.hhAttributes.getRowCount() - this.oracleCount );
+//		replaceHousehold(hhIndex,-1 );// FIXME
+
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
-		LOG.trace( "t={}, replace migrant #{}, next after: {}",
-				t.prettify( scheduler().offset() ), hhIndex,
-				QuantityUtil.toScale( dt, 1 ) );
+//		LOG.trace( "t={}, replace migrant #{}, next after: {}",
+//				t.prettify( scheduler().offset() ), hhIndex,
+//				QuantityUtil.toScale( dt, 1 ) );
 		after( dt ).call( this::migrateHousehold );
 	}
 
@@ -377,10 +380,11 @@ public class HHModel implements Scenario
 
 	private int addHousehold()
 	{
-		final long id = this.edges.incrementAndGet();
+		final long id = this.hhCount.incrementAndGet(); // grow the network
 		final Actor.ID hhRef = Actor.ID.of( String.format( "hh%08d", id ),
 				this.binder.id() );
-		final long hhIndex = toHouseholdIndex( hhRef );
+		final long hhIndex = this.hhIndex.computeIfAbsent( hhRef,
+				key -> (long) this.hhIndex.size() );
 		return replaceHousehold( hhIndex, id );
 	}
 
@@ -395,15 +399,16 @@ public class HHModel implements Scenario
 		final CBSHousehold hhType =
 //				hhCat.hhTypeDist( this.distFactory::createCategorical ).draw();
 				this.hhTypeDist.draw();
-		final Region.ID placeRef =
+		final Region.ID attractorRef =
 //				Region.ID.of( hhCat.regionRef() );
-				this.oracleRegionBroker.next( hhIndex );
+				this.attractorBroker.next( hhIndex );
 
-		final long placeIndex = toPlaceIndex( placeRef );
-		final boolean religious = this.hhAttributes.getAsBoolean( placeIndex,
-				HHAttribute.RELIGIOUS.ordinal() );
-		final boolean alternative = this.hhAttributes.getAsBoolean( placeIndex,
-				HHAttribute.ALTERNATIVE.ordinal() );
+		final long attractorIndex = Long
+				.valueOf( attractorRef.unwrap().substring( 2 ) );
+		final boolean religious = this.hhAttributes.getAsBoolean(
+				attractorIndex, HHAttribute.RELIGIOUS.ordinal() );
+		final boolean alternative = this.hhAttributes.getAsBoolean(
+				attractorIndex, HHAttribute.ALTERNATIVE.ordinal() );
 		final HesitancyProfileJson hesProf = this.hesitancyProfileDist.draw(
 				new HesitancyProfileJson.Category( religious, alternative ) );
 
@@ -452,7 +457,7 @@ public class HHModel implements Scenario
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		this.hhAttributes.setAsLong( placeIndex, hhIndex,
+		this.hhAttributes.setAsLong( attractorIndex, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBoolean( religious, hhIndex,
 				HHAttribute.RELIGIOUS.ordinal() );
@@ -479,8 +484,8 @@ public class HHModel implements Scenario
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
-			LOG.trace( "t={}, replace home leaver #{}",
-					t.prettify( scheduler().offset() ), hhIndex );
+//			LOG.trace( "t={}, replace home leaver #{}",
+//					t.prettify( scheduler().offset() ), hhIndex );
 			// FIXME replace persons too! 
 			// replaceHousehold( hhIndex, id );
 		} );
@@ -521,27 +526,12 @@ public class HHModel implements Scenario
 
 	private final Map<Actor.ID, Long> hhIndex = new HashMap<>();
 
-	private long toHouseholdIndex( final Actor.ID hhRef )
-	{
-		return this.hhIndex.computeIfAbsent( hhRef,
-				key -> (long) this.hhIndex.size() );
-	}
-
 	private final Map<Actor.ID, Long> ppIndex = new HashMap<>();
 
 	private long toMemberIndex( final Actor.ID hhRef )
 	{
 		return this.ppIndex.computeIfAbsent( hhRef,
 				key -> (long) this.ppIndex.size() );
-	}
-
-	// private final Map<Region.ID, Long> placeIndex = new HashMap<>();
-
-	private long toPlaceIndex( final Region.ID placeRef )
-	{
-		return Long.valueOf( placeRef.unwrap().substring( 2 ) );
-		// return this.placeIndex.computeIfAbsent( placeRef,
-		// key -> (long) this.placeIndex.size() );
 	}
 
 	private void logError( final Throwable e )

@@ -17,9 +17,10 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine.profile;
+package nl.rivm.cib.morphine.json;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.EnumMap;
 
 import javax.measure.quantity.Time;
@@ -29,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import io.coala.exception.Thrower;
+import io.coala.math.Tuple;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.QuantityDistribution;
 import io.coala.time.TimeUnits;
@@ -132,6 +134,30 @@ public class RelationFrequencyJson
 	{
 		return this.intervalDistCache != null ? this.intervalDistCache
 				: (this.intervalDistCache = this.dist.create( distFact ));
+	}
+
+	/**
+	 * @return
+	 */
+	public Object toCategory()
+	{
+		return new Category( this.gender, this.ageRange, this.relation );
+	}
+
+	public static class Category extends Tuple
+	{
+
+		/**
+		 * {@link Category} constructor
+		 * 
+		 * @param values
+		 */
+		public Category( final Gender gender, final String ageRange,
+			final Relation relation )
+		{
+			super( Arrays.asList( gender, ageRange, relation ) );
+		}
+
 	}
 
 	public static class DistParams
