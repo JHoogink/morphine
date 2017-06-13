@@ -103,7 +103,7 @@ public class HHModel implements Scenario
 	/** */
 	private final AtomicLong persons = new AtomicLong();
 	/** number of top rows (0..n) in {@link #hhNetwork} reserved for oracles */
-	private long oracleCount;
+	private long attractorCount;
 	/** virtual time range of simulation */
 //	private transient Range<LocalDate> timeRange = null;
 	/** empirical household compositions and referent ages, see CBS 71486 */
@@ -172,17 +172,17 @@ public class HHModel implements Scenario
 		IllegalAccessException, IOException
 	{
 
-		final List<HHAttractor> oracles = this.config
+		final List<HHAttractor> attractors = this.config
 				.hesitancyAttractors( this.binder ).toList().blockingGet();
-		this.oracleCount = oracles.size();
+		this.attractorCount = attractors.size();
 
 		final CBSHousehold hhType = this.config
 				.householdTypeDist( this.distParser ).draw(); // assuming constant
 		final long ppTotal = this.config.populationSize(),
 				hhTotal = ppTotal / hhType.size(),
-				edgeTotal = hhTotal + this.oracleCount;
+				edgeTotal = hhTotal + this.attractorCount;
 		LOG.trace( "#persons: {}, #hh: {}, #oracles: {}, #edges (max): {}",
-				ppTotal, hhTotal, this.oracleCount, edgeTotal );
+				ppTotal, hhTotal, this.attractorCount, edgeTotal );
 
 		// or Matrix.Factory.linkToJDBC(host, port, db, table, user, password)
 		// or Matrix.Factory.linkTo().file("hugeCSVFile").asDenseCSV(columnSeparator)
@@ -193,10 +193,10 @@ public class HHModel implements Scenario
 		this.hhNetwork = SparseMatrix.Factory.zeros( //ValueType.BIGDECIMAL,
 				edgeTotal, edgeTotal );
 
-		oracles.forEach( oracle ->
+		attractors.forEach( attractor ->
 		{
 			final long index = this.hhCount.getAndIncrement();
-			oracle.position().subscribe( map ->
+			attractor.position().subscribe( map ->
 			{
 				LOG.info( "t={}, oracle {}: {}", dt(), index, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
@@ -213,7 +213,8 @@ public class HHModel implements Scenario
 //				regRef -> fallbackRegRef );
 		final Map<Long, Region.ID> regions = new HashMap<>();
 		this.attractorBroker = hhIndex -> regions.computeIfAbsent(
-				hhIndex % this.oracleCount, key -> Region.ID.of( "or" + key ) );
+				hhIndex % this.attractorCount,
+				key -> Region.ID.of( "or" + key ) );
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
 		this.hhRefAgeDist = this.config
 				.householdReferentAgeDist( this.distParser );
@@ -247,21 +248,25 @@ public class HHModel implements Scenario
 				.hesitancyProfileSample( this.distFactory.getStream() );
 
 		// populate households
-		for( long time = System
-				.currentTimeMillis(), i = 0, agPrev = 0, pp = 0; i < ppTotal; i += pp )
+		for( long time = System.currentTimeMillis(), agPrev = 0; this.persons
+				.get() < ppTotal; )
 		{
-			pp = addHousehold();
+			addHousehold();
 			if( System.currentTimeMillis() - time > 1000 )
 			{
 				time = System.currentTimeMillis();
 				long agNow = this.persons.get() + this.hhCount.get();
-				LOG.info(
+				LOG.trace(
 						"Initialized {} pp ({}%) across {} hh (= +{} actors/sec)",
 						this.persons.get(), this.persons.get() * 100 / ppTotal,
 						this.hhCount.get(), agNow - agPrev );
 				agPrev = agNow;
 			}
 		}
+
+		LOG.info( "Initialized {} pp ({}%) across {} hh & {} attractor regions",
+				this.persons.get(), this.persons.get() * 100 / ppTotal,
+				this.hhCount.get() - this.attractorCount, this.attractorCount );
 
 		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
 				.newInstance();
@@ -271,10 +276,6 @@ public class HHModel implements Scenario
 				.subscribe( this::vaccinate, this::logError );
 
 		// TODO add expressingRefs from own / neighboring / global placeRef dist
-
-		LOG.info( "Initialized {} pp ({}%) across {} hh & {} attractor regions",
-				this.persons.get(), this.persons.get() * 100 / ppTotal,
-				this.hhCount.get() - this.oracleCount, this.oracleCount );
 
 		// final Pathogen measles = this.pathogens.create( "MV-1" );
 
@@ -317,8 +318,9 @@ public class HHModel implements Scenario
 
 	private void migrateHousehold( final Instant t )
 	{
-		final long hhIndex = this.oracleCount + this.distFactory.getStream()
-				.nextLong( this.hhAttributes.getRowCount() - this.oracleCount );
+		final long hhIndex = this.attractorCount
+				+ this.distFactory.getStream().nextLong(
+						this.hhAttributes.getRowCount() - this.attractorCount );
 //		replaceHousehold(hhIndex,-1 );// FIXME
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
@@ -330,18 +332,19 @@ public class HHModel implements Scenario
 
 	private void vaccinate( final Instant t )
 	{
-		this.attitudePropagator.propagate( this.hhNetwork, this.hhAttributes );
-//		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, 0, 0 );
-//		this.hhNetwork.zeros( Ret.ORIG );
-//		if( this.hhNetwork.getAsBigDecimal( 0, 0 ).signum() != 0 ) Thrower
-//				.throwNew( IllegalStateException::new, () -> "reset failed" );
-
 		final VaxOccasion occ = this.vaxOccasionDist.draw();
 		final BigDecimal nowYears = now().to( TimeUnits.ANNUM ).decimal();
 		final Range<BigDecimal> birthRange = Range
 				.of( nowYears.subtract( BigDecimal.valueOf( 4 ) ), nowYears );
 		LOG.info( "t={}, vaccination occasion: {} for susceptibles born {}",
-				t.prettify( scheduler().offset() ), occ, birthRange );
+				t.prettify( scheduler().offset() ), occ.asMap().values(),
+				birthRange );
+
+		this.attitudePropagator.propagate( this.hhNetwork, this.hhAttributes );
+//		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, 0, 0 );
+//		this.hhNetwork.zeros( Ret.ORIG );
+//		if( this.hhNetwork.getAsBigDecimal( 0, 0 ).signum() != 0 ) Thrower
+//				.throwNew( IllegalStateException::new, () -> "reset failed" );
 
 		// for each households evaluated with a positive attitude
 		this.attitudeEvaluator.isPositive( occ, this.hhAttributes )
@@ -383,8 +386,8 @@ public class HHModel implements Scenario
 		final long id = this.hhCount.incrementAndGet(); // grow the network
 		final Actor.ID hhRef = Actor.ID.of( String.format( "hh%08d", id ),
 				this.binder.id() );
-		final long hhIndex = this.hhIndex.computeIfAbsent( hhRef,
-				key -> (long) this.hhIndex.size() );
+		final long hhIndex = this.attractorCount + this.hhIndex
+				.computeIfAbsent( hhRef, key -> (long) this.hhIndex.size() );
 		return replaceHousehold( hhIndex, id );
 	}
 
@@ -453,6 +456,8 @@ public class HHModel implements Scenario
 		final BigDecimal initialCalculation = this.calculationDist.draw();
 		final Map<HHAttribute, BigDecimal> initialHesitancy = this.hesitancyDist
 				.draw( hesProf );
+
+		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, hhIndex, hhIndex );
 
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,

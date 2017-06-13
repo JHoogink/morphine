@@ -65,6 +65,9 @@ public enum HHAttribute
 	 */
 	SCHOOL_ASSORTATIVITY,
 
+	/** {@link Matrix} hh indices {@link Matrix#getAsLong} */
+	SOCIAL_NETWORK,
+
 	/** {@link BigDecimal} &isin; [0,1] */
 	CALCULATION,
 

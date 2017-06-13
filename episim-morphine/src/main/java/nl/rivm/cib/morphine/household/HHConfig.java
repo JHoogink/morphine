@@ -86,9 +86,6 @@ public interface HHConfig extends GlobalConfig
 	String STATISTICS_PREFIX = REPLICATION_PREFIX + "statistics" + KEY_SEP;
 
 	/** configuration key */
-//	String JDBC_PREFIX = STATISTICS_PREFIX + "jdbc" + KEY_SEP;
-
-	/** configuration key */
 	String POPULATION_PREFIX = MORPHINE_PREFIX + "population" + KEY_SEP;
 
 	/** configuration key */
@@ -125,9 +122,15 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	// match unit name from persistence.xml
+	@DefaultValue( "" + false )
+	@Key( STATISTICS_PREFIX + "db-enabled" )
+	boolean dbEnabled();
+
+	// match unit name from persistence.xml
 	@DefaultValue( "hh_pu" )
 	@Key( JPAConfig.JPA_UNIT_NAMES_KEY )
-	String jpaPersistenceUnit();
+	@Separator( JPAConfig.NAME_DELIMITER )
+	String[] jpaPersistenceUnitNames();
 
 	//	"jdbc:neo4j:bolt://192.168.99.100:7687/db/data" 
 	//	"jdbc:mysql://localhost/hhdb" 

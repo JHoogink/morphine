@@ -21,14 +21,18 @@ package nl.rivm.cib.morphine.household;
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
 import org.ujmp.core.calculation.Calculation.Ret;
 
+import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.MatrixUtil;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
@@ -72,57 +76,82 @@ public interface HHAttitudePropagator
 	default void propagate( final Matrix hhPressure, final Matrix hhAttributes,
 		final long... attributePressuredCols )
 	{
-		final Matrix newAttributes = Matrix.Factory.zeros(
-				hhPressure.getRowCount(),
-				Objects.requireNonNull( attributePressuredCols ).length );
-
-		// apply calculation threshold function
-		final Matrix weights = SparseMatrix.Factory
-				.zeros( hhPressure.getSize() );
-		StreamSupport
-				.stream( hhPressure.availableCoordinates().spliterator(), true )
-				.parallel() // really?
-				.forEach(
-						coords -> weights.setAsBigDecimal( filteredAppreciation(
-								hhPressure.getAsBigDecimal(
-										coords ),
-								hhAttributes.getAsBigDecimal( coords[0],
-										HHAttribute.CALCULATION
-												.ordinal() ) ) ) );
+		Objects.requireNonNull( hhPressure, "network null" );
+		Objects.requireNonNull( hhAttributes, "attributes null" );
+		final long hhTotal = hhAttributes.getRowCount();
+		final Matrix newAttributes = Matrix.Factory.zeros( hhTotal, Objects
+				.requireNonNull( attributePressuredCols, "cols null" ).length );
 
 		// calculate new attributes based on all current (weighted) information
-		LongStream.range( 0, hhPressure.getRowCount() ) //
+		final AtomicLong duration = new AtomicLong(
+				System.currentTimeMillis() ), hhCount = new AtomicLong();
+		final Logger LOG = LogUtil.getLogger( getClass() );
+		LongStream.range( 0, hhTotal ) //
 				.parallel() // really?
 				.forEach( row ->
 				{
-					// row = impression weights of a household
-					final Matrix rowPressure = weights.selectRows( Ret.LINK,
-							row );
-					
-					// reset household's attractor weight to zero
+					hhCount.incrementAndGet();
+					if( System.currentTimeMillis() - duration.get() > 1000 )
+					{
+						duration.set( System.currentTimeMillis() );
+						LOG.trace( "Propagating; {} of {}", hhCount.get(),
+								hhTotal );
+					}
+
+					// apply calculation threshold function
+					final Matrix hhPressureRow = hhPressure
+							.selectRows( Ret.LINK, row );
+					if( hhPressureRow == null ) // e.g. isolated attractors
+						return;
+
+					final BigDecimal calc = hhAttributes.getAsBigDecimal( row,
+							HHAttribute.CALCULATION.ordinal() );
 					final long attractorIndex = hhAttributes.getAsLong( row,
 							HHAttribute.ATTRACTOR_REF.ordinal() );
-					rowPressure.setAsBigDecimal( BigDecimal.ZERO, 0,
-							attractorIndex );
-					
-					final double sum = rowPressure.getValueSum();
-					
+					final AtomicLong edges = new AtomicLong();
+					final Matrix hhWeights = SparseMatrix.Factory.zeros( 1,
+							hhTotal );
+
+					// reset household's attractor weight to zero
+//					hhWeights.setAsBigDecimal( BigDecimal.ZERO, 0,
+//							attractorIndex );
+
+					final AtomicReference<BigDecimal> sum = new AtomicReference<>(
+							BigDecimal.ZERO );
+					StreamSupport.stream(
+							hhPressureRow.availableCoordinates().spliterator(),
+							true ).forEach( rowCoords ->
+							{
+								final long hhIndex = hhPressureRow.isRowVector()
+										? rowCoords[1] : rowCoords[0];
+								if( hhIndex == attractorIndex ) return;
+								final BigDecimal v = filteredAppreciation(
+										hhPressureRow.getAsBigDecimal( 0,
+												hhIndex ),
+										calc );
+								if( v.signum() == 0 ) return;
+								sum.getAndUpdate( s -> s.add( v ) );
+								hhWeights.setAsBigDecimal( v, 0, hhIndex );
+								edges.incrementAndGet();
+							} );
+
 					// add attractor weight, matched using (calculation) factor
 					final BigDecimal attractorWeightFactor = hhAttributes
 							.getAsBigDecimal( attractorIndex,
 									HHAttribute.CALCULATION.ordinal() );
 					final BigDecimal attractorWeight = DecimalUtil
-							.multiply( attractorWeightFactor, sum );
-					rowPressure.setAsBigDecimal( attractorWeight, 0,
+							.multiply( attractorWeightFactor, sum.get() );
+					hhWeights.setAsBigDecimal( attractorWeight, 0,
 							attractorIndex );
 
 					// get current hesitancy values and insert transformed
 					final Matrix rowAttributes = hhAttributes
-							.selectRows( Ret.LINK, row )
 							.selectColumns( Ret.LINK, attributePressuredCols );
-					MatrixUtil.insertBigDecimal( newAttributes, sum > 0
-							? rowPressure.mtimes( rowAttributes ).divide( sum )
-							: rowAttributes, row, 0 );
+					final Matrix res = sum.get().signum() != 0 ? hhWeights
+							.mtimes( rowAttributes ).divide( sum.get()
+									.add( attractorWeight ).doubleValue() )
+							: rowAttributes;
+					MatrixUtil.insertBigDecimal( newAttributes, res, row, 0 );
 				} );
 
 		// update all attributes at once

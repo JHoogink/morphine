@@ -106,73 +106,80 @@ public class HHSimulator
 				.inject( HHModel.class );
 
 		// persist statistics
-		final CountDownLatch dbLatch = new CountDownLatch( 1 );
-		// trade-off; see https://stackoverflow.com/a/30347287/1418999
-		final int jdbcBatchSize = 25;
-		// trade-off; >~10K per session seems to flood the stack
-		final int rowsPerTx = 10000;
-		final EntityManagerFactory emf = hhConfig.toJPAConfig(
-				HibernateJPAConfig.class,
-				// add vendor-specific JPA settings (i.e. Hibernate)
-				MapBuilder.unordered()
-						.put( AvailableSettings.STATEMENT_BATCH_SIZE,
-								"" + jdbcBatchSize )
-						.put( AvailableSettings.BATCH_VERSIONED_DATA,
-								"" + true )
-						.put( AvailableSettings.ORDER_INSERTS, "" + true )
-						.put( AvailableSettings.ORDER_UPDATES, "" + true )
-						.build() )
-				.createEMF();
-		// shared between threads generating (sim) and flushing (db) rows
-		final AtomicLong rowsPending = new AtomicLong();
-		model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
-				.buffer( rowsPerTx )
-				.observeOn(
-						// Schedulers.from( Executors.newFixedThreadPool( 4 ) )
-						Schedulers.io() )
-				.subscribe( buffer ->
-				{
-					// TODO hold simulator while pending exceeds a maximum ?
-					final long start = System.currentTimeMillis();
-					final long n = rowsPending.addAndGet( -buffer.size() );
-					JPAUtil.session( emf ).subscribe( em ->
+		final boolean jpa = hhConfig.dbEnabled();
+		final CountDownLatch dbLatch = new CountDownLatch( jpa ? 1 : 0 );
+		if( jpa )
+		{
+			// trade-off; see https://stackoverflow.com/a/30347287/1418999
+			final int jdbcBatchSize = 25;
+			// trade-off; 50K+ are postponed until sim ends, flooding the stack
+			final int rowsPerTx = 10000;
+			final EntityManagerFactory emf = hhConfig.toJPAConfig(
+					HibernateJPAConfig.class,
+					// add vendor-specific JPA settings (i.e. Hibernate)
+					MapBuilder.unordered()
+							.put( AvailableSettings.STATEMENT_BATCH_SIZE,
+									"" + jdbcBatchSize )
+							.put( AvailableSettings.BATCH_VERSIONED_DATA,
+									"" + true )
+							.put( AvailableSettings.ORDER_INSERTS, "" + true )
+							.put( AvailableSettings.ORDER_UPDATES, "" + true )
+							.build() )
+					.createEMF();
+			// shared between threads generating (sim) and flushing (db) rows
+			final AtomicLong rowsPending = new AtomicLong();
+			model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
+					.buffer( rowsPerTx )
+					.observeOn(
+							// Schedulers.from( Executors.newFixedThreadPool( 4 ) )
+							Schedulers.io() )
+					.subscribe( buffer ->
 					{
-						for( int i = 0; i < buffer.size(); i++ )
+						// TODO hold simulator while pending exceeds a maximum ?
+						final long start = System.currentTimeMillis();
+						final long n = rowsPending.addAndGet( -buffer.size() );
+						JPAUtil.session( emf ).subscribe( em ->
 						{
-							em.persist( buffer.get( i ) );
-							if( i > 0 && i % jdbcBatchSize == 0 )
+							for( int i = 0; i < buffer.size(); i++ )
 							{
-								em.flush();
-								em.clear();
+								em.persist( buffer.get( i ) );
+								if( i > 0 && i % jdbcBatchSize == 0 )
+								{
+									em.flush();
+									em.clear();
+								}
 							}
-						}
-					}, e -> LOG.error( "Problem persisting stats", e ),
-							() -> LOG.trace(
-									"Persisted {} rows in {}s, {} pending",
-									buffer.size(),
-									DecimalUtil.toScale(
-											(System.currentTimeMillis() - start)
-													/ 1000.,
-											1 ),
-									n ) );
-				}, e ->
-				{
-					LOG.error( "Problem generating household stats", e );
-					dbLatch.countDown();
-				}, () ->
-				{
-					LOG.trace( "Database persistence completed" );
-					dbLatch.countDown();
-				} );
+						}, e -> LOG.error( "Problem persisting stats", e ),
+								() -> LOG
+										.trace( "Persisted {} rows in {}s, {} pending",
+												buffer.size(),
+												DecimalUtil
+														.toScale(
+																(System.currentTimeMillis()
+																		- start)
+																		/ 1000.,
+																1 ),
+												n ) );
+					}, e ->
+					{
+						LOG.error( "Problem generating household stats", e );
+						emf.close(); // clean up connections
+						dbLatch.countDown();
+					}, () ->
+					{
+						LOG.trace( "Database persistence completed" );
+						emf.close(); // clean up connections
+						dbLatch.countDown();
+					} );
+		}
 
 		// run injected (Singleton) model; start generating the statistics
 		model.run();
 		LOG.info( "{} completed...",
 				model.scheduler().getClass().getSimpleName() );
 
-		// wait until all statistics persisted, then clean up connections
+		// wait until all statistics persisted
 		dbLatch.await();
-		emf.close();
 
 		LOG.info( "Completed {}", model.getClass().getSimpleName() );
 	}

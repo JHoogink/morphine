@@ -9,12 +9,9 @@ morphine:
     offset-date: 2012-01-01
     statistics:
       recurrence: 0 0 0 ? * MON *
-#      jdbc:
-#        url: jdbc:hsqldb:file:target/hh_testdb
-#        username: SA
-#        password:
+      db-enabled: false
   population:
-    size: 10000
+    size: 100000
     hh-type-dist: const(SOLO_1KID)
     hh-ref-age-dist: uniform(20;40)
     hh-leavehome-age: 20 yr
