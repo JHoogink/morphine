@@ -25,11 +25,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.logging.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
+import org.ujmp.core.calculation.Calculation.Ret;
 
 import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
@@ -52,12 +56,33 @@ public class HesitantTest
 	/** */
 	private static final Logger LOG = LogUtil.getLogger( HesitantTest.class );
 
-//	@Test
-//	public void dateParseTest() throws ParseException
-//	{
-//		LOG.trace( "parsed: {}", new SimpleDateFormat( "M/d/yyyy H:mm:ss a" )
-//				.parse( "9/26/2015 12:33:21 PM" ) );
-//	}
+	/**
+	 * bugs reported, see
+	 * https://github.com/ujmp/universal-java-matrix-package/issues/19
+	 */
+	@Ignore
+	@Test
+	public void matrixTest()
+	{
+		final Matrix b = Matrix.Factory.zeros( 1, 1 );
+		Assert.assertTrue( b.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
+		Assert.assertFalse( b.selectRows( Ret.LINK, 0 ).isColumnVector() );
+		Assert.assertTrue( b.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertFalse( b.selectColumns( Ret.LINK, 0 ).isRowVector() );
+
+		final Matrix a = Matrix.Factory.zeros( 2, 1 );
+		Assert.assertTrue( a.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
+		Assert.assertFalse( a.selectRows( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertTrue( a.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertFalse( a.selectColumns( Ret.LINK, 0 ).isRowVector() ); // fail
+
+		a.setAsBigDecimal( BigDecimal.ONE, 1, 0 );
+		StreamSupport
+				.stream( a.selectRows( Ret.LINK, 1 ).availableCoordinates()
+						.spliterator(), false )
+				.forEach( coords -> Assert.assertEquals( BigDecimal.ONE,
+						a.getAsBigDecimal( coords ) ) ); // fail, coords swapped
+	}
 
 	/**
 	 * Test the (default) {@link VaxHesitancy} behaviors

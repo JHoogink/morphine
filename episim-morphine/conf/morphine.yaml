@@ -11,7 +11,7 @@ morphine:
       recurrence: 0 0 0 ? * MON *
       db-enabled: false
   population:
-    size: 100000
+    size: 10000
     hh-type-dist: const(SOLO_1KID)
     hh-ref-age-dist: uniform(20;40)
     hh-leavehome-age: 20 yr
@@ -29,6 +29,15 @@ morphine:
       profile-sample: conf/hesitancy-initial.json
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
+      social-network-degree-avg: 10 # avg. no. family + friends + neighbors
+      social-network-beta-dist: bernoulli(0.3) # 0 = lattice, 1 = random network
+      social-assortativity-dist: bernoulli(0.75) # whether new link is 'similar'
+      school-assortativity-dist: bernoulli(0.75) # whether school is 'similar'
+      school-capacities: 
+        0-4: 50
+        4-12: 100
+        12-20: 200
+        
       attractor-factory: nl.rivm.cib.morphine.household.HHAttractor$Factory$SimpleBinding
       attractors:
       # local pressure, mainly from e.g. Health Services
@@ -36,28 +45,28 @@ morphine:
         alternative: 0
         confidence: 1
         complacency: 0
-        calculation: 1 # 1 = match total weight of social network
+        calculation: 1 # 1 = impact factor, 1: match, >1: outweigh soc. network
         type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Protestantists
       - religious: 1
         alternative: 0
         confidence: .5
         complacency: 1
-        calculation: 1 # 1 = match total weight of social network
+        calculation: 1 # 1 = impact factor, 1: match, >1: outweigh soc. network
         type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Traditionalists
       - religious: 0
         alternative: 1
         confidence: 0
         complacency: 1
-        calculation: 1 # 1 = match total weight of social network
+        calculation: 1 # 1 = impact factor, 1: match, >1: outweigh soc. network
         type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Mixture
       - religious: 1
         alternative: 1
         confidence: .5
         complacency: .5
-        calculation: 1 # 1 = match total weight of social network
+        calculation: 1 # 1 = impact factor, 1: match, >1: outweigh soc. network
         type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
 #        schedule: 
 #        # trigger monthly disturbance and 5-day recovery to original values

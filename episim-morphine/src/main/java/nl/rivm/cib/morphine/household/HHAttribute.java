@@ -115,7 +115,7 @@ public enum HHAttribute
 	@JsonValue
 	public String jsonValue()
 	{
-		return this.json == null ? (this.json = name().toLowerCase())
+		return this.json == null ? (this.json = name().toLowerCase().replace('_','-' ))
 				: this.json;
 	}
 }

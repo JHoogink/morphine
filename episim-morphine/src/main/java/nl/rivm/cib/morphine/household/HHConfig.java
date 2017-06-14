@@ -378,16 +378,15 @@ public interface HHConfig extends GlobalConfig
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfiles();
 
-	default ProbabilityDistribution<HesitancyProfileJson> hesitancyProfileDist(
-		final ProbabilityDistribution.Factory distFactory )
+	default ProbabilityDistribution<HesitancyProfileJson>
+		hesitancyProfileDist( final Factory distFactory )
 	{
 		return distFactory.createCategorical( HesitancyProfileJson
 				.parse( this::hesitancyProfiles ).toList().blockingGet() );
 	}
 
 	default <T> ConditionalDistribution<HesitancyProfileJson, T>
-		hesitancyProfilesGrouped(
-			final ProbabilityDistribution.Factory distFactory,
+		hesitancyProfilesGrouped( final Factory distFactory,
 			final Function<HesitancyProfileJson, T> keyMapper )
 	{
 		return ConditionalDistribution.of( distFactory::createCategorical,
@@ -442,6 +441,40 @@ public interface HHConfig extends GlobalConfig
 	{
 		return distParser.<Number>parse( hesitancyCalculationDist() )
 				.map( DecimalUtil::valueOf );
+	}
+
+	@Key( HESITANCY_PREFIX + "social-network-degree-avg" )
+	@DefaultValue( "10" )
+	int hesitancySocialNetworkDegree();
+
+	@Key( HESITANCY_PREFIX + "social-network-beta-dist" )
+	@DefaultValue( "bernoulli(0.5)" ) // 0 = lattice, 1 = random network
+	String hesitancySocialNetworkBeta();
+
+	default ProbabilityDistribution<Boolean> hesitancySocialNetworkBeta(
+		final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( hesitancySocialNetworkBeta() );
+	}
+
+	@Key( HESITANCY_PREFIX + "social-assortativity-dist" )
+	@DefaultValue( "bernoulli(0.75)" )
+	String hesitancySocialAssortativity();
+
+	default ProbabilityDistribution<Boolean> hesitancySocialAssortativity(
+		final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( hesitancySocialAssortativity() );
+	}
+
+	@Key( HESITANCY_PREFIX + "school-assortativity-dist" )
+	@DefaultValue( "bernoulli(0.75)" )
+	String hesitancySchoolAssortativity();
+
+	default ProbabilityDistribution<Boolean> hesitancySchoolAssortativity(
+		final Parser distParser ) throws ParseException
+	{
+		return distParser.parse( hesitancySchoolAssortativity() );
 	}
 
 	/** @see HHAttitudeEvaluator */

@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.LongStream;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -20,6 +22,7 @@ import javax.measure.quantity.Time;
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
+import org.ujmp.core.calculation.Calculation.Ret;
 import org.ujmp.core.enums.ValueType;
 
 import com.eaio.uuid.UUID;
@@ -127,6 +130,12 @@ public class HHModel implements Scenario
 	/** */
 	private transient ProbabilityDistribution<BigDecimal> calculationDist;
 	/** */
+	private transient ProbabilityDistribution<Boolean> socialNetworkBetaDist;
+	/** */
+	private transient ProbabilityDistribution<Boolean> socialAssortativity;
+	/** */
+	private transient ProbabilityDistribution<Boolean> schoolAssortativity;
+	/** */
 	private transient HHAttitudeEvaluator attitudeEvaluator;
 	/** */
 	private transient HHAttitudePropagator attitudePropagator;
@@ -198,7 +207,7 @@ public class HHModel implements Scenario
 			final long index = this.hhCount.getAndIncrement();
 			attractor.position().subscribe( map ->
 			{
-				LOG.info( "t={}, oracle {}: {}", dt(), index, map );
+				LOG.info( "t={}, attractor {}: {}", dt(), index, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
@@ -243,6 +252,10 @@ public class HHModel implements Scenario
 				vaccinationUtilityDist.draw(), vaccinationProximityDist.draw(),
 				vaccinationClarityDist.draw(), vaccinationAffinityDist.draw() );
 
+		this.socialAssortativity = this.config
+				.hesitancySocialAssortativity( this.distParser );
+		this.schoolAssortativity = this.config
+				.hesitancySchoolAssortativity( this.distParser );
 		// reference to json indices
 		this.hesitancyDist = this.config
 				.hesitancyProfileSample( this.distFactory.getStream() );
@@ -267,6 +280,88 @@ public class HHModel implements Scenario
 		LOG.info( "Initialized {} pp ({}%) across {} hh & {} attractor regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractorCount, this.attractorCount );
+
+		// Watts & Strogatz: N nodes with degree K (=NK/2 edges, K/2 per node)
+		this.socialNetworkBetaDist = this.config
+				.hesitancySocialNetworkBeta( this.distParser );
+		final long offset = this.attractorCount,
+				N = this.hhCount.get() - offset,
+				K = Math.min( N, this.config.hesitancySocialNetworkDegree() );
+		// step 1: setup lattice: link self + degree-1 lattice 'neighbors'
+
+		LongStream.range( 0, N )
+//		.parallel() // FIXME rows may contain just 1 value, not thread-safe?
+				.forEach( i ->
+				{
+					LongStream.range( 0, K + 1 )
+//			.parallel()
+							.forEach( di ->
+							{
+								final long j = (i + di) % N;
+								// TODO assume (a)symmetric (un)equal weights per relation type?
+								this.hhNetwork.setAsBigDecimal( BigDecimal.ONE,
+										offset + Math.min( i, j ),
+										offset + Math.max( i, j ) );
+							} );
+				} );
+		// step 2: perturb lattice
+		LongStream.range( 0, N )
+//		.parallel() // FIXME null-pointers when selecting rows, not Thread safe?
+				.forEach( i ->
+				{
+					final long row = offset + i;
+					StreamSupport.stream(
+							this.hhNetwork.selectRows( Ret.LINK, offset + i )
+									.availableCoordinates().spliterator(),
+							false // algorithm works sequentially ! 
+					).mapToLong( coords -> coords[0] // ujmp bug: row=col
+							- offset )
+							.filter( j -> i < j
+									&& this.socialNetworkBetaDist.draw() )
+							.forEach( j ->
+							{
+								long k = j;
+								// TODO apply assortativity!
+								while( k == i // shuffle: non-self, non-used
+										|| this.hhNetwork.getAsBigDecimal(
+												Math.min( row, offset + k ),
+												Math.max( row, offset + k ) )
+												.signum() != 0 )
+									k = this.distFactory.getStream()
+											.nextLong( N );
+								final Object w = this.hhNetwork
+										.getAsObject( row, offset + j );
+								this.hhNetwork.setAsObject( w,
+										Math.min( row, offset + k ),
+										Math.max( row, offset + k ) );
+								this.hhNetwork.setAsObject( null, row,
+										offset + j );
+							} );
+				} );
+		// make symmetric: for each w_i,j > 0, w_j,i <- w_i,j
+		StreamSupport
+				.stream( this.hhNetwork.availableCoordinates().spliterator(),
+						true )
+				.forEach( coords -> this.hhNetwork.setAsObject(
+						this.hhNetwork.getAsObject( coords ), coords[1],
+						coords[0] ) );
+		// show links
+		LongStream.range( 0, 10 ).map( j -> j * N / 10 )
+				.forEach(
+						i -> LOG.trace( "hh {} knows {}", i,
+								StreamSupport
+										.stream( this.hhNetwork
+												.selectRows( Ret.LINK,
+														offset + i )
+												.availableCoordinates()
+												.spliterator(), false )
+										.mapToLong( coords -> coords[0] // ujmp bug: row=col
+												- offset )
+										.toArray() ) );
+
+		LOG.info( "Networked {} nodes with edge degree {}: {}", N, K,
+				this.hhNetwork.selectRows( Ret.LINK, offset )
+						.availableCoordinates().spliterator() );
 
 		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
 				.newInstance();
@@ -456,8 +551,6 @@ public class HHModel implements Scenario
 		final BigDecimal initialCalculation = this.calculationDist.draw();
 		final Map<HHAttribute, BigDecimal> initialHesitancy = this.hesitancyDist
 				.draw( hesProf );
-
-		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, hhIndex, hhIndex );
 
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
