@@ -443,19 +443,13 @@ public interface HHConfig extends GlobalConfig
 				.map( DecimalUtil::valueOf );
 	}
 
-	@Key( HESITANCY_PREFIX + "social-network-degree-avg" )
+	@Key( HESITANCY_PREFIX + "social-network-degree" )
 	@DefaultValue( "10" )
 	int hesitancySocialNetworkDegree();
 
-	@Key( HESITANCY_PREFIX + "social-network-beta-dist" )
-	@DefaultValue( "bernoulli(0.5)" ) // 0 = lattice, 1 = random network
-	String hesitancySocialNetworkBeta();
-
-	default ProbabilityDistribution<Boolean> hesitancySocialNetworkBeta(
-		final Parser distParser ) throws ParseException
-	{
-		return distParser.parse( hesitancySocialNetworkBeta() );
-	}
+	@Key( HESITANCY_PREFIX + "social-network-beta" )
+	@DefaultValue( "0.5" ) // 0 = lattice, 1 = random network
+	double hesitancySocialNetworkBeta();
 
 	@Key( HESITANCY_PREFIX + "social-assortativity-dist" )
 	@DefaultValue( "bernoulli(0.75)" )

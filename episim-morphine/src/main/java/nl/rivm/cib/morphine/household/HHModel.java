@@ -9,9 +9,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
@@ -37,6 +40,7 @@ import io.coala.math.Range;
 import io.coala.math.Tuple;
 import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
+import io.coala.random.PseudoRandom;
 import io.coala.random.QuantityDistribution;
 import io.coala.time.Instant;
 import io.coala.time.Scenario;
@@ -129,8 +133,6 @@ public class HHModel implements Scenario
 	private transient ConditionalDistribution<HesitancyProfileJson, HesitancyProfileJson.Category> hesitancyProfileDist;
 	/** */
 	private transient ProbabilityDistribution<BigDecimal> calculationDist;
-	/** */
-	private transient ProbabilityDistribution<Boolean> socialNetworkBetaDist;
 	/** */
 	private transient ProbabilityDistribution<Boolean> socialAssortativity;
 	/** */
@@ -252,10 +254,6 @@ public class HHModel implements Scenario
 				vaccinationUtilityDist.draw(), vaccinationProximityDist.draw(),
 				vaccinationClarityDist.draw(), vaccinationAffinityDist.draw() );
 
-		this.socialAssortativity = this.config
-				.hesitancySocialAssortativity( this.distParser );
-		this.schoolAssortativity = this.config
-				.hesitancySchoolAssortativity( this.distParser );
 		// reference to json indices
 		this.hesitancyDist = this.config
 				.hesitancyProfileSample( this.distFactory.getStream() );
@@ -281,87 +279,63 @@ public class HHModel implements Scenario
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractorCount, this.attractorCount );
 
-		// Watts & Strogatz: N nodes with degree K (=NK/2 edges, K/2 per node)
-		this.socialNetworkBetaDist = this.config
-				.hesitancySocialNetworkBeta( this.distParser );
-		final long offset = this.attractorCount,
-				N = this.hhCount.get() - offset,
-				K = Math.min( N, this.config.hesitancySocialNetworkDegree() );
-		// step 1: setup lattice: link self + degree-1 lattice 'neighbors'
+		final HHConnector conn = new HHConnector.WattsStrogatz(
+				this.distFactory.getStream(),
+				this.config.hesitancySocialNetworkBeta() );
+		final long A = this.attractorCount, N = this.hhCount.get() - A, K = Math
+				.min( N - 1, this.config.hesitancySocialNetworkDegree() );
 
-		LongStream.range( 0, N )
-//		.parallel() // FIXME rows may contain just 1 value, not thread-safe?
-				.forEach( i ->
-				{
-					LongStream.range( 0, K + 1 )
-//			.parallel()
-							.forEach( di ->
-							{
-								final long j = (i + di) % N;
-								// TODO assume (a)symmetric (un)equal weights per relation type?
-								this.hhNetwork.setAsBigDecimal( BigDecimal.ONE,
-										offset + Math.min( i, j ),
-										offset + Math.max( i, j ) );
-							} );
-				} );
-		// step 2: perturb lattice
-		LongStream.range( 0, N )
-//		.parallel() // FIXME null-pointers when selecting rows, not Thread safe?
-				.forEach( i ->
-				{
-					final long row = offset + i;
-					StreamSupport.stream(
-							this.hhNetwork.selectRows( Ret.LINK, offset + i )
-									.availableCoordinates().spliterator(),
-							false // algorithm works sequentially ! 
-					).mapToLong( coords -> coords[0] // ujmp bug: row=col
-							- offset )
-							.filter( j -> i < j
-									&& this.socialNetworkBetaDist.draw() )
-							.forEach( j ->
-							{
-								long k = j;
-								// TODO apply assortativity!
-								while( k == i // shuffle: non-self, non-used
-										|| this.hhNetwork.getAsBigDecimal(
-												Math.min( row, offset + k ),
-												Math.max( row, offset + k ) )
-												.signum() != 0 )
-									k = this.distFactory.getStream()
-											.nextLong( N );
-								final Object w = this.hhNetwork
-										.getAsObject( row, offset + j );
-								this.hhNetwork.setAsObject( w,
-										Math.min( row, offset + k ),
-										Math.max( row, offset + k ) );
-								this.hhNetwork.setAsObject( null, row,
-										offset + j );
-							} );
-				} );
-		// make symmetric: for each w_i,j > 0, w_j,i <- w_i,j
-		StreamSupport
-				.stream( this.hhNetwork.availableCoordinates().spliterator(),
-						true )
-				.forEach( coords -> this.hhNetwork.setAsObject(
-						this.hhNetwork.getAsObject( coords ), coords[1],
-						coords[0] ) );
-		// show links
+		final Matrix[] assort = LongStream.range( 0, A )
+				.mapToObj( a -> conn.connect( N, K, BigDecimal.ONE ) )
+				.toArray( Matrix[]::new );
+
+		this.socialAssortativity = this.config
+				.hesitancySocialAssortativity( this.distParser );
+		LongStream.range( 0, N ).forEach( i ->
+		{
+			this.hhNetwork.setAsObject( BigDecimal.ONE, A + i, A + i ); // self
+
+			final int attr = this.hhAttributes.getAsInt( i,
+					HHAttribute.ATTRACTOR_REF.ordinal() );
+
+			IntStream.range( 0, (int) A ).forEach( a ->
+			{
+				final Matrix row = assort[a].selectRows( Ret.LINK, i );
+				final Stream<long[]> coords = StreamSupport.stream(
+						row.availableCoordinates().spliterator(), false );
+				if( a == attr )
+					// copy randomly selected assortative connections
+					coords.filter( j -> this.socialAssortativity.draw() )
+							.mapToLong( coord -> coord[0] )
+							.forEach( j -> this.hhNetwork.setAsObject(
+									row.getAsObject( 0, j ), A + i, A + j ) );
+				else
+					// copy randomly selected dissortative connections
+					coords.filter( j -> !this.socialAssortativity.draw() )
+							.mapToLong( coord -> coord[0] )
+							.forEach( j -> this.hhNetwork.setAsObject(
+									row.getAsObject( 0, j ), A + i, A + j ) );
+			} );
+		} );
+
+		// show final links sample
 		LongStream.range( 0, 10 ).map( j -> j * N / 10 )
-				.forEach(
-						i -> LOG.trace( "hh {} knows {}", i,
-								StreamSupport
-										.stream( this.hhNetwork
-												.selectRows( Ret.LINK,
-														offset + i )
-												.availableCoordinates()
-												.spliterator(), false )
-										.mapToLong( coords -> coords[0] // ujmp bug: row=col
-												- offset )
-										.toArray() ) );
+				.forEach( i -> LOG.trace( "hh {} knows {}", i, StreamSupport
+						.stream( Objects
+								.requireNonNull( Objects
+										.requireNonNull(
+												this.hhNetwork.selectRows(
+														Ret.LINK, A + i ),
+												"row null" )
+										.availableCoordinates(), "coords null" )
+								.spliterator(), false ) // FIXME NPE
+						.mapToLong( coords -> coords[0] // ujmp bug: row=col
+								- A )
+						.toArray() ) );
 
-		LOG.info( "Networked {} nodes with edge degree {}: {}", N, K,
-				this.hhNetwork.selectRows( Ret.LINK, offset )
-						.availableCoordinates().spliterator() );
+		this.schoolAssortativity = this.config
+				.hesitancySchoolAssortativity( this.distParser );
+		// TODO schools
 
 		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
 				.newInstance();
@@ -445,33 +419,42 @@ public class HHModel implements Scenario
 		this.attitudeEvaluator.isPositive( occ, this.hhAttributes )
 
 				// for each child position in the positive household
-				.forEach( hhRef -> Arrays.stream( CHILD_REF_COLUMN_INDICES )
-						.mapToLong( hhAtt -> this.hhAttributes.getAsLong( hhRef,
-								hhAtt.ordinal() ) )
+				.forEach( hhRef ->
+				{
+					LOG.trace( "positive: {}, kid status: {}",
+							this.ppAttributes.getAsInt(
+									this.hhAttributes.getAsLong( hhRef,
+											HHAttribute.CHILD1_REF.ordinal() ),
+									HHMemberAttribute.STATUS.ordinal() ) );
+					Arrays.stream( CHILD_REF_COLUMN_INDICES )
+							.mapToLong( hhAtt -> this.hhAttributes
+									.getAsLong( hhRef, hhAtt.ordinal() ) )
 
-						// if child member: 1. exists
-						.filter( ppRef -> ppRef != NA
+							// if child member: 1. exists
+							.filter( ppRef -> ppRef != NA
 
-								// 2. is susceptible
-								&& this.ppAttributes.getAsInt( ppRef,
-										HHMemberAttribute.STATUS
-												.ordinal() ) == HHMemberStatus.SUSCEPTIBLE
-														.ordinal()
+									// 2. is susceptible
+									&& this.ppAttributes.getAsInt( ppRef,
+											HHMemberAttribute.STATUS
+													.ordinal() ) == HHMemberStatus.SUSCEPTIBLE
+															.ordinal()
 
-								// 3. is of vaccination age
-								&& birthRange.contains( this.ppAttributes
-										.getAsBigDecimal( ppRef,
-												HHMemberAttribute.BIRTH
-														.ordinal() ) ) )
-						// then vaccinate
-						.forEach( ppRef ->
-						{
-							this.ppAttributes.setAsInt(
-									HHMemberStatus.IMMUNE.ordinal(), ppRef,
-									HHMemberAttribute.STATUS.ordinal() );
-							LOG.info( "Vax! (pos) hh #{} (sus) pp #{} born {}",
-									hhRef, ppRef, birthRange );
-						} ) );
+					// 3. is of vaccination age
+									&& birthRange.contains( this.ppAttributes
+											.getAsBigDecimal( ppRef,
+													HHMemberAttribute.BIRTH
+															.ordinal() ) ) )
+							// then vaccinate
+							.forEach( ppRef ->
+							{
+								this.ppAttributes.setAsInt(
+										HHMemberStatus.IMMUNE.ordinal(), ppRef,
+										HHMemberAttribute.STATUS.ordinal() );
+								LOG.info(
+										"Vax! (pos) hh #{} (sus) pp #{} born {}",
+										hhRef, ppRef, birthRange );
+							} );
+				} );
 	}
 
 	private static final long NA = -1L;

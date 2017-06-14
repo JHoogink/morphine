@@ -30,7 +30,7 @@ morphine:
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
       social-network-degree-avg: 10 # avg. no. family + friends + neighbors
-      social-network-beta-dist: bernoulli(0.3) # 0 = lattice, 1 = random network
+      social-network-beta: 0.5 # 0 = lattice, 1 = random network
       social-assortativity-dist: bernoulli(0.75) # whether new link is 'similar'
       school-assortativity-dist: bernoulli(0.75) # whether school is 'similar'
       school-capacities: 
