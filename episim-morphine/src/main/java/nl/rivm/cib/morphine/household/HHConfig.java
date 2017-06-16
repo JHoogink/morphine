@@ -405,8 +405,8 @@ public interface HHConfig extends GlobalConfig
 		ConditionalDistribution<Map<HHAttribute, BigDecimal>, HesitancyProfileJson>
 		hesitancyProfileSample( final PseudoRandom rng )
 	{
-		final float[][] sample = JsonUtil.valueOf( hesitancyProfileSample(),
-				float[][].class );
+		final BigDecimal[][] sample = JsonUtil
+				.valueOf( hesitancyProfileSample(), BigDecimal[][].class );
 		final Map<HesitancyProfileJson, ProbabilityDistribution<Map<HHAttribute, BigDecimal>>> distCache = new HashMap<>();
 		return ConditionalDistribution
 				.of( hes -> distCache.computeIfAbsent( hes, key -> () ->
@@ -451,15 +451,9 @@ public interface HHConfig extends GlobalConfig
 	@DefaultValue( "0.5" ) // 0 = lattice, 1 = random network
 	double hesitancySocialNetworkBeta();
 
-	@Key( HESITANCY_PREFIX + "social-assortativity-dist" )
-	@DefaultValue( "bernoulli(0.75)" )
-	String hesitancySocialAssortativity();
-
-	default ProbabilityDistribution<Boolean> hesitancySocialAssortativity(
-		final Parser distParser ) throws ParseException
-	{
-		return distParser.parse( hesitancySocialAssortativity() );
-	}
+	@Key( HESITANCY_PREFIX + "social-assortativity" )
+	@DefaultValue( "0.75" )
+	double hesitancySocialAssortativity();
 
 	@Key( HESITANCY_PREFIX + "school-assortativity-dist" )
 	@DefaultValue( "bernoulli(0.75)" )

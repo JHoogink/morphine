@@ -9,13 +9,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -25,7 +23,6 @@ import javax.measure.quantity.Time;
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
-import org.ujmp.core.calculation.Calculation.Ret;
 import org.ujmp.core.enums.ValueType;
 
 import com.eaio.uuid.UUID;
@@ -133,8 +130,6 @@ public class HHModel implements Scenario
 	private transient ConditionalDistribution<HesitancyProfileJson, HesitancyProfileJson.Category> hesitancyProfileDist;
 	/** */
 	private transient ProbabilityDistribution<BigDecimal> calculationDist;
-	/** */
-	private transient ProbabilityDistribution<Boolean> socialAssortativity;
 	/** */
 	private transient ProbabilityDistribution<Boolean> schoolAssortativity;
 	/** */
@@ -279,59 +274,100 @@ public class HHModel implements Scenario
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractorCount, this.attractorCount );
 
-		final HHConnector conn = new HHConnector.WattsStrogatz(
-				this.distFactory.getStream(),
+		final PseudoRandom rng = this.distFactory.getStream();
+		final HHConnector conn = new HHConnector.WattsStrogatz( rng,
 				this.config.hesitancySocialNetworkBeta() );
 		final long A = this.attractorCount, N = this.hhCount.get() - A, K = Math
 				.min( N - 1, this.config.hesitancySocialNetworkDegree() );
 
-		final Matrix[] assort = LongStream.range( 0, A )
-				.mapToObj( a -> conn.connect( N, K, BigDecimal.ONE ) )
+		final double assortativity = this.config.hesitancySocialAssortativity();
+		final Supplier<Long> assortK = this.distFactory
+				.createExponential( 1.0 / K / assortativity )
+				.map( Math::round )::draw;
+		final Supplier<Long> dissortK = this.distFactory
+				.createExponential( 1.0 / K / (1 - assortativity / (A - 1)) )
+				.map( Math::round )::draw;
+		final Supplier<BigDecimal> ownW = () -> BigDecimal.ONE,
+				assortW = () -> BigDecimal.ONE, dissortW = () -> BigDecimal.ONE;
+
+//		final long assortativeK = A < 2 ? K
+//				: (long) (K * this.config.hesitancySocialAssortativity()),
+//				dissortativeK = A < 2 ? 0
+//						: Math.max( 1, (K - assortativeK) / (A - 1) );
+		final Matrix[] assorting = LongStream.range( 0, A )
+				.mapToObj( a -> conn.connect( N, assortK, assortW ) )
+				.toArray( Matrix[]::new );
+		final Matrix[] dissorting = LongStream.range( 0, A )
+				.mapToObj( a -> A < 2 ? SparseMatrix.Factory.zeros( N, N )
+						: conn.connect( N, dissortK, dissortW ) )
 				.toArray( Matrix[]::new );
 
-		this.socialAssortativity = this.config
-				.hesitancySocialAssortativity( this.distParser );
 		LongStream.range( 0, N ).forEach( i ->
 		{
-			this.hhNetwork.setAsObject( BigDecimal.ONE, A + i, A + i ); // self
+			HHConnector.setSymmetric( this.hhNetwork, ownW.get(), A + i );
 
 			final int attr = this.hhAttributes.getAsInt( i,
 					HHAttribute.ATTRACTOR_REF.ordinal() );
 
-			IntStream.range( 0, (int) A ).forEach( a ->
+			if( A < 2 || assortativity >= 1 )
 			{
-				final Matrix row = assort[a].selectRows( Ret.LINK, i );
-				final Stream<long[]> coords = StreamSupport.stream(
-						row.availableCoordinates().spliterator(), false );
-				if( a == attr )
-					// copy randomly selected assortative connections
-					coords.filter( j -> this.socialAssortativity.draw() )
-							.mapToLong( coord -> coord[0] )
-							.forEach( j -> this.hhNetwork.setAsObject(
-									row.getAsObject( 0, j ), A + i, A + j ) );
-				else
-					// copy randomly selected dissortative connections
-					coords.filter( j -> !this.socialAssortativity.draw() )
-							.mapToLong( coord -> coord[0] )
-							.forEach( j -> this.hhNetwork.setAsObject(
-									row.getAsObject( 0, j ), A + i, A + j ) );
-			} );
+				final long[] assort = HHConnector
+						.symmetricCoordinates( assorting[attr], i )
+						.mapToLong( x ->
+						{
+							final Object w = assorting[attr].getAsObject( x );
+							this.hhNetwork.setAsObject( w, A + x[0], A + x[1] );
+							return x[0] == i ? x[1] : x[0];
+						} ).toArray();
+				final long[] dissort = IntStream.range( 0, (int) A )
+						.filter( a -> a != attr ).mapToObj( a -> a )
+						.flatMapToLong( a -> HHConnector
+								.symmetricCoordinates( dissorting[a], i )
+								.mapToLong( x ->
+								{
+									// TODO handle overrides?
+									final Object w = dissorting[a]
+											.getAsObject( x );
+									this.hhNetwork.setAsObject( w, A + x[0],
+											A + x[1] );
+									return x[0] == i ? x[1] : x[0];
+								} ) )
+						.distinct().toArray();
+				LOG.trace( "{}: {}/{}+{}/{}\t={}/{}", i, assort.length,
+						assortK.get(), dissort.length, dissortK.get(),
+						assort.length + dissort.length, K );
+			} else
+			{
+				HHConnector.symmetricCoordinates( assorting[attr], i )
+						.forEach( x -> this.hhNetwork.setAsObject(
+								assorting[attr].getAsObject( x ), A + x[0],
+								A + x[1] ) );
+			}
 		} );
 
 		// show final links sample
-		LongStream.range( 0, 10 ).map( j -> j * N / 10 )
-				.forEach( i -> LOG.trace( "hh {} knows {}", i, StreamSupport
-						.stream( Objects
-								.requireNonNull( Objects
-										.requireNonNull(
-												this.hhNetwork.selectRows(
-														Ret.LINK, A + i ),
-												"row null" )
-										.availableCoordinates(), "coords null" )
-								.spliterator(), false ) // FIXME NPE
-						.mapToLong( coords -> coords[0] // ujmp bug: row=col
-								- A )
-						.toArray() ) );
+//		LongStream.range( 0, 10 ).map( i -> i * N / 10 ).forEach( i ->
+//		{
+//			final Matrix row = this.hhNetwork.selectRows( Ret.LINK, A + i );
+//			final int attr = this.hhAttributes.getAsInt( i,
+//					HHAttribute.ATTRACTOR_REF.ordinal() );
+//			final long[] assort = StreamSupport
+//					.stream( row.availableCoordinates().spliterator(), false )
+//					.mapToLong( x -> x[colDim] )
+//					.filter( j -> this.hhAttributes.getAsInt( j,
+//							HHAttribute.ATTRACTOR_REF.ordinal() ) == attr )
+//					.toArray();
+//			final long[] dissort = StreamSupport
+//					.stream( row.availableCoordinates().spliterator(), false )
+//					.mapToLong( x -> x[colDim] )
+//					.filter( j -> this.hhAttributes.getAsInt( j,
+//							HHAttribute.ATTRACTOR_REF.ordinal() ) != attr )
+//					.toArray();
+//			LOG.trace( "hh {} knows {}+{} ({}<>{}): {}+{}", i, assort.length,
+//					dissort.length,
+//					(double) assort.length / (assort.length + dissort.length),
+//					assortativity, assort, dissort );
+//		} );
 
 		this.schoolAssortativity = this.config
 				.hesitancySchoolAssortativity( this.distParser );

@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
@@ -64,24 +63,17 @@ public class HesitantTest
 	@Test
 	public void matrixTest()
 	{
-		final Matrix b = Matrix.Factory.zeros( 1, 1 );
-		Assert.assertTrue( b.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
-		Assert.assertFalse( b.selectRows( Ret.LINK, 0 ).isColumnVector() );
-		Assert.assertTrue( b.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
-		Assert.assertFalse( b.selectColumns( Ret.LINK, 0 ).isRowVector() );
+		final Matrix m1x1 = Matrix.Factory.zeros( 1, 1 );
+		Assert.assertTrue( m1x1.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
+		Assert.assertFalse( m1x1.selectRows( Ret.LINK, 0 ).isColumnVector() );
+		Assert.assertTrue( m1x1.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertFalse( m1x1.selectColumns( Ret.LINK, 0 ).isRowVector() );
 
-		final Matrix a = Matrix.Factory.zeros( 2, 1 );
-		Assert.assertTrue( a.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
-		Assert.assertFalse( a.selectRows( Ret.LINK, 0 ).isColumnVector() ); // fail
-		Assert.assertTrue( a.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
-		Assert.assertFalse( a.selectColumns( Ret.LINK, 0 ).isRowVector() ); // fail
-
-		a.setAsBigDecimal( BigDecimal.ONE, 1, 0 );
-		StreamSupport
-				.stream( a.selectRows( Ret.LINK, 1 ).availableCoordinates()
-						.spliterator(), false )
-				.forEach( coords -> Assert.assertEquals( BigDecimal.ONE,
-						a.getAsBigDecimal( coords ) ) ); // fail, coords swapped
+		final Matrix m2x1 = Matrix.Factory.zeros( 2, 1 );
+		Assert.assertTrue( m2x1.selectRows( Ret.LINK, 0 ).isRowVector() ); // fail
+		Assert.assertFalse( m2x1.selectRows( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertTrue( m2x1.selectColumns( Ret.LINK, 0 ).isColumnVector() ); // fail
+		Assert.assertFalse( m2x1.selectColumns( Ret.LINK, 0 ).isRowVector() ); // fail
 	}
 
 	/**

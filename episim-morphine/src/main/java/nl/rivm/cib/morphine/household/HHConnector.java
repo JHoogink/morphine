@@ -19,8 +19,12 @@
  */
 package nl.rivm.cib.morphine.household;
 
+import static nl.rivm.cib.morphine.household.HHConnector.top;
+
 import java.math.BigDecimal;
+import java.util.function.Supplier;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.ujmp.core.Matrix;
@@ -38,7 +42,8 @@ import io.coala.random.PseudoRandom;
 public interface HHConnector
 {
 
-	Matrix connect( long size, long degree, BigDecimal initialWeight );
+	Matrix connect( long size, Supplier<Long> degree,
+		Supplier<BigDecimal> initialWeight );
 
 	/**
 	 * utility method
@@ -49,6 +54,51 @@ public interface HHConnector
 	static long[] top( final long... x )
 	{
 		return x[0] > x[1] ? new long[] { x[1], x[0] } : x;
+	}
+
+	static BigDecimal putSymmetric( final Matrix W, final BigDecimal wNew,
+		final long... x )
+	{
+		final long[] x_top = top( x );
+		final BigDecimal wOld = getSymmetric( W, x_top );
+		setSymmetric( W, wNew, x_top );
+		return wOld;
+	}
+
+	static void setSymmetric( final Matrix W, final Object w, final long i )
+	{
+		W.setAsObject( w, i, i );
+	}
+
+	static void setSymmetric( final Matrix W, final Object w, final long... x )
+	{
+		W.setAsObject( w, x[0], x[1] );
+		W.setAsObject( w, x[1], x[0] );
+	}
+
+	static BigDecimal getSymmetric( final Matrix W, final long... x )
+	{
+		return W.getAsBigDecimal( top( x ) );
+	}
+
+	static Stream<long[]> availableCoordinates( final Matrix W )
+	{
+		return W == null ? Stream.empty()
+				: StreamSupport.stream( W.availableCoordinates().spliterator(),
+						false );
+	}
+
+	static Stream<long[]> symmetricCoordinates( final Matrix W, final long i )
+	{
+		return availableCoordinates( W ).filter( x -> x[0] == i || x[1] == i );
+		// bug 1: W.selectColumns( Ret.LINK, i ).availableCoordinates() does not LINK but creates new
+		// bug 2: W.selectRows( Ret.LINK, i ).transpose() fails
+//		Stream.concat(
+//				availableCoordinates( W.selectColumns( Ret.LINK, i ) )
+//						.filter( x -> x[0] < i ) // avoids duplicate self
+//						.map( x -> top( x[0], i ) ),
+//				availableCoordinates( W.selectRows( Ret.LINK, i ) )
+//						.filter( x -> i <= x[0] ).map( x -> top( i, x[0] ) ) );
 	}
 
 	class WattsStrogatz implements HHConnector
@@ -63,49 +113,45 @@ public interface HHConnector
 		}
 
 		@Override
-		public Matrix connect( final long size, final long degree,
-			final BigDecimal weight )
+		public Matrix connect( final long size, final Supplier<Long> degree,
+			final Supplier<BigDecimal> weight )
 		{
 			final Matrix result = SparseMatrix.Factory.zeros( size, size );
 
 			// step 1: setup lattice: link self + degree-1 lattice 'neighbors'
 			// FIXME parallelized rows may contain just 1 value, not thread-safe?
-			LongStream.range( 0, size )
-					.forEach( i -> LongStream.range( 0, degree )
-							.forEach( di -> result.setAsBigDecimal( weight,
-									top( i, (i + di) % size ) ) ) );
+			for( long i = 0; i < size; i++ )
+			{
+				final long K = degree.get();
+				for( long di = 0; di < K; di++ )
+					result.setAsBigDecimal( weight.get(),
+							top( i, (i + 1 + di) % size ) );
+			}
 
 			// step 2: perturb lattice
 			// FIXME parallelized row selection causes NPE, not Thread safe?
-			LongStream.range( 0, size ).forEach( i -> StreamSupport
-					.stream( result.selectRows( Ret.LINK, i )
-							.availableCoordinates().spliterator(),
-							// algorithm is sequential! (+ no thread-safety)
-							false )
-					// FIXME ujmp bug: row=col
-					.mapToLong( coords -> coords[0] )
-					.filter( j -> i < j && this.rng.nextDouble() < this.beta )
-					.forEach( j ->
-					{
-						final long[] i_k = { i, j };
+//			for( long i = 0; i < size - 1; i++ )
+			LongStream.range( 0, size - 1 )// last row in triangle is empty
+					.forEach( i -> availableCoordinates(
+							result.selectRows( Ret.LINK, i ) ).forEach( x ->
+							{
+								long j = x[0];
+								if( //i < j && 
+								this.rng.nextDouble() < this.beta )
+								{
+									final long[] i_k = { i, j };
 
-						// shuffle until : non-self and non-used
-						while( i_k[1] == i || result
-								.getAsBigDecimal( top( i_k ) ).signum() != 0 )
-							i_k[1] = this.rng.nextLong( size );
+									// shuffle until : non-self and non-used
+									while( i_k[1] == i || result
+											.getAsBigDecimal( top( i_k ) )
+											.signum() != 0 )
+										i_k[1] = this.rng.nextLong( size );
 
-						final Object w = result.getAsObject( i, j );
-						result.setAsObject( w, top( i_k ) ); // set new position
-						result.setAsObject( null, i, j ); // reset old position
-					} ) );
-
-			// make symmetric : w_j,i <- w_i,j
-			StreamSupport
-					.stream( result.availableCoordinates().spliterator(),
-							false )
-					.forEach( coords -> result.setAsObject(
-							result.getAsObject( coords ), coords[1],
-							coords[0] ) );
+									final Object w = result.getAsObject( i, j );
+									result.setAsObject( null, i, j ); // reset old position
+									result.setAsObject( w, top( i_k ) ); // set new position
+								}
+							} ) );
 
 			return result;
 		}
