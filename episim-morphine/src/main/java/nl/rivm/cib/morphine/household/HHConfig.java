@@ -59,7 +59,7 @@ import nl.rivm.cib.util.PeriodConverter;
  * @author Rick van Krevelen
  */
 @Sources( { "file:" + HHConfig.CONFIG_BASE_DIR + HHConfig.CONFIG_YAML_FILE,
-		"file:${user.home}/" + HHConfig.CONFIG_YAML_FILE, // does this work?
+//		"file:${user.home}/" + HHConfig.CONFIG_YAML_FILE, // does this work?
 		"classpath:" + HHConfig.CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
@@ -169,6 +169,10 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	/////////////////////////////////////////////////////////////////////////
+
+	@Key( REPLICATION_PREFIX + "run-name" )
+	@DefaultValue( "morphine" )
+	String runName();
 
 	@Key( REPLICATION_PREFIX + "duration-period" )
 	@DefaultValue( "P1Y" )

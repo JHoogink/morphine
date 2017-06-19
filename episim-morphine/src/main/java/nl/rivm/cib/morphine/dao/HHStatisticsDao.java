@@ -25,7 +25,6 @@ import java.util.Date;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
-import javax.persistence.Convert;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
@@ -37,11 +36,9 @@ import javax.persistence.TemporalType;
 
 import org.ujmp.core.Matrix;
 
-import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.coala.persist.Persistable;
-import io.coala.persist.UUIDToByteConverter;
 import io.coala.time.Instant;
 import io.coala.time.TimeUnits;
 import nl.rivm.cib.morphine.household.HHAttribute;
@@ -69,12 +66,13 @@ public class HHStatisticsDao implements Persistable.Dao
 	 * @param members member data {@link Matrix} per {@link HHMemberAttribute}
 	 * @return a {@link MemberDao}
 	 */
-	public static HHStatisticsDao create( final UUID context, final Instant now,
+	public static HHStatisticsDao create( final String run, final Instant now,
 		final int seq, final Matrix households, final long rowIndex,
 		final Matrix members )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
-		result.context = context;
+//		result.context = context;
+		result.run = run;
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
@@ -166,10 +164,13 @@ public class HHStatisticsDao implements Persistable.Dao
 	@JsonIgnore
 	protected Date created = null;
 
-	@Column( name = "CONTEXT", nullable = false, updatable = false, length = 16,
-		columnDefinition = "BINARY(16)" )
-	@Convert( converter = UUIDToByteConverter.class )
-	protected UUID context;
+//	@Column( name = "CONTEXT", nullable = false, updatable = false, length = 16,
+//		columnDefinition = "BINARY(16)" )
+//	@Convert( converter = UUIDToByteConverter.class )
+//	protected UUID context;
+
+	@Column( name = "RUN", nullable = false, updatable = false )
+	protected String run;
 
 	@Column( name = "HH", nullable = false, updatable = false )
 	protected int hh;

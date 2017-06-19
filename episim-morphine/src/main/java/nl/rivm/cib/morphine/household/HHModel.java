@@ -405,6 +405,7 @@ public class HHModel implements Scenario
 	public Observable<HHStatisticsDao> statistics()
 	{
 		final UUID contextRef = this.binder.id().contextRef();
+		final String runName = this.binder.id().unwrap().toString();
 		return Observable.create( sub ->
 		{
 			scheduler().onReset( scheduler ->
@@ -429,7 +430,7 @@ public class HHModel implements Scenario
 					Observable
 							.fromIterable(
 									new HashSet<Long>( this.hhIndex.values() ) )
-							.map( index -> HHStatisticsDao.create( contextRef,
+							.map( index -> HHStatisticsDao.create( runName, //contextRef,
 									t, i, hhAttributes, index, ppAttributes ) )
 							.subscribe( sub::onNext, sub::onError );
 				}, sub::onError, sub::onComplete );

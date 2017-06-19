@@ -76,7 +76,7 @@ public class HHSimulator
 
 		// configure tooling
 		final LocalConfig binderConfig = LocalConfig.builder()
-				.withId( "morphine" ) // replication name, sets random seeds
+				.withId( hhConfig.runName() ) // replication name, sets random seeds
 
 				// configure event scheduler
 				.withProvider( Scheduler.class, Dsol3Scheduler.class )
