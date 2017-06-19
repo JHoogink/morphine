@@ -5,13 +5,13 @@
 
 morphine:
   replication:
-    duration-period: P2M
+    duration-period: P12M
     offset-date: 2012-01-01
     statistics:
       recurrence: 0 0 0 ? * MON *
       db-enabled: false
   population:
-    size: 100
+    size: 10000
     hh-type-dist: const(SOLO_1KID)
     hh-ref-age-dist: uniform(20;40)
     hh-leavehome-age: 20 yr
@@ -29,7 +29,7 @@ morphine:
       profile-sample: conf/hesitancy-initial.json
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
-      social-network-degree-avg: 3 # avg. no. family + friends + neighbors
+      social-network-degree: 10 # avg. no. family + friends + neighbors
       social-network-beta: 0.5 # 0 = lattice, 1 = random network
       social-assortativity: 0.85 # fraction of 'similar' connections
       school-assortativity-dist: bernoulli(0.75) # whether school is 'similar'

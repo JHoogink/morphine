@@ -277,16 +277,17 @@ public class HHModel implements Scenario
 		final PseudoRandom rng = this.distFactory.getStream();
 		final HHConnector conn = new HHConnector.WattsStrogatz( rng,
 				this.config.hesitancySocialNetworkBeta() );
-		final long A = this.attractorCount, N = this.hhCount.get() - A, K = Math
-				.min( N - 1, this.config.hesitancySocialNetworkDegree() );
+		final long A = this.attractorCount,
+				N = (this.hhCount.get() - A) / A + 1, K = Math.min( N - 1,
+						this.config.hesitancySocialNetworkDegree() );
 
 		final double assortativity = this.config.hesitancySocialAssortativity();
-		final Supplier<Long> assortK = this.distFactory
-				.createExponential( 1.0 / K / assortativity )
-				.map( Math::round )::draw;
-		final Supplier<Long> dissortK = this.distFactory
-				.createExponential( 1.0 / K / (1 - assortativity / (A - 1)) )
-				.map( Math::round )::draw;
+		final Supplier<Long> assortK = () -> (long) (assortativity * K * (A - 1)
+				/ A);
+		final Supplier<Long> dissortK =
+//				() -> Math.round( (1.0 - assortativity) * K / (A - 1) )
+				this.distFactory.createPoisson( // use poisson for small degree
+						(1.0 - assortativity) * K / (A - 1) )::draw;
 		final Supplier<BigDecimal> ownW = () -> BigDecimal.ONE,
 				assortW = () -> BigDecimal.ONE, dissortW = () -> BigDecimal.ONE;
 
@@ -302,48 +303,63 @@ public class HHModel implements Scenario
 						: conn.connect( N, dissortK, dissortW ) )
 				.toArray( Matrix[]::new );
 
-		LongStream.range( 0, N ).forEach( i ->
+		LongStream.range( A, this.hhAttributes.getRowCount() ).forEach( i ->
 		{
 			HHConnector.setSymmetric( this.hhNetwork, ownW.get(), A + i );
 
+			final long ia = (i - A) / A;
 			final int attr = this.hhAttributes.getAsInt( i,
 					HHAttribute.ATTRACTOR_REF.ordinal() );
 
+			final boolean log = (i - A) % (N * A / 5) == 0;
 			if( A < 2 || assortativity >= 1 )
 			{
+				HHConnector.availableCoordinates( assorting[attr], i )
+						.forEach( x -> this.hhNetwork.setAsObject(
+								assorting[attr].getAsObject( x ), A + x[0],
+								A + x[1] ) );
+				if( log )
+					LOG.trace( "Assorted {} ({}/{}) -> {}", i, ia, N, attr );
+			} else
+			{
+				// get separate assort + dissort j's just for logging
 				final long[] assort = HHConnector
-						.symmetricCoordinates( assorting[attr], i )
+						.availableCoordinates( assorting[attr], ia )
 						.mapToLong( x ->
 						{
 							final Object w = assorting[attr].getAsObject( x );
-							this.hhNetwork.setAsObject( w, A + x[0], A + x[1] );
-							return x[0] == i ? x[1] : x[0];
+							this.hhNetwork.setAsObject( w, A + x[0] * A + attr,
+									A + x[1] * A + attr );
+							// row/col coord within top triangle
+							return (x[0] == ia ? x[1] : x[0]) * A + attr;
 						} ).toArray();
 				final long[] dissort = IntStream.range( 0, (int) A )
 						.filter( a -> a != attr ).mapToObj( a -> a )
 						.flatMapToLong( a -> HHConnector
-								.symmetricCoordinates( dissorting[a], i )
+								.availableCoordinates( dissorting[a], ia )
 								.mapToLong( x ->
 								{
-									// TODO handle overrides?
+									// TODO handle overrides from different a/A?
 									final Object w = dissorting[a]
 											.getAsObject( x );
-									this.hhNetwork.setAsObject( w, A + x[0],
-											A + x[1] );
-									return x[0] == i ? x[1] : x[0];
+									this.hhNetwork.setAsObject( w,
+											A + x[0] * A + a,
+											A + x[1] * A + a );
+									// row/col coord within top triangle
+									return (x[0] == ia ? x[1] : x[0]) * A + a;
 								} ) )
-						.distinct().toArray();
-				LOG.trace( "{}: {}/{}+{}/{}\t={}/{}", i, assort.length,
-						assortK.get(), dissort.length, dissortK.get(),
-						assort.length + dissort.length, K );
-			} else
-			{
-				HHConnector.symmetricCoordinates( assorting[attr], i )
-						.forEach( x -> this.hhNetwork.setAsObject(
-								assorting[attr].getAsObject( x ), A + x[0],
-								A + x[1] ) );
+						.distinct() // don't log duplicates
+						.toArray();
+				if( log ) LOG.trace(
+						"Combined {}({}/{}) -> {}: {}{}/{}+{}{}/({}*{}) = {}/{}",
+						i, ia, N, attr, assort.length, assort, assortK.get(),
+						dissort.length, dissort, A - 1, dissortK.get(),
+						assort.length + dissort.length, K + 1 );
 			}
 		} );
+
+		LOG.info( "Initialized WattsStrogatz network, degree: {}, assort: {}",
+				K, assortativity );
 
 		// show final links sample
 //		LongStream.range( 0, 10 ).map( i -> i * N / 10 ).forEach( i ->

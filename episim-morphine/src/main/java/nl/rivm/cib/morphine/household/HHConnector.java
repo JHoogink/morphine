@@ -19,8 +19,6 @@
  */
 package nl.rivm.cib.morphine.household;
 
-import static nl.rivm.cib.morphine.household.HHConnector.top;
-
 import java.math.BigDecimal;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
@@ -59,7 +57,7 @@ public interface HHConnector
 	static BigDecimal putSymmetric( final Matrix W, final BigDecimal wNew,
 		final long... x )
 	{
-		final long[] x_top = top( x );
+		final long[] x_top = HHConnector.top( x );
 		final BigDecimal wOld = getSymmetric( W, x_top );
 		setSymmetric( W, wNew, x_top );
 		return wOld;
@@ -78,7 +76,7 @@ public interface HHConnector
 
 	static BigDecimal getSymmetric( final Matrix W, final long... x )
 	{
-		return W.getAsBigDecimal( top( x ) );
+		return W.getAsBigDecimal( HHConnector.top( x ) );
 	}
 
 	static Stream<long[]> availableCoordinates( final Matrix W )
@@ -88,9 +86,12 @@ public interface HHConnector
 						false );
 	}
 
-	static Stream<long[]> symmetricCoordinates( final Matrix W, final long i )
+	static Stream<long[]> availableCoordinates( final Matrix W, final long i )
 	{
-		return availableCoordinates( W ).filter( x -> x[0] == i || x[1] == i );
+		// FIXME don't go through ALL coordinates, rather just relevant row/col
+		return HHConnector.availableCoordinates( W )
+				.filter( x -> x[0] == i || x[1] == i );
+
 		// bug 1: W.selectColumns( Ret.LINK, i ).availableCoordinates() does not LINK but creates new
 		// bug 2: W.selectRows( Ret.LINK, i ).transpose() fails
 //		Stream.concat(
@@ -122,34 +123,41 @@ public interface HHConnector
 			// FIXME parallelized rows may contain just 1 value, not thread-safe?
 			for( long i = 0; i < size; i++ )
 			{
-				final long K = degree.get();
+				final long K = Math.min( size / 4, // need room to shuffle j's
+						degree.get() );
+
 				for( long di = 0; di < K; di++ )
 					result.setAsBigDecimal( weight.get(),
-							top( i, (i + 1 + di) % size ) );
+							HHConnector.top( i, (i + 1 + di) % size ) );
 			}
 
 			// step 2: perturb lattice
 			// FIXME parallelized row selection causes NPE, not Thread safe?
-//			for( long i = 0; i < size - 1; i++ )
 			LongStream.range( 0, size - 1 )// last row in triangle is empty
-					.forEach( i -> availableCoordinates(
-							result.selectRows( Ret.LINK, i ) ).forEach( x ->
+					.forEach( i -> HHConnector
+							.availableCoordinates(
+									result.selectRows( Ret.LINK, i ) )
+							.forEach( x ->
 							{
 								long j = x[0];
-								if( //i < j && 
-								this.rng.nextDouble() < this.beta )
+								if( this.rng.nextDouble() < this.beta )
 								{
 									final long[] i_k = { i, j };
 
 									// shuffle until : non-self and non-used
 									while( i_k[1] == i || result
-											.getAsBigDecimal( top( i_k ) )
+											.getAsBigDecimal(
+													HHConnector.top( i_k ) )
 											.signum() != 0 )
 										i_k[1] = this.rng.nextLong( size );
 
+									// weight to move from i,j to i,k
 									final Object w = result.getAsObject( i, j );
-									result.setAsObject( null, i, j ); // reset old position
-									result.setAsObject( w, top( i_k ) ); // set new position
+									// reset old position
+									result.setAsObject( null, i, j );
+									// set new position
+									result.setAsObject( w,
+											HHConnector.top( i_k ) );
 								}
 							} ) );
 
