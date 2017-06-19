@@ -186,7 +186,8 @@ public class HHModel implements Scenario
 		final CBSHousehold hhType = this.config
 				.householdTypeDist( this.distParser ).draw(); // assuming constant
 		final long ppTotal = this.config.populationSize(),
-				hhTotal = ppTotal / hhType.size(), edgeTotal = hhTotal + 1;
+				hhTotal = ppTotal / hhType.size(),
+				edgeTotal = hhTotal + this.attractorCount;
 		LOG.trace( "Populate #pp: {}, #hh: {}, #attractors: {}, #link-max: {}",
 				ppTotal, hhTotal, this.attractorCount, edgeTotal );
 
@@ -639,7 +640,8 @@ public class HHModel implements Scenario
 		final long id = this.persons.incrementAndGet();
 		final Actor.ID memberRef = Actor.ID.of( String.format( "pp%08d", id ),
 				this.binder.id() );
-		final long index = toMemberIndex( memberRef );
+		final long index = this.ppIndex.computeIfAbsent( memberRef,
+				key -> (long) this.ppIndex.size() );
 		this.ppAttributes.setAsBigDecimal(
 				now().to( TimeUnits.ANNUM ).subtract( initialAge ).decimal(),
 				index, HHMemberAttribute.BIRTH.ordinal() );
@@ -667,12 +669,6 @@ public class HHModel implements Scenario
 	private final Map<Actor.ID, Long> hhIndex = new HashMap<>();
 
 	private final Map<Actor.ID, Long> ppIndex = new HashMap<>();
-
-	private long toMemberIndex( final Actor.ID hhRef )
-	{
-		return this.ppIndex.computeIfAbsent( hhRef,
-				key -> (long) this.ppIndex.size() );
-	}
 
 	private void logError( final Throwable e )
 	{
