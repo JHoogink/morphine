@@ -177,11 +177,7 @@ public class HHModel implements Scenario
 		IllegalAccessException, IOException
 	{
 		final PseudoRandom rng = this.distFactory.getStream();
-		LOG.trace(
-				"Initializing {}, rng: {}, seed: {} vs. {}, offset: {}, length: {}",
-				getClass().getSimpleName(), rng.id(),
-				this.binder.id().unwrap().hashCode(), rng.seed(),
-				scheduler().offset() );
+		LOG.trace( "seed: {}, offset: {}", rng.seed(), scheduler().offset() );
 
 		final List<HHAttractor> attractors = this.config
 				.hesitancyAttractors( this.binder ).toList().blockingGet();
@@ -190,9 +186,8 @@ public class HHModel implements Scenario
 		final CBSHousehold hhType = this.config
 				.householdTypeDist( this.distParser ).draw(); // assuming constant
 		final long ppTotal = this.config.populationSize(),
-				hhTotal = ppTotal / hhType.size(),
-				edgeTotal = hhTotal + this.attractorCount;
-		LOG.trace( "#persons: {}, #hh: {}, #oracles: {}, #edges (max): {}",
+				hhTotal = ppTotal / hhType.size(), edgeTotal = hhTotal + 1;
+		LOG.trace( "Populate #pp: {}, #hh: {}, #attractors: {}, #link-max: {}",
 				ppTotal, hhTotal, this.attractorCount, edgeTotal );
 
 		// or Matrix.Factory.linkToJDBC(host, port, db, table, user, password)
@@ -209,7 +204,7 @@ public class HHModel implements Scenario
 			final long index = this.hhCount.getAndIncrement();
 			attractor.position().subscribe( map ->
 			{
-				LOG.info( "t={}, attractor {}: {}", dt(), index, map );
+				LOG.info( "t={}, attractor/region {}: {}", dt(), index, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
@@ -267,20 +262,19 @@ public class HHModel implements Scenario
 			{
 				time = System.currentTimeMillis();
 				long agNow = this.persons.get() + this.hhCount.get();
-				LOG.trace(
-						"Initialized {} pp ({}%) across {} hh (= +{} actors/sec)",
+				LOG.trace( "Populating, {} pp ({}%), {} hh (= +{} actors/sec)",
 						this.persons.get(), this.persons.get() * 100 / ppTotal,
 						this.hhCount.get(), agNow - agPrev );
 				agPrev = agNow;
 			}
 		}
 
-		LOG.info( "Initialized {} pp ({}%) across {} hh & {} attractor regions",
+		LOG.info( "Populated: {} pp ({}%) across {} hh & {} attractor/regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractorCount, this.attractorCount );
 
-		final HHConnector conn = new HHConnector.WattsStrogatz( rng,
-				this.config.hesitancySocialNetworkBeta() );
+		final double beta = this.config.hesitancySocialNetworkBeta();
+		final HHConnector conn = new HHConnector.WattsStrogatz( rng, beta );
 		final long A = this.attractorCount,
 				N = (this.hhCount.get() - A) / A + 1, K = Math.min( N - 1,
 						this.config.hesitancySocialNetworkDegree() );
@@ -367,8 +361,9 @@ public class HHModel implements Scenario
 			}
 		} );
 
-		LOG.info( "Initialized WattsStrogatz network, degree: {}, assort: {}",
-				K, assortativity );
+		LOG.info( "Networked, model: {}, degree: {}, beta: {}, assort: {}",
+				HHConnector.WattsStrogatz.class.getSimpleName(), K, beta,
+				assortativity );
 
 		// show final links sample
 //		LongStream.range( 0, 10 ).map( i -> i * N / 10 ).forEach( i ->
@@ -554,10 +549,10 @@ public class HHModel implements Scenario
 				attractorIndex, HHAttribute.RELIGIOUS.ordinal() );
 		final boolean alternative = this.hhAttributes.getAsBoolean(
 				attractorIndex, HHAttribute.ALTERNATIVE.ordinal() );
-		final HesitancyProfileJson hesProf = this.hesitancyProfileDist.draw(
+		final HesitancyProfileJson profile = this.hesitancyProfileDist.draw(
 				new HesitancyProfileJson.Category( religious, alternative ) );
 
-		final HHMemberStatus hhStatus = hesProf.status == VaccineStatus.none
+		final HHMemberStatus hhStatus = profile.status == VaccineStatus.none
 				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.IMMUNE;
 		final long referentRef = createPerson( hhRefAge, hhStatus );
 
@@ -597,7 +592,7 @@ public class HHModel implements Scenario
 
 		final BigDecimal initialCalculation = this.calculationDist.draw();
 		final Map<HHAttribute, BigDecimal> initialHesitancy = this.hesitancyDist
-				.draw( hesProf );
+				.draw( profile );
 
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
