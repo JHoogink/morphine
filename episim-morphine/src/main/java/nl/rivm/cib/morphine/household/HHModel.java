@@ -25,13 +25,12 @@ import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
 import org.ujmp.core.enums.ValueType;
 
-import com.eaio.uuid.UUID;
-
 import io.coala.bind.InjectConfig;
 import io.coala.bind.InjectConfig.Scope;
 import io.coala.bind.LocalBinder;
 import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
+import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityUtil;
 import io.coala.math.Range;
 import io.coala.math.Tuple;
@@ -177,6 +176,12 @@ public class HHModel implements Scenario
 	public void init() throws ParseException, InstantiationException,
 		IllegalAccessException, IOException
 	{
+		final PseudoRandom rng = this.distFactory.getStream();
+		LOG.trace(
+				"Initializing {}, rng: {}, seed: {} vs. {}, offset: {}, length: {}",
+				getClass().getSimpleName(), rng.id(),
+				this.binder.id().unwrap().hashCode(), rng.seed(),
+				scheduler().offset() );
 
 		final List<HHAttractor> attractors = this.config
 				.hesitancyAttractors( this.binder ).toList().blockingGet();
@@ -274,7 +279,6 @@ public class HHModel implements Scenario
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractorCount, this.attractorCount );
 
-		final PseudoRandom rng = this.distFactory.getStream();
 		final HHConnector conn = new HHConnector.WattsStrogatz( rng,
 				this.config.hesitancySocialNetworkBeta() );
 		final long A = this.attractorCount,
@@ -314,12 +318,17 @@ public class HHModel implements Scenario
 			final boolean log = (i - A) % (N * A / 5) == 0;
 			if( A < 2 || assortativity >= 1 )
 			{
-				HHConnector.availableCoordinates( assorting[attr], i )
-						.forEach( x -> this.hhNetwork.setAsObject(
-								assorting[attr].getAsObject( x ), A + x[0],
-								A + x[1] ) );
-				if( log )
-					LOG.trace( "Assorted {} ({}/{}) -> {}", i, ia, N, attr );
+				final long[] assort = HHConnector
+						.availableCoordinates( assorting[attr], i )
+						.mapToLong( x ->
+						{
+							final Object w = assorting[attr].getAsObject( x );
+							this.hhNetwork.setAsObject( w, A + x[0] * A + attr,
+									A + x[1] * A + attr );
+							return (x[0] == ia ? x[1] : x[0]) * A + attr;
+						} ).toArray();
+				if( log ) LOG.trace( "Assorted {} ({}/{} -> {}): {} = {}/{}", i,
+						ia, N, attr, assort, assort.length, K + 1 );
 			} else
 			{
 				// get separate assort + dissort j's just for logging
@@ -351,10 +360,10 @@ public class HHModel implements Scenario
 						.distinct() // don't log duplicates
 						.toArray();
 				if( log ) LOG.trace(
-						"Combined {}({}/{}) -> {}: {}{}/{}+{}{}/({}*{}) = {}/{}",
-						i, ia, N, attr, assort.length, assort, assortK.get(),
-						dissort.length, dissort, A - 1, dissortK.get(),
-						assort.length + dissort.length, K + 1 );
+						"Combined {} ({}/{} -> {}): {}({}/{})+{}({}/{}/~{}) = {}/{}",
+						i, ia, N, attr, assort, assort.length,
+						assortK.get() + 1, dissort, dissort.length, A - 1,
+						dissortK.get(), assort.length + dissort.length, K + 1 );
 			}
 		} );
 
@@ -404,7 +413,7 @@ public class HHModel implements Scenario
 
 	public Observable<HHStatisticsDao> statistics()
 	{
-		final UUID contextRef = this.binder.id().contextRef();
+//		final UUID contextRef = this.binder.id().contextRef();
 		final String runName = this.binder.id().unwrap().toString();
 		return Observable.create( sub ->
 		{
@@ -456,8 +465,10 @@ public class HHModel implements Scenario
 	{
 		final VaxOccasion occ = this.vaxOccasionDist.draw();
 		final BigDecimal nowYears = now().to( TimeUnits.ANNUM ).decimal();
-		final Range<BigDecimal> birthRange = Range
-				.of( nowYears.subtract( BigDecimal.valueOf( 4 ) ), nowYears );
+		// TODO from config: vaccination call age
+		final Range<BigDecimal> birthRange = Range.of(
+				nowYears.subtract( BigDecimal.valueOf( 4 ) ),
+				nowYears.subtract( DecimalUtil.ONE_HALF ) );
 		LOG.info( "t={}, vaccination occasion: {} for susceptibles born {}",
 				t.prettify( scheduler().offset() ), occ.asMap().values(),
 				birthRange );
@@ -472,16 +483,11 @@ public class HHModel implements Scenario
 		this.attitudeEvaluator.isPositive( occ, this.hhAttributes )
 
 				// for each child position in the positive household
-				.forEach( hhRef ->
+				.forEach( hh ->
 				{
-					LOG.trace( "positive: {}, kid status: {}",
-							this.ppAttributes.getAsInt(
-									this.hhAttributes.getAsLong( hhRef,
-											HHAttribute.CHILD1_REF.ordinal() ),
-									HHMemberAttribute.STATUS.ordinal() ) );
 					Arrays.stream( CHILD_REF_COLUMN_INDICES )
 							.mapToLong( hhAtt -> this.hhAttributes
-									.getAsLong( hhRef, hhAtt.ordinal() ) )
+									.getAsLong( hh, hhAtt.ordinal() ) )
 
 							// if child member: 1. exists
 							.filter( ppRef -> ppRef != NA
@@ -496,7 +502,9 @@ public class HHModel implements Scenario
 									&& birthRange.contains( this.ppAttributes
 											.getAsBigDecimal( ppRef,
 													HHMemberAttribute.BIRTH
-															.ordinal() ) ) )
+															.ordinal() ) )
+					//
+					)
 							// then vaccinate
 							.forEach( ppRef ->
 							{
@@ -505,7 +513,10 @@ public class HHModel implements Scenario
 										HHMemberAttribute.STATUS.ordinal() );
 								LOG.info(
 										"Vax! (pos) hh #{} (sus) pp #{} born {}",
-										hhRef, ppRef, birthRange );
+										hh, ppRef,
+										this.ppAttributes.getAsBigDecimal(
+												ppRef, HHMemberAttribute.BIRTH
+														.ordinal() ) );
 							} );
 				} );
 	}

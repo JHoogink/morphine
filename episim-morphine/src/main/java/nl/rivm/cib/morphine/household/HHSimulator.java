@@ -25,12 +25,15 @@ import java.time.ZonedDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 
 import org.aeonbits.owner.ConfigCache;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.cfg.AvailableSettings;
 
+import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
@@ -62,6 +65,20 @@ public class HHSimulator
 
 	public static final String CONF_ARG = "conf";
 
+	// FIXME remove once fixed in coala
+	@Singleton
+	public static class DistributionFactory
+		extends Math3ProbabilityDistribution.Factory
+	{
+		@Inject
+		public DistributionFactory( final LocalBinder binder,
+			final PseudoRandom.Factory rngFactory )
+		{
+			super( rngFactory.create( PseudoRandom.Config.NAME_DEFAULT,
+					binder.id().unwrap().hashCode() ) ); // workaround for 'bug'
+		}
+	}
+
 	/**
 	 * @param args arguments from the command line
 	 * @throws IOException
@@ -85,7 +102,7 @@ public class HHSimulator
 				.withProvider( PseudoRandom.Factory.class,
 						Math3PseudoRandom.MersenneTwisterFactory.class )
 				.withProvider( ProbabilityDistribution.Factory.class,
-						Math3ProbabilityDistribution.Factory.class )
+						DistributionFactory.class )
 				.withProvider( ProbabilityDistribution.Parser.class,
 						DistributionParser.class )
 
@@ -98,6 +115,7 @@ public class HHSimulator
 				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
 		ConfigCache.getOrCreate( ReplicateConfig.class,
 				MapBuilder.unordered()
+						.put( ReplicateConfig.ID_KEY, "" + hhConfig.runName() )
 						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
 						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
 						.build() );

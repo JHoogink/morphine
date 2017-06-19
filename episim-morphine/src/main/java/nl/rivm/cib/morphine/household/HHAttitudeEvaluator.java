@@ -44,7 +44,7 @@ public interface HHAttitudeEvaluator
 	 * @param hhIndex the household row index/indices to update, or {@code null}
 	 *            for all
 	 */
-	boolean isPositiveRow( VaxOccasion occ, Matrix hhAttributes, long hhIndex );
+	boolean isPositive( VaxOccasion occ, Matrix hhAttributes, long hhIndex );
 
 	/**
 	 * @param occ the {@link VaxOccasion} to evaluate, or {@code null} if only a
@@ -62,10 +62,12 @@ public interface HHAttitudeEvaluator
 	default LongStream isPositive( final VaxOccasion occ,
 		final Matrix hhAttributes, final long... hhFilter )
 	{
-		return (hhFilter == null
+		return (hhFilter == null || hhFilter.length == 0
 				? LongStream.range( 0, hhAttributes.getRowCount() )
-				: Arrays.stream( hhFilter )).parallel().filter(
-						row -> isPositiveRow( occ, hhAttributes, row ) );
+				: Arrays.stream( hhFilter ))
+						.filter( i -> i != hhAttributes.getAsInt( i,
+								HHAttribute.ATTRACTOR_REF.ordinal() ) )
+						.filter( i -> isPositive( occ, hhAttributes, i ) );
 	}
 
 	// examples
@@ -74,13 +76,15 @@ public interface HHAttitudeEvaluator
 	class Average implements HHAttitudeEvaluator
 	{
 		@Override
-		public boolean isPositiveRow( final VaxOccasion occ,
-			final Matrix hhAttributes, final long hhRow )
+		public boolean isPositive( final VaxOccasion occ,
+			final Matrix hhAttributes, final long i )
 		{
-			final BigDecimal conf = hhAttributes.getAsBigDecimal( hhRow,
+			final BigDecimal conf = hhAttributes.getAsBigDecimal( i,
 					HHAttribute.CONFIDENCE.ordinal() );
-			final BigDecimal comp = hhAttributes.getAsBigDecimal( hhRow,
+			final BigDecimal comp = hhAttributes.getAsBigDecimal( i,
 					HHAttribute.COMPLACENCY.ordinal() );
+
+			// no occasion, just return general attitude
 			if( occ == null ) return Compare.gt( conf, comp );
 
 			final BigDecimal conv = VaxHesitancy.minimumConvenience( occ );
@@ -95,7 +99,7 @@ public interface HHAttitudeEvaluator
 	{
 
 		@Override
-		public boolean isPositiveRow( final VaxOccasion occ,
+		public boolean isPositive( final VaxOccasion occ,
 			final Matrix hhAttributes, final long hhRow )
 		{
 			final BigDecimal conf = hhAttributes.getAsBigDecimal( hhRow,

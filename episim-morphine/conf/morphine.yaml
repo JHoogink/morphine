@@ -5,6 +5,7 @@
 
 morphine:
   replication:
+    run-name: run1
     duration-period: P12M
     offset-date: 2012-01-01
     statistics:
