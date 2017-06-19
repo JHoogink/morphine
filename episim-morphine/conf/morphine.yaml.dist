@@ -3,6 +3,12 @@
 # MORPHINE sample configuration file
 #
 
+javax:
+  persistence:
+    jdbc:
+      url: jdbc:h2:~/morphdat/h2_hhdb;AUTO_SERVER=TRUE
+      user: sa
+      password: sa
 morphine:
   replication:
     run-name: run1
@@ -10,7 +16,7 @@ morphine:
     offset-date: 2012-01-01
     statistics:
       recurrence: 0 0 0 ? * MON *
-      db-enabled: false
+      db-enabled: true
   population:
     size: 10000
     hh-type-dist: const(SOLO_1KID)

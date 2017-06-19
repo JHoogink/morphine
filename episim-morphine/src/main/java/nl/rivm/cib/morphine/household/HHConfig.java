@@ -134,9 +134,9 @@ public interface HHConfig extends GlobalConfig
 
 	//	"jdbc:neo4j:bolt://192.168.99.100:7687/db/data" 
 	//	"jdbc:mysql://localhost/hhdb" 
-	//	"jdbc:hsqldb:mem:hhdb" 
-	// jdbc:hsqldb:file:target/hh_testdb
-	@DefaultValue( "jdbc:h2:~/morphdat/h2_hhdb" )
+	// jdbc:h2:~/morphdat/h2_hhdb
+	// jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb
+	@DefaultValue( "jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb" )
 	@Key( JPAConfig.JPA_JDBC_URL_KEY )
 	URI jdbcUrl();
 
