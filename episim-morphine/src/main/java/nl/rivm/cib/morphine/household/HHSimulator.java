@@ -20,16 +20,14 @@
 package nl.rivm.cib.morphine.household;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.ZonedDateTime;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 
-import org.aeonbits.owner.ConfigCache;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.cfg.AvailableSettings;
 
@@ -45,11 +43,9 @@ import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
-import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.util.MapBuilder;
 import io.reactivex.schedulers.Schedulers;
-import nl.rivm.cib.episim.cbs.TimeUtil;
 
 /**
  * {@link HHSimulator}
@@ -91,7 +87,7 @@ public class HHSimulator
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), args, hhConfig );
 
-		// configure tooling
+		// configure tooling FIXME move to morphine.yaml
 		final LocalConfig binderConfig = LocalConfig.builder()
 				.withId( hhConfig.runName() ) // replication name, sets random seeds
 
@@ -108,30 +104,22 @@ public class HHSimulator
 
 				.build();
 
-		// (re)configure replication run length FIXME via binder config
-		final ZonedDateTime offset = hhConfig.offset()
-				.atStartOfDay( TimeUtil.NL_TZ );
-		final long durationDays = Duration
-				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
-		ConfigCache.getOrCreate( ReplicateConfig.class,
-				MapBuilder.unordered()
-						.put( ReplicateConfig.ID_KEY, "" + hhConfig.runName() )
-						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
-						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
-						.build() );
+		// FIXME via binder config
+		hhConfig.toReplicateConfig();
 
-		final HHModel model = binderConfig.createBinder()
-				.inject( HHModel.class );
+		final LocalBinder binder = binderConfig.createBinder();
+		final HHModel model = binder.inject( HHModel.class );
 
 		// persist statistics
 		final boolean jpa = hhConfig.dbEnabled();
 		final CountDownLatch dbLatch = new CountDownLatch( jpa ? 1 : 0 );
-		if( jpa )
+		if( jpa ) try
 		{
 			// trade-off; see https://stackoverflow.com/a/30347287/1418999
 			final int jdbcBatchSize = 25;
 			// trade-off; 50K+ are postponed until sim ends, flooding the stack
 			final int rowsPerTx = 10000;
+
 			final EntityManagerFactory emf = hhConfig.toJPAConfig(
 					HibernateJPAConfig.class,
 					// add vendor-specific JPA settings (i.e. Hibernate)
@@ -147,7 +135,7 @@ public class HHSimulator
 			// shared between threads generating (sim) and flushing (db) rows
 			final AtomicLong rowsPending = new AtomicLong();
 			model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
-					.buffer( rowsPerTx )
+					.buffer( 10, TimeUnit.SECONDS, rowsPerTx )
 					.observeOn(
 							// Schedulers.from( Executors.newFixedThreadPool( 4 ) )
 							Schedulers.io() )
@@ -160,7 +148,7 @@ public class HHSimulator
 						{
 							for( int i = 0; i < buffer.size(); i++ )
 							{
-								em.persist( buffer.get( i ) );
+								buffer.get( i ).persist( em, binder.id() );
 								if( i > 0 && i % jdbcBatchSize == 0 )
 								{
 									em.flush();
@@ -168,16 +156,17 @@ public class HHSimulator
 								}
 							}
 						}, e -> LOG.error( "Problem persisting stats", e ),
-								() -> LOG
-										.trace( "Persisted {} rows in {}s, {} pending",
-												buffer.size(),
-												DecimalUtil
-														.toScale(
-																(System.currentTimeMillis()
-																		- start)
-																		/ 1000.,
-																1 ),
-												n ) );
+								() ->
+								{
+									if( buffer.isEmpty() ) return;
+									final Number dt = DecimalUtil.toScale(
+											(System.currentTimeMillis() - start)
+													/ 1000.,
+											1 );
+									LOG.trace(
+											"Persisted {} rows in {}s, {} pending",
+											buffer.size(), dt, n );
+								} );
 					}, e ->
 					{
 						LOG.error( "Problem generating household stats", e );
@@ -189,7 +178,12 @@ public class HHSimulator
 						emf.close(); // clean up connections
 						dbLatch.countDown();
 					} );
+		} catch( final Exception e )
+		{
+			LOG.error( "Could not start database", e );
+			dbLatch.countDown();
 		}
+//		model.network().subscribe( e -> LOG.trace( "change: {}", e ) );
 
 		// run injected (Singleton) model; start generating the statistics
 		model.run();

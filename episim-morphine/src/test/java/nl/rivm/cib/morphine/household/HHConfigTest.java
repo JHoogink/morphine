@@ -63,7 +63,8 @@ public class HHConfigTest
 		final HHConfig conf = HHConfig.getOrCreate();
 		final Scheduler scheduler = this.binder.inject( Scheduler.class );
 		scheduler.onReset( () -> conf.hesitancyAttractors( this.binder )
-				.blockingSubscribe( oracle -> oracle.position()
+				.values()
+				.forEach( oracle -> oracle.position()
 						.subscribe( pos -> LOG.trace( "t={}, oracle {} {}",
 								scheduler.now().prettify( TimeUnits.DAYS, 1 ),
 								oracle, pos ) ) ) );

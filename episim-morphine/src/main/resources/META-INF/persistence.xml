@@ -10,6 +10,7 @@
 		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
 		<!-- List all @Entities: no JPA auto-discovery in Java SE runtime :( -->
+		<!-- <class>nl.rivm.cib.morphine.dao.HHConfigDao</class> -->
 		<!-- <class>nl.rivm.cib.morphine.dao.HHStatisticsDao</class> -->
 
 		<properties>

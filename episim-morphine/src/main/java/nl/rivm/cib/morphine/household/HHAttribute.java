@@ -19,15 +19,17 @@
  */
 package nl.rivm.cib.morphine.household;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.ujmp.core.Matrix;
 
-import com.fasterxml.jackson.annotation.JsonValue;
+import nl.rivm.cib.morphine.json.HHJsonifiable;
+import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 
 /**
  * {@link HHAttribute}
@@ -35,7 +37,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * @version $Id$
  * @author Rick van Krevelen
  */
-public enum HHAttribute
+public enum HHAttribute implements HHJsonifiable
 {
 	/** population-unique identifier (may be replaced upon death/emigration) */
 	IDENTIFIER,
@@ -44,10 +46,28 @@ public enum HHAttribute
 	ATTRACTOR_REF,
 
 	/** {@link Boolean} determines hesitancy profile */
-	RELIGIOUS,
+//	RELIGIOUS,
 
 	/** {@link Boolean} determines hesitancy profile */
-	ALTERNATIVE,
+//	ALTERNATIVE,
+
+	/** {@link Matrix} hh indices {@link Matrix#getAsLong} */
+	SOCIAL_NETWORK_SIZE,
+
+	/** drawn from CBS social contact profile {@link RelationFrequencyJson} */
+	IMPRESSION_DAYS, 
+
+	/** in-group peer pressure */
+	IMPRESSION_INPEER,
+
+	/** out-group peer pressure */
+	IMPRESSION_OUTPEER,
+
+	/** own resolve */
+	IMPRESSION_SELF,
+
+	/** coherence */
+	IMPRESSION_ATTRACTOR,
 
 	/**
 	 * social <a
@@ -64,9 +84,6 @@ public enum HHAttribute
 	 * href=https://www.wikiwand.com/en/Homophily>homophily</a> in transmission
 	 */
 	SCHOOL_ASSORTATIVITY,
-
-	/** {@link Matrix} hh indices {@link Matrix#getAsLong} */
-	SOCIAL_NETWORK,
 
 	/** {@link BigDecimal} &isin; [0,1] */
 	CALCULATION,
@@ -96,26 +113,25 @@ public enum HHAttribute
 
 	;
 
-	public Object get( final Matrix data, final long hhIndex )
+	public static <T> Map<HHAttribute, T> toMap(
+		final Function<Integer, T> data, final HHAttribute... attributeFilter )
 	{
-		return data.getAsObject( hhIndex, ordinal() );
-	}
-
-	public static Map<HHAttribute, Object> toMap( final Matrix data,
-		final long hhIndex, final HHAttribute... attribute )
-	{
-		return Arrays.stream( Objects.requireNonNull( attribute ) )
+		return Arrays
+				.stream( attributeFilter == null || attributeFilter.length == 0
+						? values() : attributeFilter )
 				.collect( Collectors.toMap( att -> att,
-						att -> att.get( data, hhIndex ), ( att1, att2 ) -> att1,
+						att -> data.apply( att.ordinal() ),
+						( att1, att2 ) -> att1,
 						() -> new EnumMap<>( HHAttribute.class ) ) );
 	}
 
 	private String json = null;
 
-	@JsonValue
+	@Override
 	public String jsonValue()
 	{
-		return this.json == null ? (this.json = name().toLowerCase().replace('_','-' ))
+		return this.json == null
+				? (this.json = name().toLowerCase().replace( '_', '-' ))
 				: this.json;
 	}
 }

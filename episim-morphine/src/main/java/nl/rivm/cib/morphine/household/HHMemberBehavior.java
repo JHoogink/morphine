@@ -19,15 +19,27 @@
  */
 package nl.rivm.cib.morphine.household;
 
+import nl.rivm.cib.morphine.json.HHJsonifiable;
+
 /**
  * {@link HHMemberBehavior} determines mixing schedules of household members
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
-public enum HHMemberBehavior
+public enum HHMemberBehavior implements HHJsonifiable
 {
 	NORMAL,
 
 	;
+
+	private String json = null;
+
+	@Override
+	public String jsonValue()
+	{
+		return this.json == null
+				? (this.json = name().toLowerCase().replace( '_', '-' ))
+				: this.json;
+	}
 }

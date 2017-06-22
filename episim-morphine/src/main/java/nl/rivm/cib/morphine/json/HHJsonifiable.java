@@ -17,40 +17,19 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine.household;
+package nl.rivm.cib.morphine.json;
 
-import nl.rivm.cib.morphine.json.HHJsonifiable;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * {@link HHMemberStatus} are SEIR-like compartments differentiating between
- * removed and immunized
+ * {@link HHJsonifiable}
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
-public enum HHMemberStatus implements HHJsonifiable
+public interface HHJsonifiable
 {
-	SUSCEPTIBLE,
+	@JsonValue
+	String jsonValue();
 
-	INFECTIOUS,
-
-	ARTIFICIAL_IMMUNE,
-
-	NATURAL_IMMUNE,
-
-	PASSIVE_IMMUNE,
-
-	REMOVED,
-
-	;
-
-	private String json = null;
-
-	@Override
-	public String jsonValue()
-	{
-		return this.json == null
-				? (this.json = name().toLowerCase().replace( '_', '-' ))
-				: this.json;
-	}
 }

@@ -10,12 +10,14 @@ javax:
       user: sa
       password: sa
 morphine:
+  # anything below is persisted, except for YAML comments
+  comment: blabla
   replication:
     run-name: run1
-    duration-period: P12M
-    offset-date: 2012-01-01
+    duration-period: P18M
+    offset-date: 2012-06-01
     statistics:
-      recurrence: 0 0 0 ? * MON *
+      recurrence: 1 0 0 ? * MON *
       db-enabled: true
   population:
     size: 10000
@@ -25,21 +27,31 @@ morphine:
     hh-migrate-rate: .02 annual
 #   vaccination occasions recur to hesitant parents of susceptible children
     vaccination:
-      occasion-recurrence: 0 0 0 7 * ? * # each 7th day of the month
+      # http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html
+      # e.g.: 0 0 0 7 * ? * # each 7th day of the month
+      occasion-recurrence: 0 0 12 1 1/2 ? 2013-2020
       occasion-utility-dist: const(0.5)
       occasion-clarity-dist: const(0.5)
       occasion-affinity-dist: const(0.5)
       occasion-proximity-dist: const(0.5)
     hesitancy:
-      calculation-dist: const(0.5) # TODO include in hesitancy profile sample?
-      profiles: conf/hesitancy-univariate.json # incl. covariate sample indices
+      # TODO include in hesitancy profile sample?
+      calculation-dist: const(0.5)
+      # incl. covariate sample indices
+      profiles: conf/hesitancy-univariate.json
       profile-sample: conf/hesitancy-initial.json
+      relation-frequencies: conf/relation-frequency.json
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
-      social-network-degree: 10 # avg. no. family + friends + neighbors
-      social-network-beta: 0.5 # 0 = lattice, 1 = random network
-      social-assortativity: 0.85 # fraction of 'similar' connections
-      school-assortativity-dist: bernoulli(0.75) # whether school is 'similar'
+      propagation-recurrence: 0 0 0 ? * MON *
+      # avg. no. family + friends + neighbors
+      social-network-degree: 10
+      # 0 = lattice, 1 = random network
+      social-network-beta: 0.5
+      # fraction of 'similar' connections
+      social-assortativity: 0.85
+      # whether school is 'similar'
+      school-assortativity-dist: bernoulli(0.75) 
       school-capacities: 
         0-4: 50
         4-12: 100
@@ -48,33 +60,53 @@ morphine:
       attractor-factory: nl.rivm.cib.morphine.household.HHAttractor$Factory$SimpleBinding
       attractors:
       # local pressure, mainly from e.g. Health Services
-      - religious: 0
-        alternative: 0
-        confidence: 1
-        complacency: 0
-        calculation: .1 # relative impact per it., >1: outweigh soc. network
-        type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
+        sec-reg:
+          religious: 0
+          alternative: 0
+          confidence: 1
+          complacency: 0
+          # relative impact per it., >1: outweigh soc. network
+          impression-attractor: .1
+          impression-self: 1
+          impression-inpeer: 1
+          impression-outpeer: 1
+          type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Protestantists
-      - religious: 1
-        alternative: 0
-        confidence: .5
-        complacency: 1
-        calculation: .1 # 1 = relative impact per it., >1: outweigh soc. network
-        type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
+        rel-reg:
+          religious: 1
+          alternative: 0
+          confidence: .5
+          complacency: 1
+          # 1 = relative impact per it., >1: outweigh soc. network
+          impression-attractor: .1
+          impression-self: 1
+          impression-inpeer: 1
+          impression-outpeer: 1
+          type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Traditionalists
-      - religious: 0
-        alternative: 1
-        confidence: 0
-        complacency: 1
-        calculation: .1 # 1 = relative impact per it., >1: outweigh soc. network
-        type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
+        sec-alt:
+          religious: 0
+          alternative: 1
+          confidence: 0
+          complacency: 1
+          # 1 = relative impact per it., >1: outweigh soc. network
+          impression-attractor: .1
+          impression-self: 1
+          impression-inpeer: 1
+          impression-outpeer: 1
+          type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Mixture
-      - religious: 1
-        alternative: 1
-        confidence: .5
-        complacency: .5
-        calculation: .1 # 1 = relative impact per it., >1: outweigh soc. network
-        type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
+        rel-alt:
+          religious: 1
+          alternative: 1
+          confidence: .5
+          complacency: .5
+          # 1 = relative impact per it., >1: outweigh soc. network
+          impression-attractor: .1
+          impression-self: 1
+          impression-inpeer: 1
+          impression-outpeer: 1
+          type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
 #        schedule: 
 #        # trigger monthly disturbance and 5-day recovery to original values
 #        - recurrence: 0 0 0 1 * ? *

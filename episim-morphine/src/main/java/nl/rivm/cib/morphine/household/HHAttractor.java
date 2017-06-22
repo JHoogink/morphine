@@ -22,8 +22,11 @@ package nl.rivm.cib.morphine.household;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -31,11 +34,12 @@ import javax.inject.Singleton;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.coala.bind.LocalBinder;
-import io.coala.exception.ExceptionFactory;
-import io.coala.log.LogUtil.Pretty;
+import io.coala.exception.Thrower;
 import io.coala.time.Duration;
 import io.coala.time.Scheduler;
 import io.reactivex.Observable;
+import nl.rivm.cib.morphine.json.HesitancyProfileJson;
+import nl.rivm.cib.morphine.json.HesitancyProfileJson.Category;
 
 /**
  * {@link HHAttractor} adds special proactive entities acting as special
@@ -48,11 +52,23 @@ import io.reactivex.Observable;
  */
 public interface HHAttractor extends HHScenarioConfigurable
 {
+	String TYPE_KEY = "type";
+
+	String RELIGIOUS_KEY = "religious";
+
+	boolean RELIGIOUS_DEFAULT = false;
+
+	String ALTERNATIVE_KEY = "alternative";
+
+	boolean ALTERNATIVE_DEFAULT = false;
+
 	/**
 	 * @return an {@link Observable} stream of {@link HHAttribute} values
 	 *         {@link Map mapped} as {@link BigDecimal}
 	 */
 	Observable<Map<HHAttribute, BigDecimal>> position();
+
+	HesitancyProfileJson.Category toHesitancyProfile();
 
 	/**
 	 * {@link SignalSchedule} executes simple position updates configured as
@@ -108,37 +124,65 @@ public interface HHAttractor extends HHScenarioConfigurable
 		{
 			return getClass().getSimpleName() + this.config;
 		}
+
+		@Override
+		public Category toHesitancyProfile()
+		{
+			return new HesitancyProfileJson.Category(
+					this.config.get( RELIGIOUS_KEY )
+							.asBoolean( RELIGIOUS_DEFAULT ),
+					this.config.get( ALTERNATIVE_KEY )
+							.asBoolean( ALTERNATIVE_DEFAULT ) );
+		}
 	}
 
 	interface Factory
 	{
-		String TYPE_KEY = "type";
-
 		HHAttractor create( JsonNode config ) throws Exception;
 
-		default Observable<HHAttractor> createAll( final JsonNode config,
+		static HHAttractor construct( final JsonNode node,
+			final LocalBinder binder )
+			throws ClassNotFoundException, ParseException
+		{
+			final Class<? extends HHAttractor> type = node.has( TYPE_KEY )
+					? Class.forName( node.get( TYPE_KEY ).textValue() )
+							.asSubclass( HHAttractor.class )
+					: SignalSchedule.class;
+			return binder.inject( type ).reset( node );
+		}
+
+		default Map<String, HHAttractor> createAll( final JsonNode config,
 			final LocalBinder binder )
 		{
-			return Observable.fromIterable( config ).flatMap( node ->
+			if( config.isArray() ) return IntStream.range( 0, config.size() )
+					.mapToObj( i -> i ).collect( Collectors.toMap(
+							i -> String.format( "attractor%02d", i ), i ->
+							{
+								try
+								{
+									return construct( config.get( i ), binder );
+								} catch( final Exception e )
+								{
+									return Thrower.rethrowUnchecked( e );
+								}
+							}, ( k1, k2 ) -> k1, TreeMap::new ) );
+			if( config.isObject() )
 			{
-				try
+				final Map<String, HHAttractor> result = new TreeMap<>();
+				config.fields().forEachRemaining( e ->
 				{
-					final Class<? extends HHAttractor> type = node
-							.has( TYPE_KEY )
-									? Class
-											.forName( node.get( TYPE_KEY )
-													.textValue() )
-											.asSubclass( HHAttractor.class )
-									: SignalSchedule.class;
-					return Observable
-							.just( binder.inject( type ).reset( node ) );
-				} catch( final Exception e )
-				{
-					return Observable.error(
-							ExceptionFactory.createUnchecked( e, Pretty.of(
-									() -> "Problem with config: " + node ) ) );
-				}
-			} );
+					try
+					{
+						result.put( e.getKey(),
+								construct( e.getValue(), binder ) );
+					} catch( final Exception e1 )
+					{
+						Thrower.rethrowUnchecked( e1 );
+					}
+				} );
+				return result;
+			}
+			return Collections.emptyMap();
 		}
 
 		@Singleton
