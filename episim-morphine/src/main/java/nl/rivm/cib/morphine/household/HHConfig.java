@@ -5,10 +5,14 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -26,9 +30,11 @@ import io.coala.bind.LocalBinder;
 import io.coala.config.ConfigUtil;
 import io.coala.config.GlobalConfig;
 import io.coala.config.YamlUtil;
+import io.coala.exception.Thrower;
 import io.coala.json.JsonUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityConfigConverter;
+import io.coala.math.QuantityUtil;
 import io.coala.persist.JPAConfig;
 import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
@@ -37,14 +43,15 @@ import io.coala.random.ProbabilityDistribution.Parser;
 import io.coala.random.PseudoRandom;
 import io.coala.random.QuantityDistribution;
 import io.coala.time.Instant;
+import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
 import io.coala.time.Timing;
 import io.coala.util.FileUtil;
 import io.coala.util.InputStreamConverter;
 import io.coala.util.MapBuilder;
-import io.reactivex.Observable;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
+import nl.rivm.cib.episim.cbs.TimeUtil;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.HesitancyDimension;
@@ -77,16 +84,17 @@ public interface HHConfig extends GlobalConfig
 	String KEY_SEP = ConfigUtil.CONFIG_KEY_SEP;
 
 	/** configuration key */
-	String MORPHINE_PREFIX = "morphine" + KEY_SEP;
+	String MORPHINE_BASE = "morphine";
 
 	/** configuration key */
-	String REPLICATION_PREFIX = MORPHINE_PREFIX + "replication" + KEY_SEP;
+	String REPLICATION_PREFIX = MORPHINE_BASE + KEY_SEP + "replication"
+			+ KEY_SEP;
 
 	/** configuration key */
 	String STATISTICS_PREFIX = REPLICATION_PREFIX + "statistics" + KEY_SEP;
 
 	/** configuration key */
-	String POPULATION_PREFIX = MORPHINE_PREFIX + "population" + KEY_SEP;
+	String POPULATION_PREFIX = MORPHINE_BASE + KEY_SEP + "population" + KEY_SEP;
 
 	/** configuration key */
 	String HESITANCY_PREFIX = POPULATION_PREFIX + "hesitancy" + KEY_SEP;
@@ -184,6 +192,20 @@ public interface HHConfig extends GlobalConfig
 	@ConverterClass( LocalDateConverter.class )
 	LocalDate offset();
 
+	/** globally (re)configure replication run length etc. */
+	default ReplicateConfig toReplicateConfig()
+	{
+		final ZonedDateTime offset = offset().atStartOfDay( TimeUtil.NL_TZ );
+		final long durationDays = Duration
+				.between( offset, offset.plus( duration() ) ).toDays();
+		return ConfigCache.getOrCreate( ReplicateConfig.class,
+				MapBuilder.unordered()
+						.put( ReplicateConfig.ID_KEY, "" + runName() )
+						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
+						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
+						.build() );
+	}
+
 	/**
 	 * <a
 	 * href=http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html>Cron
@@ -228,6 +250,16 @@ public interface HHConfig extends GlobalConfig
 	{
 		return distParser.<Number>parse( householdReferentAgeDist() )
 				.toQuantities( TimeUnits.ANNUM );
+	}
+
+	@Key( POPULATION_PREFIX + "hh-ref-male-prob" )
+	@DefaultValue( ".5" )
+	double householdReferentMaleProb();
+
+	default ProbabilityDistribution<Boolean> householdReferentMaleDist(
+		final Factory distFactory ) throws ParseException
+	{
+		return distFactory.createBernoulli( householdReferentMaleProb() );
 	}
 
 	/** @see TimeUnits#ANNUM_LABEL */
@@ -344,37 +376,48 @@ public interface HHConfig extends GlobalConfig
 	@DefaultValue( "nl.rivm.cib.morphine.household.HHAttractor$Factory$SimpleBinding" )
 	Class<? extends HHAttractor.Factory> hesitancyAttractorFactory();
 
-	default Observable<HHAttractor>
+	default Map<String, HHAttractor>
 		hesitancyAttractors( final LocalBinder binder )
 	{
 		try
 		{
-			return hesitancyAttractorFactory().newInstance().createAll(
-					toJSON( HESITANCY_PREFIX + "attractors" ), binder );
+			return Collections.unmodifiableMap(
+					hesitancyAttractorFactory().newInstance().createAll(
+							toJSON( HESITANCY_PREFIX + "attractors" ),
+							binder ) );
 		} catch( final Exception e )
 		{
-			return Observable.error( e );
+			return Thrower.rethrowUnchecked( e );
 		}
 	}
 
 	/** @see RelationFrequencyJson */
-	@Key( HESITANCY_PREFIX + "profiles" )
+	@Key( HESITANCY_PREFIX + "relation-frequencies" )
 	@DefaultValue( CONFIG_BASE_DIR + "relation-frequency.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyRelationFrequencies();
 
-//	default ConditionalDistribution<RelationFrequencyJson>
-//		hesitancyRelationFrequencyDist(
-//			final ProbabilityDistribution.Factory distFactory )
-//	{
-//		return ConditionalDistribution.of( distFactory::createCategorical,
-//				JsonUtil.readArrayAsync( this::hesitancyRelationFrequencies,
-//						RelationFrequencyJson.class )
-//						.toMultimap( json -> json.toCategory(),
-//								json -> json.intervalDist( distFactory ),
-//								TreeMap::new )
-//						.blockingGet() );
-//	}
+	default
+		ConditionalDistribution<Quantity<Time>, RelationFrequencyJson.Category>
+		hesitancyRelationFrequencyDist(
+			final ProbabilityDistribution.Factory distFactory )
+	{
+		final List<RelationFrequencyJson> map = JsonUtil
+				.readArrayAsync( this::hesitancyRelationFrequencies,
+						RelationFrequencyJson.class )
+				.toList().blockingGet();
+		@SuppressWarnings( "unchecked" )
+		final Quantity<Time> defaultDelay = QuantityUtil.valueOf( "1 yr" );
+		return c ->
+		{
+			return map.stream()
+					.filter( json -> json.relation == c.relation()
+							&& json.gender == c.gender()
+							&& json.ageRange().contains( c.floorAge() ) )
+					.map( json -> json.intervalDist( distFactory ).draw() )
+					.findFirst().orElse( defaultDelay );
+		};
+	}
 
 	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profiles" )
@@ -491,6 +534,27 @@ public interface HHConfig extends GlobalConfig
 		return attitudePropagatorType().newInstance();
 	}
 
+	/**
+	 * <a
+	 * href=http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html>Cron
+	 * trigger pattern</a> for timing the attitude/hesitancy propagation, e.g.
+	 * <ol type=a>
+	 * <li>{@code "0 0 0 ? * MON *"} : <em>midnight on every Monday</em></li>
+	 * <li>{@code "0 0 0 1,15 * ? *"} : <em>midnight on every 1st and 15th day
+	 * of the month</em></li>
+	 * </ol>
+	 */
+	@Key( STATISTICS_PREFIX + "propagator-recurrence" )
+	@DefaultValue( "0 0 0 ? * MON *" )
+	String attitudePropagatorRecurrence();
+
+	default Iterable<Instant> attitudePropagatorRecurrence( final Scheduler scheduler )
+		throws ParseException
+	{
+		return Timing.of( attitudePropagatorRecurrence() ).offset( scheduler.offset() )
+				.iterate();
+	}
+	
 //	@Key( "morphine.measles.contact-period" )
 //	@DefaultValue( "10 h" )
 //	Duration contactPeriod();

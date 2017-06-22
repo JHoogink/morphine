@@ -20,27 +20,27 @@
 package nl.rivm.cib.morphine.dao;
 
 import java.math.BigDecimal;
-import java.util.Date;
 
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 
 import org.ujmp.core.Matrix;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import io.coala.bind.LocalId;
+import io.coala.persist.JPAUtil;
 import io.coala.persist.Persistable;
 import io.coala.time.Instant;
-import io.coala.time.TimeUnits;
 import nl.rivm.cib.morphine.household.HHAttribute;
 import nl.rivm.cib.morphine.household.HHMemberAttribute;
 
@@ -52,8 +52,10 @@ import nl.rivm.cib.morphine.household.HHMemberAttribute;
  */
 @Entity
 @Table( name = "HOUSEHOLDS" )
+@SequenceGenerator( name = HHStatisticsDao.HH_SEQ, allocationSize = 25 )
 public class HHStatisticsDao implements Persistable.Dao
 {
+	public static final String HH_SEQ = "HH_SEQ";
 
 	private static final String TIME_COL_DEF = "DECIMAL(10,4)";
 
@@ -64,35 +66,51 @@ public class HHStatisticsDao implements Persistable.Dao
 	 * @param households household data {@link Matrix} per {@link HHAttribute}
 	 * @param rowIndex the household's respective row index
 	 * @param members member data {@link Matrix} per {@link HHMemberAttribute}
-	 * @return a {@link MemberDao}
+	 * @return a {@link HHMemberDao}
 	 */
-	public static HHStatisticsDao create( final String run, final Instant now,
-		final int seq, final Matrix households, final long rowIndex,
-		final Matrix members )
+	public static HHStatisticsDao create( final HHConfigDao run,
+		final Instant now, final int seq, final String[] attractorNames,
+		final Matrix households, final long rowIndex, final Matrix members )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
 //		result.context = context;
-		result.run = run;
+		result.config = run;
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.homeRef = households.getAsInt( rowIndex,
+		result.attractorRef = households.getAsString( rowIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
-		result.religious = households.getAsBoolean( rowIndex,
-				HHAttribute.RELIGIOUS.ordinal() );
-		result.alternative = households.getAsBoolean( rowIndex,
-				HHAttribute.ALTERNATIVE.ordinal() );
+		result.socialNetworkSize = households.getAsInt( rowIndex,
+				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
+		result.socialAssortativity = households.getAsBigDecimal( rowIndex,
+				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
+		result.impressionDays = households.getAsBigDecimal( rowIndex,
+				HHAttribute.IMPRESSION_DAYS.ordinal() );;
+		result.impressionInpeers = households.getAsBigDecimal( rowIndex,
+				HHAttribute.IMPRESSION_INPEER.ordinal() );
+		result.impressionOutpeers = households.getAsBigDecimal( rowIndex,
+				HHAttribute.IMPRESSION_OUTPEER.ordinal() );
+		result.impressionSelf = households.getAsBigDecimal( rowIndex,
+				HHAttribute.IMPRESSION_SELF.ordinal() );
+		result.impressionAttractor = households.getAsBigDecimal( rowIndex,
+				HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+//		result.schoolAssortativity = households.getAsBigDecimal( rowIndex,
+//				HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
+//		result.religious = households.getAsBoolean( rowIndex,
+//				HHAttribute.RELIGIOUS.ordinal() );
+//		result.alternative = households.getAsBoolean( rowIndex,
+//				HHAttribute.ALTERNATIVE.ordinal() );
 		result.calculation = households.getAsBigDecimal( rowIndex,
 				HHAttribute.CALCULATION.ordinal() );
 		result.confidence = households.getAsBigDecimal( rowIndex,
 				HHAttribute.CONFIDENCE.ordinal() );
 		result.complacency = households.getAsBigDecimal( rowIndex,
 				HHAttribute.COMPLACENCY.ordinal() );
-		result.referent = MemberDao.create( now, members, households
+		result.referent = HHMemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.REFERENT_REF.ordinal() ) );
 //		result.partner = MemberDao.create( now, members, households
 //				.getAsLong( rowIndex, HHAttribute.PARTNER_REF.ordinal() ) );
-		result.child1 = MemberDao.create( now, members, households
+		result.child1 = HHMemberDao.create( now, members, households
 				.getAsLong( rowIndex, HHAttribute.CHILD1_REF.ordinal() ) );
 //		result.child2 = MemberDao.create( now, members, households
 //				.getAsLong( rowIndex, HHAttribute.CHILD2_REF.ordinal() ) );
@@ -102,75 +120,38 @@ public class HHStatisticsDao implements Persistable.Dao
 	}
 
 	/**
-	 * {@link MemberDao} is an {@link Embeddable} member data access object
+	 * @param em
 	 */
-	@Embeddable
-	public static class MemberDao implements Persistable.Dao
+	public void persist( final EntityManager em, final LocalId id )
 	{
-		/**
-		 * @param now current virtual time {@link Instant} for calculating age
-		 * @param data member data {@link Matrix} per {@link HHMemberAttribute}
-		 * @param rowIndex the member's respective row index
-		 * @return a {@link MemberDao}
-		 */
-		public static MemberDao create( final Instant now, final Matrix data,
-			final long rowIndex )
-		{
-			if( rowIndex < 0 ) return null;
-			final MemberDao result = new MemberDao();
-			result.age = now.to( TimeUnits.ANNUM ).decimal()
-					.subtract( data.getAsBigDecimal( rowIndex,
-							HHMemberAttribute.BIRTH.ordinal() ) );
-			result.male = data.getAsBoolean( rowIndex,
-					HHMemberAttribute.MALE.ordinal() );
-			result.status = data.getAsInt( rowIndex,
-					HHMemberAttribute.STATUS.ordinal() );
-//			result.behavior = data.getAsInt( rowIndex,
-//					HHMemberAttribute.BEHAVIOR.ordinal() );
-			return result;
-		}
-
-		public static final String AGE_ATTR = "age";
-
-		public static final String STATUS_ATTR = "status";
-
-		public static final String MALE_ATTR = "male";
-
-//		public static final String BEHAVIOR_ATTR = "behavior";
-
-		@Column
-		protected BigDecimal age;
-
-		@Column
-		protected int status;
-
-		@Column
-		protected boolean male;
-
-//		@Column
-//		protected int behavior;
-
+		if( !em.contains( this.config ) )
+			this.config = JPAUtil.findOrCreate( em,
+					() -> HHConfigDao.find( em, id ),
+					() -> em.merge( this.config ) );
+		em.persist( this );
 	}
 
 	@Id
-	@GeneratedValue
+	@GeneratedValue( generator = HH_SEQ )
 	@Column( name = "PK", nullable = false, updatable = false )
 	protected Integer pk = null;
 
 	/** time stamp of insert, as per http://stackoverflow.com/a/3107628 */
-	@Temporal( TemporalType.TIMESTAMP )
-	@Column( name = "CREATED_TS", insertable = false, updatable = false,
-		columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" )
-	@JsonIgnore
-	protected Date created = null;
+//	@Temporal( TemporalType.TIMESTAMP )
+//	@Column( name = "CREATED_TS", insertable = false, updatable = false,
+//		columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" )
+//	@JsonIgnore
+//	protected Date created = null;
 
 //	@Column( name = "CONTEXT", nullable = false, updatable = false, length = 16,
 //		columnDefinition = "BINARY(16)" )
 //	@Convert( converter = UUIDToByteConverter.class )
 //	protected UUID context;
 
-	@Column( name = "RUN", nullable = false, updatable = false )
-	protected String run;
+	@ManyToOne( optional = false, cascade = CascadeType.PERSIST,
+		fetch = FetchType.LAZY )
+//	@Column( name = "CONFIG", nullable = false, updatable = false )
+	public HHConfigDao config;
 
 	@Column( name = "HH", nullable = false, updatable = false )
 	protected int hh;
@@ -178,14 +159,45 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SEQ", nullable = false, updatable = false )
 	protected int seq;
 
-	@Column( name = "HOME_REF", nullable = false, updatable = false )
-	protected int homeRef;
+	@Column( name = "ATTRACTOR_REF", nullable = false, updatable = false )
+	protected String attractorRef;
 
-	@Column( name = "RELIGIOUS", nullable = false, updatable = false )
-	protected boolean religious;
+	@Column( name = "SOCIAL_ASSORTATIVITY", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal socialAssortativity;
 
-	@Column( name = "ALTERNATIVE", nullable = false, updatable = false )
-	protected boolean alternative;
+	@Column( name = "SOCIAL_NETWORK_SIZE", nullable = false, updatable = false )
+	protected int socialNetworkSize;
+
+	@Column( name = "IMPRESSION_DAYS", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal impressionDays;
+
+	@Column( name = "IMPRESSION_INPEERS", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal impressionInpeers;
+
+	@Column( name = "IMPRESSION_OUTPEERS", nullable = false,
+		updatable = false, columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal impressionOutpeers;
+
+	@Column( name = "IMPRESSION_SELF", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal impressionSelf;
+
+	@Column( name = "IMPRESSION_ATTRACTOR", nullable = false,
+		updatable = false, columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal impressionAttractor;
+
+//	@Column( name = "SCHOOL_ASSORTATIVITY", nullable = false, updatable = false,
+//		columnDefinition = ATTITUDE_COL_DEF )
+//	protected BigDecimal schoolAssortativity;
+
+//	@Column( name = "RELIGIOUS", nullable = false, updatable = false )
+//	protected boolean religious;
+
+//	@Column( name = "ALTERNATIVE", nullable = false, updatable = false )
+//	protected boolean alternative;
 
 	@Column( name = "CALCULATION", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
@@ -200,13 +212,13 @@ public class HHStatisticsDao implements Persistable.Dao
 	protected BigDecimal complacency;
 
 	@AttributeOverrides( {
-			@AttributeOverride( name = MemberDao.AGE_ATTR,
+			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
 				column = @Column( name = "REFERENT_AGE", nullable = false,
 					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = MemberDao.STATUS_ATTR,
-				column = @Column( name = "REFERENT_STATUS", nullable = false,
-					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.MALE_ATTR,
+//			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
+//				column = @Column( name = "REFERENT_STATUS", nullable = false,
+//					updatable = false ) ),
+			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
 				column = @Column( name = "REFERENT_MALE", nullable = false,
 					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
@@ -214,7 +226,7 @@ public class HHStatisticsDao implements Persistable.Dao
 //					updatable = false ) )
 	} )
 	@Embedded
-	protected MemberDao referent;
+	protected HHMemberDao referent;
 
 //	@AttributeOverrides( {
 //			@AttributeOverride( name = MemberDao.AGE_ATTR,
@@ -231,24 +243,24 @@ public class HHStatisticsDao implements Persistable.Dao
 ////					updatable = false ) )
 //	} )
 //	@Embedded
-//	protected MemberDao partner;
+//	protected HHMemberDao partner;
 
 	@AttributeOverrides( {
-			@AttributeOverride( name = MemberDao.AGE_ATTR,
+			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
 				column = @Column( name = "CHILD1_AGE", nullable = true,
 					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = MemberDao.STATUS_ATTR,
+			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
 				column = @Column( name = "CHILD1_STATUS", nullable = true,
 					updatable = false ) ),
-			@AttributeOverride( name = MemberDao.MALE_ATTR,
-				column = @Column( name = "CHILD1_MALE", nullable = true,
-					updatable = false ) ),
+//			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
+//				column = @Column( name = "CHILD1_MALE", nullable = true,
+//					updatable = false ) ),
 //			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
 //				column = @Column( name = "CHILD1_BEHAVIOR", nullable = true,
 //					updatable = false ) ) 
 	} )
 	@Embedded
-	protected MemberDao child1;
+	protected HHMemberDao child1;
 
 //	@AttributeOverrides( {
 //			@AttributeOverride( name = MemberDao.AGE_ATTR,
@@ -265,7 +277,7 @@ public class HHStatisticsDao implements Persistable.Dao
 ////					updatable = false ) ) 
 //	} )
 //	@Embedded
-//	protected MemberDao child2;
+//	protected HHMemberDao child2;
 
 //	@AttributeOverrides( {
 //			@AttributeOverride( name = MemberDao.AGE_ATTR,
@@ -282,7 +294,7 @@ public class HHStatisticsDao implements Persistable.Dao
 ////					updatable = false ) ) 
 //	} )
 //	@Embedded
-//	protected MemberDao child3;
+//	protected HHMemberDao child3;
 
 	@Override
 	public String toString()

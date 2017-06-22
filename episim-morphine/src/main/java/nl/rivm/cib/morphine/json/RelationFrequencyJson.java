@@ -23,13 +23,17 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.EnumMap;
 
+import javax.measure.Quantity;
 import javax.measure.quantity.Time;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import io.coala.exception.Thrower;
+import io.coala.math.DecimalUtil;
+import io.coala.math.Range;
 import io.coala.math.Tuple;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.QuantityDistribution;
@@ -42,6 +46,7 @@ import io.coala.time.TimeUnits;
  * @version $Id$
  * @author Rick van Krevelen
  */
+@JsonIgnoreProperties( ignoreUnknown = true )
 public class RelationFrequencyJson
 {
 
@@ -120,14 +125,29 @@ public class RelationFrequencyJson
 	@JsonProperty( "dist" )
 	public DistParams dist;
 
-	@JsonIgnore
-	private QuantityDistribution<Time> intervalDistCache = null;
-
 	@Override
 	public String toString()
 	{
 		return this.gender + "|" + this.ageRange + "|" + this.relation;
 	}
+
+	@JsonIgnore
+	private Range<BigDecimal> ageRangeCache = null;
+
+	public Range<BigDecimal> ageRange()
+	{
+		if( this.ageRangeCache == null )
+		{
+			final String[] ages = this.ageRange.replaceAll( ">", "" )
+					.split( "-" );
+			this.ageRangeCache = (ages.length == 1 ? Range.of( ages[0] )
+					: Range.of( ages[0], ages[1] )).map( BigDecimal::new );
+		}
+		return this.ageRangeCache;
+	}
+
+	@JsonIgnore
+	private QuantityDistribution<Time> intervalDistCache = null;
 
 	public QuantityDistribution<Time>
 		intervalDist( final ProbabilityDistribution.Factory distFact )
@@ -139,25 +159,43 @@ public class RelationFrequencyJson
 	/**
 	 * @return
 	 */
-	public Object toCategory()
+	public Category toCategory()
 	{
-		return new Category( this.gender, this.ageRange, this.relation );
+		return new Category( this.gender, this.relation,
+				ageRange().lowerValue() );
 	}
 
 	public static class Category extends Tuple
 	{
 
-		/**
-		 * {@link Category} constructor
-		 * 
-		 * @param values
-		 */
-		public Category( final Gender gender, final String ageRange,
-			final Relation relation )
+		public Category( final boolean male, final Relation relation,
+			final Quantity<Time> age )
 		{
-			super( Arrays.asList( gender, ageRange, relation ) );
+			this( male ? Gender.male : Gender.female, relation, DecimalUtil
+					.valueOf( age.to( TimeUnits.ANNUM ).getValue() ) );
 		}
 
+		public Category( final Gender gender, final Relation relation,
+			final BigDecimal ageRange )
+		{
+			super( Arrays.asList( gender, relation, ageRange ) );
+		}
+
+		public Gender gender()
+		{
+			return (Gender) values().get( 0 );
+		}
+
+		public Relation relation()
+		{
+			return (Relation) values().get( 1 );
+		}
+
+		@SuppressWarnings( "unchecked" )
+		public BigDecimal floorAge()
+		{
+			return (BigDecimal) values().get( 2 );
+		}
 	}
 
 	public static class DistParams

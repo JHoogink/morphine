@@ -1,23 +1,27 @@
 package nl.rivm.cib.morphine.household;
 
+import java.beans.PropertyChangeEvent;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.measure.Quantity;
+import javax.measure.quantity.Frequency;
 import javax.measure.quantity.Time;
 
 import org.apache.logging.log4j.Logger;
@@ -38,18 +42,22 @@ import io.coala.random.ConditionalDistribution;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.random.QuantityDistribution;
+import io.coala.time.Expectation;
 import io.coala.time.Instant;
 import io.coala.time.Scenario;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
 import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
+import io.reactivex.subjects.Subject;
 import nl.rivm.cib.epidemes.cbs.json.CBSGender;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
-import nl.rivm.cib.episim.model.locate.Region;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
+import nl.rivm.cib.morphine.dao.HHConfigDao;
 import nl.rivm.cib.morphine.dao.HHStatisticsDao;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.VaccineStatus;
+import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 
 /**
  * {@link HHModel} is a simple example {@link Scenario} implementation, of which
@@ -98,15 +106,19 @@ public class HHModel implements Scenario
 	/** */
 	private Matrix hhAttributes;
 	/** */
+	private Matrix ppAttributes;
+	/** */
 	private Matrix hhNetwork;
 	/** */
-	private Matrix ppAttributes;
+	private Matrix hhNetworkActivity;
+	/** */
+	private final Map<Long, Expectation> hhNetworkExpectations = new HashMap<>();
 	/** */
 	private final AtomicLong hhCount = new AtomicLong();
 	/** */
 	private final AtomicLong persons = new AtomicLong();
 	/** number of top rows (0..n) in {@link #hhNetwork} reserved for oracles */
-	private long attractorCount;
+//	private long attractorCount;
 	/** virtual time range of simulation */
 //	private transient Range<LocalDate> timeRange = null;
 	/** empirical household compositions and referent ages, see CBS 71486 */
@@ -114,12 +126,30 @@ public class HHModel implements Scenario
 	/** zip-codes per borough / ward / municipality / ... */
 //	private transient ConditionalDistribution<CbsNeighborhood, Region.ID> hoodDist;
 
+	private Map<String, HHAttractor> attractors = Collections.emptyMap();
+
+//	private Map<String, Integer> attractorIndex = new HashMap<>();
+	private String[] attractorNames;
+
+	/**
+	 * {@link AttractorBroker} assigns regions to households
+	 */
+	@FunctionalInterface
+	public interface AttractorBroker
+	{
+		String next( Long hhIndex );
+	}
+
 	/** */
-	private RegionBroker attractorBroker;
+	private AttractorBroker attractorBroker;
 	/** */
 	private ProbabilityDistribution<CBSHousehold> hhTypeDist;
 	/** */
 	private QuantityDistribution<Time> hhRefAgeDist;
+	/** */
+	private ProbabilityDistribution<Boolean> hhRefMaleDist;
+	/** */
+	private ConditionalDistribution<Quantity<Time>, RelationFrequencyJson.Category> hhImpressIntervalDist;
 	/** */
 	private QuantityDistribution<Time> hhMigrateDist;
 	/** */
@@ -141,15 +171,6 @@ public class HHModel implements Scenario
 	private transient ProbabilityDistribution<VaxOccasion> vaxOccasionDist;
 
 //	private transient ConditionalDistribution<Quantity<Time>, GenderAge> peerPressureIntervalDist;
-
-	/**
-	 * {@link RegionBroker} assigns regions to households
-	 */
-	@FunctionalInterface
-	public interface RegionBroker
-	{
-		Region.ID next( Long hhIndex );
-	}
 
 	/**
 	 * {@link GenderAge} wraps a {@link Tuple} in: CBSGender x Instant (birth)
@@ -179,37 +200,48 @@ public class HHModel implements Scenario
 		final PseudoRandom rng = this.distFactory.getStream();
 		LOG.trace( "seed: {}, offset: {}", rng.seed(), scheduler().offset() );
 
-		final List<HHAttractor> attractors = this.config
-				.hesitancyAttractors( this.binder ).toList().blockingGet();
-		this.attractorCount = attractors.size();
+		this.attractors = this.config.hesitancyAttractors( this.binder );
+		this.attractorNames = this.attractors.keySet().stream()
+				.toArray( String[]::new );
 
 		final CBSHousehold hhType = this.config
 				.householdTypeDist( this.distParser ).draw(); // assuming constant
 		final long ppTotal = this.config.populationSize(),
 				hhTotal = ppTotal / hhType.size(),
-				edgeTotal = hhTotal + this.attractorCount;
+				edges = hhTotal + this.attractors.size();
 		LOG.trace( "Populate #pp: {}, #hh: {}, #attractors: {}, #link-max: {}",
-				ppTotal, hhTotal, this.attractorCount, edgeTotal );
+				ppTotal, hhTotal, this.attractors.size(), edges );
 
 		// or Matrix.Factory.linkToJDBC(host, port, db, table, user, password)
 		// or Matrix.Factory.linkTo().file("hugeCSVFile").asDenseCSV(columnSeparator)
-		this.hhAttributes = Matrix.Factory.zeros( ValueType.BIGDECIMAL,
-				edgeTotal, HHAttribute.values().length );
+		this.hhAttributes = Matrix.Factory.zeros( ValueType.BIGDECIMAL, edges,
+				HHAttribute.values().length );
 		this.ppAttributes = Matrix.Factory.zeros( ValueType.BIGDECIMAL, ppTotal,
 				HHMemberAttribute.values().length );
-		this.hhNetwork = SparseMatrix.Factory.zeros( //ValueType.BIGDECIMAL,
-				edgeTotal, edgeTotal );
+		this.hhNetwork = SparseMatrix.Factory.zeros( edges, edges );
+		this.hhNetworkActivity = SparseMatrix.Factory.zeros( edges, edges );
 
-		attractors.forEach( attractor ->
+		this.config.hesitancyRelationFrequencies();
+
+		this.attractors.forEach( ( name, attractor ) ->
 		{
-			final long index = this.hhCount.getAndIncrement();
+			final int index = (int) this.hhCount.getAndIncrement();
+//			this.attractorIndex.put( name, index );
+			this.hhAttributes.setAsInt( index, index,
+					HHAttribute.ATTRACTOR_REF.ordinal() );
+			this.hhAttributes.setAsInt( index, index,
+					HHAttribute.IDENTIFIER.ordinal() );
 			attractor.position().subscribe( map ->
 			{
-				LOG.info( "t={}, attractor/region {}: {}", dt(), index, map );
+				LOG.info( "t={}, attractor/region {} ({}): {}", dt(), index,
+						name, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
 		} );
+
+		this.hhImpressIntervalDist = this.config
+				.hesitancyRelationFrequencyDist( this.distFactory );
 
 //		this.timeRange = Range
 //				.upFromAndIncluding( scheduler().offset().toLocalDate() );
@@ -218,11 +250,12 @@ public class HHModel implements Scenario
 //		final Region.ID fallbackRegRef = this.config.fallbackRegionRef();
 //		this.hoodDist = this.config.neighborhoodDist( this.distFactory,
 //				regRef -> fallbackRegRef );
-		final Map<Long, Region.ID> regions = new HashMap<>();
-		this.attractorBroker = hhIndex -> regions.computeIfAbsent(
-				hhIndex % this.attractorCount,
-				key -> Region.ID.of( "or" + key ) );
+//		final Map<Long, Region.ID> regions = new HashMap<>();
+		this.attractorBroker = hhIndex -> attractorNames[(int) (hhIndex
+				% attractors.size())];
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
+		this.hhRefMaleDist = this.config
+				.householdReferentMaleDist( this.distFactory );
 		this.hhRefAgeDist = this.config
 				.householdReferentAgeDist( this.distParser );
 //		this.peerPressureIntervalDist = this.config
@@ -272,13 +305,16 @@ public class HHModel implements Scenario
 
 		LOG.info( "Populated: {} pp ({}%) across {} hh & {} attractor/regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
-				this.hhCount.get() - this.attractorCount, this.attractorCount );
+				this.hhCount.get() - attractors.size(), attractors.size() );
 
 		final double beta = this.config.hesitancySocialNetworkBeta();
 		final HHConnector conn = new HHConnector.WattsStrogatz( rng, beta );
-		final long A = this.attractorCount,
-				N = (this.hhCount.get() - A) / A + 1, K = Math.min( N - 1,
+		final long A = attractors.size(), N = (this.hhCount.get() - A) / A,
+				K = Math.min( N - 1,
 						this.config.hesitancySocialNetworkDegree() );
+
+		this.schoolAssortativity = this.config
+				.hesitancySchoolAssortativity( this.distParser );
 
 		final double assortativity = this.config.hesitancySocialAssortativity();
 		final Supplier<Long> assortK = () -> (long) (assortativity * K * (A - 1)
@@ -287,66 +323,110 @@ public class HHModel implements Scenario
 //				() -> Math.round( (1.0 - assortativity) * K / (A - 1) )
 				this.distFactory.createPoisson( // use poisson for small degree
 						(1.0 - assortativity) * K / (A - 1) )::draw;
-		final Supplier<BigDecimal> ownW = () -> BigDecimal.ONE,
-				assortW = () -> BigDecimal.ONE, dissortW = () -> BigDecimal.ONE;
 
 //		final long assortativeK = A < 2 ? K
 //				: (long) (K * this.config.hesitancySocialAssortativity()),
 //				dissortativeK = A < 2 ? 0
 //						: Math.max( 1, (K - assortativeK) / (A - 1) );
 		final Matrix[] assorting = LongStream.range( 0, A )
-				.mapToObj( a -> conn.connect( N, assortK, assortW ) )
+				.mapToObj( a -> conn.connect( N, assortK,
+						() -> this.hhAttributes.getAsBigDecimal( a,
+								HHAttribute.IMPRESSION_INPEER.ordinal() ) ) )
 				.toArray( Matrix[]::new );
 		final Matrix[] dissorting = LongStream.range( 0, A )
 				.mapToObj( a -> A < 2 ? SparseMatrix.Factory.zeros( N, N )
-						: conn.connect( N, dissortK, dissortW ) )
+						: conn.connect( N, dissortK,
+								() -> this.hhAttributes.getAsBigDecimal( a,
+										HHAttribute.IMPRESSION_OUTPEER
+												.ordinal() ) ) )
 				.toArray( Matrix[]::new );
 
+		// create the social network (between households/parents)
 		LongStream.range( A, this.hhAttributes.getRowCount() ).forEach( i ->
 		{
-			HHConnector.setSymmetric( this.hhNetwork, ownW.get(), A + i );
 
-			final long ia = (i - A) / A;
-			final int attr = this.hhAttributes.getAsInt( i,
-					HHAttribute.ATTRACTOR_REF.ordinal() );
+			// FIXME
+			this.hhAttributes.setAsBoolean( this.schoolAssortativity.draw(), i,
+					HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
+
+			final int aOwn = (int) (i % A); // TODO obtain from this.hhAttributes.getAsString( i, HHAttribute.ATTRACTOR_REF.ordinal() );
+
+			final long ia = (i - A) / A; // i within assortative sub-group
 
 			final boolean log = (i - A) % (N * A / 5) == 0;
 			if( A < 2 || assortativity >= 1 )
 			{
+				final AtomicReference<BigDecimal> totalW = new AtomicReference<>(
+						BigDecimal.ZERO );
 				final long[] assort = HHConnector
-						.availableCoordinates( assorting[attr], i )
+						.availableCoordinates( assorting[aOwn], i )
 						.mapToLong( x ->
 						{
-							final Object w = assorting[attr].getAsObject( x );
-							this.hhNetwork.setAsObject( w, A + x[0] * A + attr,
-									A + x[1] * A + attr );
-							return (x[0] == ia ? x[1] : x[0]) * A + attr;
+							final BigDecimal w = assorting[aOwn]
+									.getAsBigDecimal( x );
+							totalW.getAndUpdate( bd -> bd.add( w ) );
+							this.hhNetwork.setAsBigDecimal( w,
+									A + x[0] * A + aOwn, A + x[1] * A + aOwn );
+							return (x[0] == ia ? x[1] : x[0]) * A + aOwn;
 						} ).toArray();
 				if( log ) LOG.trace( "Assorted {} ({}/{} -> {}): {} = {}/{}", i,
-						ia, N, attr, assort, assort.length, K + 1 );
+						ia, N, aOwn, assort, assort.length, K + 1 );
+
+				final BigDecimal inpeerW = totalW.get(),
+						selfW = inpeerW.multiply(
+								this.hhAttributes.getAsBigDecimal( aOwn,
+										HHAttribute.IMPRESSION_SELF
+												.ordinal() ) ),
+						attrW = inpeerW.multiply(
+								this.hhAttributes.getAsBigDecimal( aOwn,
+										HHAttribute.IMPRESSION_ATTRACTOR
+												.ordinal() ) );
+				// set stubbornness
+				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
+				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
+				this.hhAttributes.setAsBigDecimal( inpeerW, i,
+						HHAttribute.IMPRESSION_INPEER.ordinal() );
+//				this.hhAttributes.setAsBigDecimal( BigDecimal.ZERO, A + i,
+//						HHAttribute.SOCIAL_IMPACT_OUTPEER.ordinal() );
+				this.hhAttributes.setAsBigDecimal( selfW, i,
+						HHAttribute.IMPRESSION_SELF.ordinal() );
+				this.hhAttributes.setAsBigDecimal( attrW, i,
+						HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+				this.hhAttributes.setAsInt( assort.length, i,
+						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
+				this.hhAttributes.setAsBigDecimal( BigDecimal.ONE, i,
+						HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
 			} else
 			{
 				// get separate assort + dissort j's just for logging
+				final AtomicReference<BigDecimal> totalAssortW = new AtomicReference<>(
+						BigDecimal.ZERO ),
+						totalDissortW = new AtomicReference<>(
+								BigDecimal.ZERO );
 				final long[] assort = HHConnector
-						.availableCoordinates( assorting[attr], ia )
+						.availableCoordinates( assorting[aOwn], ia )
 						.mapToLong( x ->
 						{
-							final Object w = assorting[attr].getAsObject( x );
-							this.hhNetwork.setAsObject( w, A + x[0] * A + attr,
-									A + x[1] * A + attr );
+							final BigDecimal w = assorting[aOwn]
+									.getAsBigDecimal( x );
+							totalAssortW.getAndUpdate( bd -> bd.add( w ) );
+							this.hhNetwork.setAsBigDecimal( w,
+									A + x[0] * A + aOwn, A + x[1] * A + aOwn );
 							// row/col coord within top triangle
-							return (x[0] == ia ? x[1] : x[0]) * A + attr;
+							return (x[0] == ia ? x[1] : x[0]) * A + aOwn;
 						} ).toArray();
 				final long[] dissort = IntStream.range( 0, (int) A )
-						.filter( a -> a != attr ).mapToObj( a -> a )
+						.filter( a -> a != aOwn ).mapToObj( a -> a )
 						.flatMapToLong( a -> HHConnector
 								.availableCoordinates( dissorting[a], ia )
 								.mapToLong( x ->
 								{
 									// TODO handle overrides from different a/A?
-									final Object w = dissorting[a]
-											.getAsObject( x );
-									this.hhNetwork.setAsObject( w,
+									final BigDecimal w = dissorting[a]
+											.getAsBigDecimal( x );
+									totalDissortW
+											.getAndUpdate( bd -> bd.add( w ) );
+									this.hhNetwork.setAsBigDecimal( w,
 											A + x[0] * A + a,
 											A + x[1] * A + a );
 									// row/col coord within top triangle
@@ -354,12 +434,45 @@ public class HHModel implements Scenario
 								} ) )
 						.distinct() // don't log duplicates
 						.toArray();
+				final int peerTotal = assort.length + dissort.length;
 				if( log ) LOG.trace(
 						"Combined {} ({}/{} -> {}): {}({}/{})+{}({}/{}/~{}) = {}/{}",
-						i, ia, N, attr, assort, assort.length,
+						i, ia, N, aOwn, assort, assort.length,
 						assortK.get() + 1, dissort, dissort.length, A - 1,
-						dissortK.get(), assort.length + dissort.length, K + 1 );
+						dissortK.get(), peerTotal, K + 1 );
+				if( peerTotal == 0 )
+				{
+					LOG.warn( "No peers for {}", i );
+					return;
+				}
+				final BigDecimal inpeerW = totalAssortW.get(),
+						outpeerW = totalDissortW.get(),
+						selfW = inpeerW.add( outpeerW ).multiply(
+								this.hhAttributes.getAsBigDecimal( aOwn,
+										HHAttribute.IMPRESSION_SELF
+												.ordinal() ) ),
+						attrW = inpeerW.add( outpeerW )
+								.multiply( this.hhAttributes.getAsBigDecimal(
+										aOwn, HHAttribute.IMPRESSION_ATTRACTOR
+												.ordinal() ) );
+				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
+				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
+
+				this.hhAttributes.setAsBigDecimal( inpeerW, i,
+						HHAttribute.IMPRESSION_INPEER.ordinal() );
+				this.hhAttributes.setAsBigDecimal( outpeerW, i,
+						HHAttribute.IMPRESSION_OUTPEER.ordinal() );
+				this.hhAttributes.setAsBigDecimal( selfW, i,
+						HHAttribute.IMPRESSION_SELF.ordinal() );
+				this.hhAttributes.setAsBigDecimal( attrW, i,
+						HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+				this.hhAttributes.setAsInt( peerTotal, i,
+						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
+				this.hhAttributes.setAsBigDecimal(
+						DecimalUtil.divide( assort.length, peerTotal ), i,
+						HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
 			}
+
 		} );
 
 		LOG.info( "Networked, model: {}, degree: {}, beta: {}, assort: {}",
@@ -390,14 +503,14 @@ public class HHModel implements Scenario
 //					assortativity, assort, dissort );
 //		} );
 
-		this.schoolAssortativity = this.config
-				.hesitancySchoolAssortativity( this.distParser );
-		// TODO schools
-
 		this.attitudeEvaluator = this.config.attitudeEvaluatorType()
 				.newInstance();
 		this.attitudePropagator = this.config.attitudePropagatorType()
 				.newInstance();
+
+		atEach( this.config.attitudePropagatorRecurrence( scheduler() ) )
+				.subscribe( this::propagate, this::logError );
+
 		atEach( this.config.vaccinationRecurrence( scheduler() ) )
 				.subscribe( this::vaccinate, this::logError );
 
@@ -407,12 +520,21 @@ public class HHModel implements Scenario
 
 	}
 
+	private Subject<PropertyChangeEvent> networkEvents = PublishSubject
+			.create();
+
+	public Observable<PropertyChangeEvent> network()
+	{
+		return this.networkEvents;
+	}
+
 	public Observable<HHStatisticsDao> statistics()
 	{
 //		final UUID contextRef = this.binder.id().contextRef();
-		final String runName = this.binder.id().unwrap().toString();
 		return Observable.create( sub ->
 		{
+			final HHConfigDao cfg = HHConfigDao.create( this.binder.id(),
+					this.config );
 			scheduler().onReset( scheduler ->
 			{
 				// TODO copy/move completion trigger to Scheduler
@@ -430,14 +552,14 @@ public class HHModel implements Scenario
 				scheduler.atEach( when ).subscribe( t ->
 				{
 					final int i = this.statsIteration.getAndIncrement();
+					LOG.trace( "t={}, exporting statistics #{}", dt(), i );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
-					Observable
-							.fromIterable(
-									new HashSet<Long>( this.hhIndex.values() ) )
-							.map( index -> HHStatisticsDao.create( runName, //contextRef,
-									t, i, hhAttributes, index, ppAttributes ) )
-							.subscribe( sub::onNext, sub::onError );
+					LongStream.range( 0, this.hhAttributes.getRowCount() )
+							.mapToObj( j -> HHStatisticsDao.create( cfg, t, i,
+									this.attractorNames, hhAttributes, j,
+									ppAttributes ) )
+							.forEach( sub::onNext );
 				}, sub::onError, sub::onComplete );
 			} );
 		} );
@@ -445,9 +567,9 @@ public class HHModel implements Scenario
 
 	private void migrateHousehold( final Instant t )
 	{
-		final long hhIndex = this.attractorCount
-				+ this.distFactory.getStream().nextLong(
-						this.hhAttributes.getRowCount() - this.attractorCount );
+		final long hhIndex = this.attractors.size() + this.distFactory
+				.getStream().nextLong( this.hhAttributes.getRowCount()
+						- this.attractors.size() );
 //		replaceHousehold(hhIndex,-1 );// FIXME
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
@@ -455,6 +577,66 @@ public class HHModel implements Scenario
 //				t.prettify( scheduler().offset() ), hhIndex,
 //				QuantityUtil.toScale( dt, 1 ) );
 		after( dt ).call( this::migrateHousehold );
+	}
+
+	private void pushChangedAttributes( final long i )
+	{
+		if( this.networkEvents.hasObservers() ) this.networkEvents.onNext(
+				new PropertyChangeEvent( i, "hh" + i, null, HHAttribute.toMap(
+						k -> this.hhAttributes.getAsBigDecimal( i, k ),
+						HHAttribute.CONFIDENCE, HHAttribute.COMPLACENCY ) ) );
+	}
+
+	private void impress( final long i, final Quantity<Time> dt, final int Nj,
+		final List<long[]> unpicked )
+	{
+		final List<long[]> jRemaining = unpicked == null ? contacts( i )
+				: unpicked;
+		final int jTotal = unpicked == null ? jRemaining.size() : Nj;
+
+		if( jRemaining.isEmpty() ) // no repeat, restarted by #propagate()
+		{
+			this.hhNetworkExpectations.remove( i );
+			return;
+		}
+
+		final int ji = this.distFactory.getStream().nextInt( jTotal );
+		if( ji < jRemaining.size() ) // ignore pick if member already removed
+		{
+			final long[] x = jRemaining.remove( ji );
+			final BigDecimal w = this.hhNetwork.getAsBigDecimal( x );
+			this.hhNetworkActivity.setAsBigDecimal( w, x );
+		}
+
+		// repeat while unpicked connections remain
+		this.hhNetworkExpectations.compute( i,
+				( k, v ) -> jRemaining.isEmpty() ? null // stop recurrence
+						: after( dt ).call(
+								t -> impress( i, dt, jTotal, jRemaining ) ) );
+	}
+
+	private void propagate( final Instant t )
+	{
+		LOG.trace( "t={}, propagating...", dt() );
+		final long[] changed = this.attitudePropagator
+				.propagate( this.hhNetworkActivity, this.hhAttributes );
+		Arrays.stream( changed ).forEach( this::pushChangedAttributes );
+		this.hhNetworkActivity.clear();
+		LongStream
+				.range( this.attractors.size(),
+						this.hhNetworkActivity.getRowCount() )
+				.forEach(
+						i -> this.hhNetworkExpectations.compute( i, ( k, v ) ->
+						{
+							if( v != null ) v.remove(); // cancel previous
+							final Quantity<Time> dt = QuantityUtil.valueOf(
+									this.hhAttributes.getAsBigDecimal( i,
+											HHAttribute.IMPRESSION_DAYS
+													.ordinal() ),
+									TimeUnits.DAYS );
+							return after( dt )
+									.call( t1 -> impress( i, dt, -1, null ) );
+						} ) );
 	}
 
 	private void vaccinate( final Instant t )
@@ -469,7 +651,6 @@ public class HHModel implements Scenario
 				t.prettify( scheduler().offset() ), occ.asMap().values(),
 				birthRange );
 
-		this.attitudePropagator.propagate( this.hhNetwork, this.hhAttributes );
 //		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, 0, 0 );
 //		this.hhNetwork.zeros( Ret.ORIG );
 //		if( this.hhNetwork.getAsBigDecimal( 0, 0 ).signum() != 0 ) Thrower
@@ -505,11 +686,13 @@ public class HHModel implements Scenario
 							.forEach( ppRef ->
 							{
 								this.ppAttributes.setAsInt(
-										HHMemberStatus.IMMUNE.ordinal(), ppRef,
+										HHMemberStatus.ARTIFICIAL_IMMUNE
+												.ordinal(),
+										ppRef,
 										HHMemberAttribute.STATUS.ordinal() );
 								LOG.info(
-										"Vax! (pos) hh #{} (sus) pp #{} born {}",
-										hh, ppRef,
+										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
+										dt(), hh, ppRef,
 										this.ppAttributes.getAsBigDecimal(
 												ppRef, HHMemberAttribute.BIRTH
 														.ordinal() ) );
@@ -524,7 +707,7 @@ public class HHModel implements Scenario
 		final long id = this.hhCount.incrementAndGet(); // grow the network
 		final Actor.ID hhRef = Actor.ID.of( String.format( "hh%08d", id ),
 				this.binder.id() );
-		final long hhIndex = this.attractorCount + this.hhIndex
+		final long hhIndex = this.attractors.size() + this.hhIndex
 				.computeIfAbsent( hhRef, key -> (long) this.hhIndex.size() );
 		return replaceHousehold( hhIndex, id );
 	}
@@ -532,30 +715,41 @@ public class HHModel implements Scenario
 	private int replaceHousehold( final long hhIndex, final long id )
 	{
 
-//		final Cbs71486json.Category hhCat = this.localHouseholdDist
-//				.draw( dt() );
-		final Quantity<Time> hhRefAge =
-//				hhCat.ageDist( this.distFactory::createUniformContinuous ).draw();
-				this.hhRefAgeDist.draw();
-		final CBSHousehold hhType =
-//				hhCat.hhTypeDist( this.distFactory::createCategorical ).draw();
-				this.hhTypeDist.draw();
-		final Region.ID attractorRef =
+		final String attractorRef =
 //				Region.ID.of( hhCat.regionRef() );
 				this.attractorBroker.next( hhIndex );
 
-		final long attractorIndex = Long
-				.valueOf( attractorRef.unwrap().substring( 2 ) );
-		final boolean religious = this.hhAttributes.getAsBoolean(
-				attractorIndex, HHAttribute.RELIGIOUS.ordinal() );
-		final boolean alternative = this.hhAttributes.getAsBoolean(
-				attractorIndex, HHAttribute.ALTERNATIVE.ordinal() );
-		final HesitancyProfileJson profile = this.hesitancyProfileDist.draw(
-				new HesitancyProfileJson.Category( religious, alternative ) );
+		final HHAttractor attractor = this.attractors.get( attractorRef );
+//		final boolean religious = this.hhAttributes.getAsBoolean(
+//				attractorIndex, HHAttribute.RELIGIOUS.ordinal() );
+//		final boolean alternative = this.hhAttributes.getAsBoolean(
+//				attractorIndex, HHAttribute.ALTERNATIVE.ordinal() );
+		final HesitancyProfileJson profile = this.hesitancyProfileDist
+				.draw( attractor.toHesitancyProfile() );
+
+		final boolean hhRefMale = this.hhRefMaleDist.draw();
+//		final Cbs71486json.Category hhCat = this.localHouseholdDist.draw( dt() );
+		final Quantity<Time> hhRefAge =
+//		hhCat.ageDist( this.distFactory::createUniformContinuous ).draw();
+				this.hhRefAgeDist.draw();
+		final CBSHousehold hhType =
+//		hhCat.hhTypeDist( this.distFactory::createCategorical ).draw();
+				this.hhTypeDist.draw();
+
+		final Quantity<Time> impressDelay = Arrays
+				.stream( RelationFrequencyJson.Relation.values() )
+				.map( r -> this.hhImpressIntervalDist
+						.draw( new RelationFrequencyJson.Category( hhRefMale, r,
+								hhRefAge ) )
+						.inverse().asType( Frequency.class ) )
+				.reduce( ( f1, f2 ) -> f1.add( f2 ) ).get().inverse()
+				.asType( Time.class );
+		this.hhNetworkExpectations.put( hhIndex, after( impressDelay )
+				.call( t -> impress( hhIndex, impressDelay, -1, null ) ) );
 
 		final HHMemberStatus hhStatus = profile.status == VaccineStatus.none
-				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.IMMUNE;
-		final long referentRef = createPerson( hhRefAge, hhStatus );
+				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.ARTIFICIAL_IMMUNE;
+		final long referentRef = createPerson( hhRefMale, hhRefAge, hhStatus );
 
 //		final long partnerRef = hhType.adultCount() < 2 ? NA
 //				: createPerson(
@@ -565,8 +759,9 @@ public class HHModel implements Scenario
 		final Quantity<Time> child1Age = hhRefAge.subtract(
 				// TODO from distribution, e.g. 60036ned, 37201
 				QuantityUtil.valueOf( 20, TimeUnits.ANNUM ) );
+		final boolean child1Male = true;
 		final long child1Ref = hhType.childCount() < 1 ? NA
-				: createPerson( child1Age, hhStatus );
+				: createPerson( child1Male, child1Age, hhStatus );
 //		final long child2Ref = hhType.childCount() < 2 ? NA
 //				: createPerson(
 //						hhRefAge.subtract(
@@ -598,12 +793,15 @@ public class HHModel implements Scenario
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		this.hhAttributes.setAsLong( attractorIndex, hhIndex,
+		this.hhAttributes.setAsString( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
-		this.hhAttributes.setAsBoolean( religious, hhIndex,
-				HHAttribute.RELIGIOUS.ordinal() );
-		this.hhAttributes.setAsBoolean( alternative, hhIndex,
-				HHAttribute.ALTERNATIVE.ordinal() );
+		this.hhAttributes.setAsBigDecimal(
+				QuantityUtil.toBigDecimal( impressDelay, TimeUnits.DAYS ),
+				hhIndex, HHAttribute.IMPRESSION_DAYS.ordinal() );
+//		this.hhAttributes.setAsBoolean( religious, hhIndex,
+//				HHAttribute.RELIGIOUS.ordinal() );
+//		this.hhAttributes.setAsBoolean( alternative, hhIndex,
+//				HHAttribute.ALTERNATIVE.ordinal() );
 		this.hhAttributes.setAsBigDecimal( initialCalculation, hhIndex,
 				HHAttribute.CALCULATION.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
@@ -634,8 +832,14 @@ public class HHModel implements Scenario
 		return hhType.size();
 	}
 
-	private long createPerson( final Quantity<Time> initialAge,
-		final HHMemberStatus status )
+	private List<long[]> contacts( final long i )
+	{
+		return HHConnector.availableCoordinates( this.hhNetwork, i ).parallel()
+				.collect( Collectors.toList() );
+	}
+
+	private long createPerson( final boolean male,
+		final Quantity<Time> initialAge, final HHMemberStatus status )
 	{
 		final long id = this.persons.incrementAndGet();
 		final Actor.ID memberRef = Actor.ID.of( String.format( "pp%08d", id ),
@@ -645,6 +849,8 @@ public class HHModel implements Scenario
 		this.ppAttributes.setAsBigDecimal(
 				now().to( TimeUnits.ANNUM ).subtract( initialAge ).decimal(),
 				index, HHMemberAttribute.BIRTH.ordinal() );
+		this.ppAttributes.setAsBoolean( male, index,
+				HHMemberAttribute.MALE.ordinal() );
 		this.ppAttributes.setAsInt( status.ordinal(), index,
 				HHMemberAttribute.STATUS.ordinal() );
 		this.ppAttributes.setAsInt( HHMemberBehavior.NORMAL.ordinal(), index,
