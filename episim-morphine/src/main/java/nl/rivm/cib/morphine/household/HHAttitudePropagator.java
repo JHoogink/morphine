@@ -124,19 +124,16 @@ public interface HHAttitudePropagator
 					final AtomicReference<BigDecimal> sumW = new AtomicReference<>(
 							BigDecimal.ZERO );
 					final AtomicInteger sumJ = new AtomicInteger( 0 );
-					HHConnector.availableCoordinates( hhPressure, i )
-							.forEach( x ->
-							{
-								final long j = x[0] == i ? x[1] : x[0];
-								if( j == i ) return; // skip self
-
-								sumJ.incrementAndGet();
-								// apply calculation threshold function to peers
-								final BigDecimal w = filteredAppreciation(
-										hhPressure.getAsBigDecimal( x ), calc );
-								sumW.getAndUpdate( s -> s.add( w ) );
-								rowW.setAsBigDecimal( w, 0, j );
-							} );
+					HHConnector.availablePeers( hhPressure, i ).forEach( j ->
+					{
+						sumJ.incrementAndGet();
+						final BigDecimal w = HHConnector
+								.getSymmetric( hhPressure, i, j );
+						// apply calculation threshold function to peers
+						sumW.getAndUpdate(
+								s -> s.add( filteredAppreciation( w, calc ) ) );
+						rowW.setAsBigDecimal( w, 0, j );
+					} );
 
 					if( sumW.get().signum() < 1 )
 					{

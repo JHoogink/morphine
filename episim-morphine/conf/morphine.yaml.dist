@@ -43,7 +43,7 @@ morphine:
       relation-frequencies: conf/relation-frequency.json
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
-      propagation-recurrence: 0 0 0 ? * MON *
+      propagator-recurrence: 0 0 0 ? * MON *
       # avg. no. family + friends + neighbors
       social-network-degree: 10
       # 0 = lattice, 1 = random network

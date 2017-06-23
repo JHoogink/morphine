@@ -544,7 +544,7 @@ public interface HHConfig extends GlobalConfig
 	 * of the month</em></li>
 	 * </ol>
 	 */
-	@Key( STATISTICS_PREFIX + "propagator-recurrence" )
+	@Key( HESITANCY_PREFIX + "propagator-recurrence" )
 	@DefaultValue( "0 0 0 ? * MON *" )
 	String attitudePropagatorRecurrence();
 

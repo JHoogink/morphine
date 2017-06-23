@@ -78,14 +78,15 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.hh = households.getAsInt( rowIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.attractorRef = households.getAsString( rowIndex,
-				HHAttribute.ATTRACTOR_REF.ordinal() );
+		result.attractorRef = attractorNames[households.getAsInt( rowIndex,
+				HHAttribute.ATTRACTOR_REF.ordinal() ) % attractorNames.length];
 		result.socialNetworkSize = households.getAsInt( rowIndex,
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 		result.socialAssortativity = households.getAsBigDecimal( rowIndex,
 				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
 		result.impressionDays = households.getAsBigDecimal( rowIndex,
-				HHAttribute.IMPRESSION_DAYS.ordinal() );;
+				HHAttribute.IMPRESSION_DAYS.ordinal() );
+		;
 		result.impressionInpeers = households.getAsBigDecimal( rowIndex,
 				HHAttribute.IMPRESSION_INPEER.ordinal() );
 		result.impressionOutpeers = households.getAsBigDecimal( rowIndex,
@@ -177,16 +178,16 @@ public class HHStatisticsDao implements Persistable.Dao
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressionInpeers;
 
-	@Column( name = "IMPRESSION_OUTPEERS", nullable = false,
-		updatable = false, columnDefinition = ATTITUDE_COL_DEF )
+	@Column( name = "IMPRESSION_OUTPEERS", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressionOutpeers;
 
 	@Column( name = "IMPRESSION_SELF", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressionSelf;
 
-	@Column( name = "IMPRESSION_ATTRACTOR", nullable = false,
-		updatable = false, columnDefinition = ATTITUDE_COL_DEF )
+	@Column( name = "IMPRESSION_ATTRACTOR", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressionAttractor;
 
 //	@Column( name = "SCHOOL_ASSORTATIVITY", nullable = false, updatable = false,

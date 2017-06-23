@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -251,8 +252,9 @@ public class HHModel implements Scenario
 //		this.hoodDist = this.config.neighborhoodDist( this.distFactory,
 //				regRef -> fallbackRegRef );
 //		final Map<Long, Region.ID> regions = new HashMap<>();
-		this.attractorBroker = hhIndex -> attractorNames[(int) (hhIndex
+		final AttractorBroker broker = hhIndex -> attractorNames[(int) (hhIndex
 				% attractors.size())];
+		this.attractorBroker = broker;
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
 		this.hhRefMaleDist = this.config
 				.householdReferentMaleDist( this.distFactory );
@@ -309,33 +311,35 @@ public class HHModel implements Scenario
 
 		final double beta = this.config.hesitancySocialNetworkBeta();
 		final HHConnector conn = new HHConnector.WattsStrogatz( rng, beta );
-		final long A = attractors.size(), N = (this.hhCount.get() - A) / A,
-				K = Math.min( N - 1,
+		final long A = attractors.size(), N = this.hhCount.get() - A,
+				Na = N / A + 1, // add 1 extra for partition rounding errors
+				K = Math.min( Na - 1,
 						this.config.hesitancySocialNetworkDegree() );
 
 		this.schoolAssortativity = this.config
 				.hesitancySchoolAssortativity( this.distParser );
 
-		final double assortativity = this.config.hesitancySocialAssortativity();
+		final double assortativity = this.config.hesitancySocialAssortativity(),
+				dissortativity = (1.0 - assortativity);
 		final Supplier<Long> assortK = () -> (long) (assortativity * K * (A - 1)
 				/ A);
 		final Supplier<Long> dissortK =
 //				() -> Math.round( (1.0 - assortativity) * K / (A - 1) )
 				this.distFactory.createPoisson( // use poisson for small degree
-						(1.0 - assortativity) * K / (A - 1) )::draw;
+						dissortativity * K / (A - 1) )::draw;
 
 //		final long assortativeK = A < 2 ? K
 //				: (long) (K * this.config.hesitancySocialAssortativity()),
 //				dissortativeK = A < 2 ? 0
 //						: Math.max( 1, (K - assortativeK) / (A - 1) );
 		final Matrix[] assorting = LongStream.range( 0, A )
-				.mapToObj( a -> conn.connect( N, assortK,
+				.mapToObj( a -> conn.connect( Na, assortK,
 						() -> this.hhAttributes.getAsBigDecimal( a,
 								HHAttribute.IMPRESSION_INPEER.ordinal() ) ) )
 				.toArray( Matrix[]::new );
 		final Matrix[] dissorting = LongStream.range( 0, A )
-				.mapToObj( a -> A < 2 ? SparseMatrix.Factory.zeros( N, N )
-						: conn.connect( N, dissortK,
+				.mapToObj( a -> A < 2 ? SparseMatrix.Factory.zeros( Na, Na )
+						: conn.connect( Na, dissortK,
 								() -> this.hhAttributes.getAsBigDecimal( a,
 										HHAttribute.IMPRESSION_OUTPEER
 												.ordinal() ) ) )
@@ -349,28 +353,28 @@ public class HHModel implements Scenario
 			this.hhAttributes.setAsBoolean( this.schoolAssortativity.draw(), i,
 					HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
 
-			final int aOwn = (int) (i % A); // TODO obtain from this.hhAttributes.getAsString( i, HHAttribute.ATTRACTOR_REF.ordinal() );
+			final int aOwn = (int) (i % A); // TODO obtain from 			final String attrName = this.hhAttributes.getAsString( i, HHAttribute.ATTRACTOR_REF.ordinal() );
 
 			final long ia = (i - A) / A; // i within assortative sub-group
 
-			final boolean log = (i - A) % (N * A / 5) == 0;
+			final boolean log = (i - A) % (N / 5) == 0;
 			if( A < 2 || assortativity >= 1 )
 			{
 				final AtomicReference<BigDecimal> totalW = new AtomicReference<>(
 						BigDecimal.ZERO );
-				final long[] assort = HHConnector
-						.availableCoordinates( assorting[aOwn], i )
-						.mapToLong( x ->
+				final long[] inpeers = HHConnector
+						.availablePeers( assorting[aOwn], ia ).map( ja ->
 						{
-							final BigDecimal w = assorting[aOwn]
-									.getAsBigDecimal( x );
+							final BigDecimal w = HHConnector
+									.getSymmetric( assorting[aOwn], ia, ja );
 							totalW.getAndUpdate( bd -> bd.add( w ) );
-							this.hhNetwork.setAsBigDecimal( w,
-									A + x[0] * A + aOwn, A + x[1] * A + aOwn );
-							return (x[0] == ia ? x[1] : x[0]) * A + aOwn;
+							final long j = A + A * ja + aOwn;
+							HHConnector.setSymmetric( this.hhNetwork, w, i, j );
+							return j;
 						} ).toArray();
-				if( log ) LOG.trace( "Assorted {} ({}/{} -> {}): {} = {}/{}", i,
-						ia, N, aOwn, assort, assort.length, K + 1 );
+				if( log )
+					LOG.trace( "hh #{} ({}/{} -> {}) in-peers: {} = {}/{}", i,
+							ia, Na, aOwn, inpeers, inpeers.length, K + 1 );
 
 				final BigDecimal inpeerW = totalW.get(),
 						selfW = inpeerW.multiply(
@@ -382,8 +386,8 @@ public class HHModel implements Scenario
 										HHAttribute.IMPRESSION_ATTRACTOR
 												.ordinal() ) );
 				// set stubbornness
-				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
-				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
+//				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
+//				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
 				this.hhAttributes.setAsBigDecimal( inpeerW, i,
 						HHAttribute.IMPRESSION_INPEER.ordinal() );
 //				this.hhAttributes.setAsBigDecimal( BigDecimal.ZERO, A + i,
@@ -392,7 +396,7 @@ public class HHModel implements Scenario
 						HHAttribute.IMPRESSION_SELF.ordinal() );
 				this.hhAttributes.setAsBigDecimal( attrW, i,
 						HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
-				this.hhAttributes.setAsInt( assort.length, i,
+				this.hhAttributes.setAsInt( inpeers.length, i,
 						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 				this.hhAttributes.setAsBigDecimal( BigDecimal.ONE, i,
 						HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
@@ -403,48 +407,55 @@ public class HHModel implements Scenario
 						BigDecimal.ZERO ),
 						totalDissortW = new AtomicReference<>(
 								BigDecimal.ZERO );
-				final long[] assort = HHConnector
-						.availableCoordinates( assorting[aOwn], ia )
-						.mapToLong( x ->
+				final long[] inpeers = HHConnector
+						.availablePeers( assorting[aOwn], ia )
+						.filter( ja -> ja * A + aOwn < N ) // skip if >N
+						.map( ja ->
 						{
-							final BigDecimal w = assorting[aOwn]
-									.getAsBigDecimal( x );
+							final BigDecimal w = HHConnector
+									.getSymmetric( assorting[aOwn], ia, ja );
 							totalAssortW.getAndUpdate( bd -> bd.add( w ) );
-							this.hhNetwork.setAsBigDecimal( w,
-									A + x[0] * A + aOwn, A + x[1] * A + aOwn );
-							// row/col coord within top triangle
-							return (x[0] == ia ? x[1] : x[0]) * A + aOwn;
+							final long j = A + A * ja + aOwn;
+							HHConnector.setSymmetric( this.hhNetwork, w, i, j );
+							return j;
 						} ).toArray();
-				final long[] dissort = IntStream.range( 0, (int) A )
+				final long[] outpeers = IntStream.range( 0, (int) A )
 						.filter( a -> a != aOwn ).mapToObj( a -> a )
 						.flatMapToLong( a -> HHConnector
-								.availableCoordinates( dissorting[a], ia )
-								.mapToLong( x ->
+								.availablePeers( dissorting[a], ia )
+								.filter( ja -> ja * A + a < N ) // skip if >N
+								.map( ja ->
 								{
-									// TODO handle overrides from different a/A?
-									final BigDecimal w = dissorting[a]
-											.getAsBigDecimal( x );
+									final BigDecimal w = HHConnector
+											.getSymmetric( dissorting[a], ia,
+													ja );
 									totalDissortW
 											.getAndUpdate( bd -> bd.add( w ) );
-									this.hhNetwork.setAsBigDecimal( w,
-											A + x[0] * A + a,
-											A + x[1] * A + a );
-									// row/col coord within top triangle
-									return (x[0] == ia ? x[1] : x[0]) * A + a;
+									final long j = A + A * ja + a;
+									HHConnector.setSymmetric( this.hhNetwork, w,
+											i, j );
+									return j;
 								} ) )
-						.distinct() // don't log duplicates
 						.toArray();
-				final int peerTotal = assort.length + dissort.length;
-				if( log ) LOG.trace(
-						"Combined {} ({}/{} -> {}): {}({}/{})+{}({}/{}/~{}) = {}/{}",
-						i, ia, N, aOwn, assort, assort.length,
-						assortK.get() + 1, dissort, dissort.length, A - 1,
-						dissortK.get(), peerTotal, K + 1 );
-				if( peerTotal == 0 )
-				{
-					LOG.warn( "No peers for {}", i );
-					return;
-				}
+				// FIXME where do the extra (dissortative, one from each) links come from ???
+				final int peerTotal = inpeers.length + outpeers.length;
+				final long[] stored = contacts( i );
+				final List<Long> peers = Stream.of( inpeers, outpeers ).flatMap(
+						( long[] p ) -> Arrays.stream( p ).mapToObj( l -> l ) )
+						.sorted().collect( Collectors.toList() );
+				final String[] diff = Arrays.stream( stored )
+						.filter( l -> !peers.contains( l ) )
+						.mapToObj( l -> "" + l + "\\" + (l % A) )
+						.toArray( String[]::new );
+				if( //log || 
+				peerTotal == 0 || peerTotal != stored.length ) LOG.warn(
+						"hh #{} ({}/{} -> {}) peers: in {}({}/{}) "
+								+ "+ out {}({}/{}) = {}/{}, added: {}",
+						i, ia, Na, aOwn, inpeers, inpeers.length,
+						DecimalUtil.toScale( assortativity * K, 1 ), outpeers,
+						outpeers.length,
+						DecimalUtil.toScale( dissortativity * K, 1 ), peerTotal,
+						K, diff );
 				final BigDecimal inpeerW = totalAssortW.get(),
 						outpeerW = totalDissortW.get(),
 						selfW = inpeerW.add( outpeerW ).multiply(
@@ -455,8 +466,8 @@ public class HHModel implements Scenario
 								.multiply( this.hhAttributes.getAsBigDecimal(
 										aOwn, HHAttribute.IMPRESSION_ATTRACTOR
 												.ordinal() ) );
-				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
-				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
+//				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
+//				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
 
 				this.hhAttributes.setAsBigDecimal( inpeerW, i,
 						HHAttribute.IMPRESSION_INPEER.ordinal() );
@@ -469,7 +480,7 @@ public class HHModel implements Scenario
 				this.hhAttributes.setAsInt( peerTotal, i,
 						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 				this.hhAttributes.setAsBigDecimal(
-						DecimalUtil.divide( assort.length, peerTotal ), i,
+						DecimalUtil.divide( inpeers.length, peerTotal ), i,
 						HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
 			}
 
@@ -587,32 +598,43 @@ public class HHModel implements Scenario
 						HHAttribute.CONFIDENCE, HHAttribute.COMPLACENCY ) ) );
 	}
 
-	private void impress( final long i, final Quantity<Time> dt, final int Nj,
-		final List<long[]> unpicked )
+	private void impressFirst( final long i, final Quantity<Time> dt )
 	{
-		final List<long[]> jRemaining = unpicked == null ? contacts( i )
-				: unpicked;
-		final int jTotal = unpicked == null ? jRemaining.size() : Nj;
-
-		if( jRemaining.isEmpty() ) // no repeat, restarted by #propagate()
+		this.hhNetworkExpectations.compute( i, ( k, v ) ->
 		{
+			if( v != null ) v.remove(); // cancel previous
+			final long[] J = contacts( i );
+			return after( dt )
+					.call( t1 -> impressNext( i, dt, J, J.length - 1 ) );
+		} );
+	}
+
+	private void impressNext( final long i, final Quantity<Time> dt,
+		final long[] J, final int n )
+	{
+		if( n > 0 )
+		{
+			final int k = this.distFactory.getStream().nextInt( J.length );
+			if( k <= n ) // ignore pick if member already removed
+			{
+				final long j = J[k];
+				if( k != n )
+				{
+					J[k] = J[n];
+					J[n] = j;
+				}
+				final BigDecimal w = HHConnector.getSymmetric( this.hhNetwork,
+						i, j );
+				HHConnector.setSymmetric( this.hhNetworkActivity, w, i, j );
+			}
+//			LOG.trace( "hh #{} {}", i, n );
+			this.hhNetworkExpectations.put( i, after( dt )
+					.call( t -> impressNext( i, dt, J, k > n ? n : n - 1 ) ) );
+		} else
+		{
+//			LOG.trace( "hh #{} saturated", i );
 			this.hhNetworkExpectations.remove( i );
-			return;
 		}
-
-		final int ji = this.distFactory.getStream().nextInt( jTotal );
-		if( ji < jRemaining.size() ) // ignore pick if member already removed
-		{
-			final long[] x = jRemaining.remove( ji );
-			final BigDecimal w = this.hhNetwork.getAsBigDecimal( x );
-			this.hhNetworkActivity.setAsBigDecimal( w, x );
-		}
-
-		// repeat while unpicked connections remain
-		this.hhNetworkExpectations.compute( i,
-				( k, v ) -> jRemaining.isEmpty() ? null // stop recurrence
-						: after( dt ).call(
-								t -> impress( i, dt, jTotal, jRemaining ) ) );
 	}
 
 	private void propagate( final Instant t )
@@ -626,17 +648,12 @@ public class HHModel implements Scenario
 				.range( this.attractors.size(),
 						this.hhNetworkActivity.getRowCount() )
 				.forEach(
-						i -> this.hhNetworkExpectations.compute( i, ( k, v ) ->
-						{
-							if( v != null ) v.remove(); // cancel previous
-							final Quantity<Time> dt = QuantityUtil.valueOf(
-									this.hhAttributes.getAsBigDecimal( i,
-											HHAttribute.IMPRESSION_DAYS
-													.ordinal() ),
-									TimeUnits.DAYS );
-							return after( dt )
-									.call( t1 -> impress( i, dt, -1, null ) );
-						} ) );
+						i -> impressFirst( i,
+								QuantityUtil.valueOf(
+										this.hhAttributes.getAsBigDecimal( i,
+												HHAttribute.IMPRESSION_DAYS
+														.ordinal() ),
+										TimeUnits.DAYS ) ) );
 	}
 
 	private void vaccinate( final Instant t )
@@ -744,8 +761,8 @@ public class HHModel implements Scenario
 						.inverse().asType( Frequency.class ) )
 				.reduce( ( f1, f2 ) -> f1.add( f2 ) ).get().inverse()
 				.asType( Time.class );
-		this.hhNetworkExpectations.put( hhIndex, after( impressDelay )
-				.call( t -> impress( hhIndex, impressDelay, -1, null ) ) );
+
+		impressFirst( hhIndex, impressDelay );
 
 		final HHMemberStatus hhStatus = profile.status == VaccineStatus.none
 				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.ARTIFICIAL_IMMUNE;
@@ -832,10 +849,10 @@ public class HHModel implements Scenario
 		return hhType.size();
 	}
 
-	private List<long[]> contacts( final long i )
+	private long[] contacts( final long i )
 	{
-		return HHConnector.availableCoordinates( this.hhNetwork, i ).parallel()
-				.collect( Collectors.toList() );
+		return HHConnector.availablePeers( this.hhNetwork, i )//.parallel()
+				.toArray();
 	}
 
 	private long createPerson( final boolean male,

@@ -27,7 +27,6 @@ import java.util.stream.StreamSupport;
 
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
-import org.ujmp.core.calculation.Calculation.Ret;
 
 import io.coala.random.PseudoRandom;
 
@@ -70,8 +69,11 @@ public interface HHConnector
 
 	static void setSymmetric( final Matrix W, final Object w, final long... x )
 	{
-		W.setAsObject( w, x[0], x[1] );
-		W.setAsObject( w, x[1], x[0] );
+		final long[] y = top( x );
+		if( w != null && w instanceof BigDecimal )
+			W.setAsBigDecimal( (BigDecimal) w, y );
+		else
+			W.setAsObject( w, y );
 	}
 
 	static BigDecimal getSymmetric( final Matrix W, final long... x )
@@ -79,27 +81,36 @@ public interface HHConnector
 		return W.getAsBigDecimal( HHConnector.top( x ) );
 	}
 
+	/**
+	 * <B>NOTE</b> JVM/UJMP-BUG: don't parallelize, coord array reused by JVM?
+	 * 
+	 * @param W
+	 * @return
+	 */
 	static Stream<long[]> availableCoordinates( final Matrix W )
 	{
 		return W == null ? Stream.empty()
 				: StreamSupport.stream( W.availableCoordinates().spliterator(),
-						false );
+						false ); // 
 	}
 
-	static Stream<long[]> availableCoordinates( final Matrix W, final long i )
+	static boolean isPeer( final Matrix W, final long... x )
 	{
-		// FIXME don't go through ALL coordinates, rather just relevant row/col
-		return HHConnector.availableCoordinates( W )
-				.filter( x -> x[0] == i || x[1] == i );
+		final long[] y = top( x );
+		return W.containsCoordinates( y )
+				&& W.getAsBigDecimal( y ).signum() > 0;
+	}
 
+	static LongStream availablePeers( final Matrix W, final long i )
+	{
 		// bug 1: W.selectColumns( Ret.LINK, i ).availableCoordinates() does not LINK but creates new
 		// bug 2: W.selectRows( Ret.LINK, i ).transpose() fails
-//		Stream.concat(
-//				availableCoordinates( W.selectColumns( Ret.LINK, i ) )
-//						.filter( x -> x[0] < i ) // avoids duplicate self
-//						.map( x -> top( x[0], i ) ),
-//				availableCoordinates( W.selectRows( Ret.LINK, i ) )
-//						.filter( x -> i <= x[0] ).map( x -> top( i, x[0] ) ) );
+
+		return Stream
+				.of( LongStream.range( 0, i ).filter( j -> isPeer( W, j, i ) ),
+						LongStream.range( i + 1, W.getColumnCount() )
+								.filter( j -> isPeer( W, i, j ) ) )
+				.flatMapToLong( s -> s );
 	}
 
 	class WattsStrogatz implements HHConnector
@@ -134,31 +145,25 @@ public interface HHConnector
 			// step 2: perturb lattice
 			// FIXME parallelized row selection causes NPE, not Thread safe?
 			LongStream.range( 0, size - 1 )// last row in triangle is empty
-					.forEach( i -> HHConnector
-							.availableCoordinates(
-									result.selectRows( Ret.LINK, i ) )
-							.forEach( x ->
+					.forEach( i -> LongStream.range( i + 1, size - 1 )
+							.filter( j -> HHConnector.isPeer( result, i, j )
+									&& this.rng.nextDouble() < this.beta )
+							.forEach( j ->
 							{
-								long j = x[0];
-								if( this.rng.nextDouble() < this.beta )
-								{
-									final long[] i_k = { i, j };
+								//final long[] i_k = { i, j };
+								long k = j;
+								// shuffle until : non-self and non-used
+								while( k == i
+										|| HHConnector.isPeer( result, i, k ) )
+									k = this.rng.nextLong( size );
 
-									// shuffle until : non-self and non-used
-									while( i_k[1] == i || result
-											.getAsBigDecimal(
-													HHConnector.top( i_k ) )
-											.signum() != 0 )
-										i_k[1] = this.rng.nextLong( size );
-
-									// weight to move from i,j to i,k
-									final Object w = result.getAsObject( i, j );
-									// reset old position
-									result.setAsObject( null, i, j );
-									// set new position
-									result.setAsObject( w,
-											HHConnector.top( i_k ) );
-								}
+								// weight to move from i,j to i,k
+								final BigDecimal w = HHConnector
+										.getSymmetric( result, i, j );
+								// reset old position
+								HHConnector.setSymmetric( result, null, i, j );
+								// set new position
+								HHConnector.setSymmetric( result, w, i, k );
 							} ) );
 
 			return result;
