@@ -168,7 +168,8 @@ public interface HHAttitudePropagator
 					if( i % logN == 0 )
 					{
 						final int s = 4;
-						LOG.trace( "{} [{},{}] -({}/{})-> [{},{}] -> [{},{}]",
+						LOG.trace(
+								"hh #{} [{},{}] ---({}%)--> [{},{}] -> [{},{}]",
 								i,
 								DecimalUtil.toScale(
 										hhAttributes.getAsBigDecimal( i,
@@ -178,10 +179,12 @@ public interface HHAttitudePropagator
 										hhAttributes.getAsBigDecimal( i,
 												attributePressuredCols[1] ),
 										s ),
-								sumJ.get(),
-								hhAttributes.getAsInt( i,
-										HHAttribute.SOCIAL_NETWORK_SIZE
-												.ordinal() ),
+								DecimalUtil.toScale(
+										100. * sumJ.get()
+												/ hhAttributes.getAsInt( i,
+														HHAttribute.SOCIAL_NETWORK_SIZE
+																.ordinal() ),
+										1 ),
 								DecimalUtil.toScale(
 										newAttributes.getAsBigDecimal( i, 0 ),
 										s ),

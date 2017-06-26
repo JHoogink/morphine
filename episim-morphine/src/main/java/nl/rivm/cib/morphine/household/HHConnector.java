@@ -20,6 +20,8 @@
 package nl.rivm.cib.morphine.household;
 
 import java.math.BigDecimal;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -40,7 +42,7 @@ public interface HHConnector
 {
 
 	Matrix connect( long size, Supplier<Long> degree,
-		Supplier<BigDecimal> initialWeight );
+		Function<long[], BigDecimal> initialW, Predicate<long[]> legalJ );
 
 	/**
 	 * utility method
@@ -107,7 +109,7 @@ public interface HHConnector
 		// bug 2: W.selectRows( Ret.LINK, i ).transpose() fails
 
 		return Stream
-				.of( LongStream.range( 0, i ).filter( j -> isPeer( W, j, i ) ),
+				.of( LongStream.range( 0, i ).filter( j -> isPeer( W, i, j ) ),
 						LongStream.range( i + 1, W.getColumnCount() )
 								.filter( j -> isPeer( W, i, j ) ) )
 				.flatMapToLong( s -> s );
@@ -126,20 +128,31 @@ public interface HHConnector
 
 		@Override
 		public Matrix connect( final long size, final Supplier<Long> degree,
-			final Supplier<BigDecimal> weight )
+			final Function<long[], BigDecimal> initialW,
+			final Predicate<long[]> legalJ )
 		{
 			final Matrix result = SparseMatrix.Factory.zeros( size, size );
 
 			// step 1: setup lattice: link self + degree-1 lattice 'neighbors'
 			// FIXME parallelized rows may contain just 1 value, not thread-safe?
-			for( long i = 0; i < size; i++ )
+			for( long i = 0; i < size - 1; i++ )
 			{
-				final long K = Math.min( size / 4, // need room to shuffle j's
+				final long K = Math.min( size - i, // need room to shuffle j's
 						degree.get() );
 
-				for( long di = 0; di < K; di++ )
-					result.setAsBigDecimal( weight.get(),
-							HHConnector.top( i, (i + 1 + di) % size ) );
+				for( long k = 0; k < K; k++ )
+				{
+					for( int attempt = 0; attempt < 10; attempt++ )
+					{
+						final long[] x = { i, (i + 1 + k) % size };
+						if( legalJ.test( x ) )
+						{
+							final long[] y = HHConnector.top( x );
+							result.setAsBigDecimal( initialW.apply( y ), y );
+							continue;
+						}
+					}
+				}
 			}
 
 			// step 2: perturb lattice
@@ -150,20 +163,21 @@ public interface HHConnector
 									&& this.rng.nextDouble() < this.beta )
 							.forEach( j ->
 							{
-								//final long[] i_k = { i, j };
-								long k = j;
 								// shuffle until : non-self and non-used
-								while( k == i
-										|| HHConnector.isPeer( result, i, k ) )
-									k = this.rng.nextLong( size );
+								final long[] x = { i, j }, y = { i, j };
+								for( int attempt = 0; attempt < 10 && (y[1] == i // skip self
+										|| HHConnector.isPeer( result, y ) // skip used
+										|| !legalJ.test( y ) // skip illegal
+								); attempt++ )
+									y[1] = i + this.rng.nextLong( size - i );
 
 								// weight to move from i,j to i,k
 								final BigDecimal w = HHConnector
-										.getSymmetric( result, i, j );
+										.getSymmetric( result, x );
 								// reset old position
-								HHConnector.setSymmetric( result, null, i, j );
+								HHConnector.setSymmetric( result, null, x );
 								// set new position
-								HHConnector.setSymmetric( result, w, i, k );
+								HHConnector.setSymmetric( result, w, y );
 							} ) );
 
 			return result;
