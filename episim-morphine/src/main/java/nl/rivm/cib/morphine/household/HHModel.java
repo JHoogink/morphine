@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,8 +34,8 @@ import org.ujmp.core.enums.ValueType;
 import io.coala.bind.InjectConfig;
 import io.coala.bind.InjectConfig.Scope;
 import io.coala.bind.LocalBinder;
-import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
+import io.coala.log.LogUtil.Pretty;
 import io.coala.math.DecimalUtil;
 import io.coala.math.QuantityUtil;
 import io.coala.math.Range;
@@ -199,7 +200,7 @@ public class HHModel implements Scenario
 		IllegalAccessException, IOException
 	{
 		final PseudoRandom rng = this.distFactory.getStream();
-		LOG.trace( "seed: {}, offset: {}", rng.seed(), scheduler().offset() );
+		LOG.info( "seed: {}, offset: {}", rng.seed(), scheduler().offset() );
 
 		this.attractors = this.config.hesitancyAttractors( this.binder );
 		this.attractorNames = this.attractors.keySet().stream()
@@ -210,7 +211,7 @@ public class HHModel implements Scenario
 		final long ppTotal = this.config.populationSize(),
 				hhTotal = ppTotal / hhType.size(),
 				edges = hhTotal + this.attractors.size();
-		LOG.trace( "Populate #pp: {}, #hh: {}, #attractors: {}, #link-max: {}",
+		LOG.info( "Populate #pp: {}, #hh: {}, #attractors: {}, #link-max: {}",
 				ppTotal, hhTotal, this.attractors.size(), edges );
 
 		// or Matrix.Factory.linkToJDBC(host, port, db, table, user, password)
@@ -234,8 +235,8 @@ public class HHModel implements Scenario
 					HHAttribute.IDENTIFIER.ordinal() );
 			attractor.position().subscribe( map ->
 			{
-				LOG.info( "t={}, attractor/region {} ({}): {}", dt(), index,
-						name, map );
+				LOG.info( "t={}, attractor/region {} ({}): {}", pretty( now() ),
+						index, name, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
@@ -293,7 +294,7 @@ public class HHModel implements Scenario
 		for( long time = System.currentTimeMillis(), agPrev = 0; this.persons
 				.get() < ppTotal; )
 		{
-			addHousehold();
+			replaceHousehold( NA );
 			if( System.currentTimeMillis() - time > 1000 )
 			{
 				time = System.currentTimeMillis();
@@ -305,7 +306,7 @@ public class HHModel implements Scenario
 			}
 		}
 
-		LOG.info( "Populated: {} pp ({}%) across {} hh & {} attractor/regions",
+		LOG.info( "Populated: {} pp ({}%) across {} hh in {} attractor/regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
 				this.hhCount.get() - this.attractors.size(),
 				this.attractors.size() );
@@ -430,8 +431,8 @@ public class HHModel implements Scenario
 						} ).toArray();
 				final int peerTotal = inpeers.length + outpeers.length;
 				final long[] stored = contacts( i );
-				final List<Long> peers = Stream.of( inpeers, outpeers ).flatMap(
-						ll -> Arrays.stream( ll ).mapToObj( l -> l ) )
+				final List<Long> peers = Stream.of( inpeers, outpeers )
+						.flatMap( ll -> Arrays.stream( ll ).mapToObj( l -> l ) )
 						.sorted().collect( Collectors.toList() );
 				final String[] diff = Arrays.stream( stored )
 						.filter( l -> !peers.contains( l ) )
@@ -454,9 +455,9 @@ public class HHModel implements Scenario
 								this.hhAttributes.getAsBigDecimal( aOwn,
 										HHAttribute.IMPRESSION_SELF_MULTIPLIER
 												.ordinal() ) ),
-						attrW = inpeerW.add( outpeerW )
-								.multiply( this.hhAttributes.getAsBigDecimal(
-										aOwn, HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER
+						attrW = inpeerW.add( outpeerW ).multiply(
+								this.hhAttributes.getAsBigDecimal( aOwn,
+										HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER
 												.ordinal() ) );
 //				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
 //				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
@@ -555,7 +556,8 @@ public class HHModel implements Scenario
 				scheduler.atEach( when ).subscribe( t ->
 				{
 					final int s = this.statsIteration.getAndIncrement();
-					LOG.trace( "t={}, exporting statistics #{}", dt(), s );
+					LOG.debug( "t={}, exporting statistics #{}", pretty( t ),
+							s );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
 					LongStream.range( 0, this.hhAttributes.getRowCount() )
@@ -569,20 +571,6 @@ public class HHModel implements Scenario
 				}, sub::onError, sub::onComplete );
 			} );
 		} );
-	}
-
-	private void migrateHousehold( final Instant t )
-	{
-		final long A = this.attractors.size(),
-				N = this.hhAttributes.getRowCount() - A,
-				i = A + this.distFactory.getStream().nextLong( N );
-//		replaceHousehold(i,-1 );// FIXME
-
-		final Quantity<Time> dt = this.hhMigrateDist.draw();
-//		LOG.trace( "t={}, replace migrant #{}, next after: {}",
-//				t.prettify( scheduler().offset() ), i,
-//				QuantityUtil.toScale( dt, 1 ) );
-		after( dt ).call( this::migrateHousehold );
 	}
 
 	private void pushChangedAttributes( final long i )
@@ -634,7 +622,7 @@ public class HHModel implements Scenario
 
 	private void propagate( final Instant t )
 	{
-		LOG.trace( "t={}, propagating...", dt() );
+		LOG.debug( "t={}, propagating...", pretty( t ) );
 		final long[] changed = this.attitudePropagator
 				.propagate( this.hhNetworkActivity, this.hhAttributes );
 		Arrays.stream( changed ).forEach( this::pushChangedAttributes );
@@ -659,9 +647,8 @@ public class HHModel implements Scenario
 		final Range<BigDecimal> birthRange = Range.of(
 				nowYears.subtract( BigDecimal.valueOf( 4 ) ),
 				nowYears.subtract( DecimalUtil.ONE_HALF ) );
-		LOG.info( "t={}, vaccination occasion: {} for susceptibles born {}",
-				t.prettify( scheduler().offset() ), occ.asMap().values(),
-				birthRange );
+		LOG.debug( "t={}, vaccination occasion: {} for susceptibles born {}",
+				pretty( t ), occ.asMap().values(), birthRange );
 
 //		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, 0, 0 );
 //		this.hhNetwork.zeros( Ret.ORIG );
@@ -702,9 +689,9 @@ public class HHModel implements Scenario
 												.ordinal(),
 										ppRef,
 										HHMemberAttribute.STATUS.ordinal() );
-								LOG.info(
+								LOG.debug(
 										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
-										dt(), hh, ppRef,
+										pretty( t ), hh, ppRef,
 										this.ppAttributes.getAsBigDecimal(
 												ppRef, HHMemberAttribute.BIRTH
 														.ordinal() ) );
@@ -714,18 +701,34 @@ public class HHModel implements Scenario
 
 	private static final long NA = -1L;
 
-	private int addHousehold()
+	private void migrateHousehold( final Instant t )
 	{
-		final long id = this.hhCount.incrementAndGet(); // grow the network
-		final Actor.ID hhRef = Actor.ID.of( String.format( "hh%08d", id ),
-				this.binder.id() );
-		final long hhIndex = this.attractors.size() + this.hhIndex
-				.computeIfAbsent( hhRef, key -> (long) this.hhIndex.size() );
-		return replaceHousehold( hhIndex, id );
+		final long A = this.attractors.size(),
+				N = this.hhAttributes.getRowCount() - A,
+				i = A + this.distFactory.getStream().nextLong( N );
+		replaceHousehold( i );
+
+		final Quantity<Time> dt = this.hhMigrateDist.draw();
+		LOG.debug( "t={}, replace migrant #{}, next after: {}", pretty( t ), i,
+				QuantityUtil.toScale( dt, 1 ) );
+
+		after( dt ).call( this::migrateHousehold );
 	}
 
-	private int replaceHousehold( final long hhIndex, final long id )
+	private int replaceHousehold( final long oldIndex )
 	{
+		final long id = this.hhCount.incrementAndGet();
+		final long hhIndex;
+		if( oldIndex == NA )
+		{
+			hhIndex = this.attractors.size() + this.hhIndex.computeIfAbsent( id,
+					key -> (long) this.hhIndex.size() );
+		} else
+		{
+			hhIndex = oldIndex;
+			this.hhIndex.remove( this.hhAttributes.getAsLong( hhIndex,
+					HHAttribute.IDENTIFIER.ordinal() ) );
+		}
 
 		final int attractorRef =
 //				Region.ID.of( hhCat.regionRef() );
@@ -762,7 +765,11 @@ public class HHModel implements Scenario
 
 		final HHMemberStatus hhStatus = profile.status == VaccineStatus.none
 				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.ARTIFICIAL_IMMUNE;
-		final long referentRef = createPerson( hhRefMale, hhRefAge, hhStatus );
+		final long referentRef = createPerson(
+				oldIndex == NA ? NA
+						: this.hhAttributes.getAsLong( hhIndex,
+								HHAttribute.REFERENT_REF.ordinal() ),
+				hhRefMale, hhRefAge, hhStatus );
 
 //		final long partnerRef = hhType.adultCount() < 2 ? NA
 //				: createPerson(
@@ -773,8 +780,15 @@ public class HHModel implements Scenario
 				// TODO from distribution, e.g. 60036ned, 37201
 				QuantityUtil.valueOf( 20, TimeUnits.ANNUM ) );
 		final boolean child1Male = true;
-		final long child1Ref = hhType.childCount() < 1 ? NA
-				: createPerson( child1Male, child1Age, hhStatus );
+		final long child1Ref = hhType
+				.childCount() < 1
+						? NA
+						: createPerson(
+								oldIndex == NA ? NA
+										: this.hhAttributes.getAsLong( hhIndex,
+												HHAttribute.CHILD1_REF
+														.ordinal() ),
+								child1Male, child1Age, hhStatus );
 //		final long child2Ref = hhType.childCount() < 2 ? NA
 //				: createPerson(
 //						hhRefAge.subtract(
@@ -836,10 +850,8 @@ public class HHModel implements Scenario
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
-//			LOG.trace( "t={}, replace home leaver #{}",
-//					t.prettify( scheduler().offset() ), hhIndex );
-			// FIXME replace persons too! 
-			// replaceHousehold( hhIndex, id );
+			LOG.debug( "t={}, replace home leaver #{}", pretty( t ), hhIndex );
+			replaceHousehold( hhIndex );
 		} );
 
 		return hhType.size();
@@ -851,14 +863,23 @@ public class HHModel implements Scenario
 				.toArray();
 	}
 
-	private long createPerson( final boolean male,
+	private long createPerson( final long oldIndex, final boolean male,
 		final Quantity<Time> initialAge, final HHMemberStatus status )
 	{
 		final long id = this.persons.incrementAndGet();
-		final Actor.ID memberRef = Actor.ID.of( String.format( "pp%08d", id ),
-				this.binder.id() );
-		final long index = this.ppIndex.computeIfAbsent( memberRef,
-				key -> (long) this.ppIndex.size() );
+		final long index;
+		if( oldIndex == NA )
+		{
+			index = this.ppIndex.computeIfAbsent( id,
+					key -> (long) this.ppIndex.size() );
+		} else
+		{
+			index = oldIndex;
+			this.ppIndex.remove( this.ppAttributes.getAsLong( index,
+					HHMemberAttribute.IDENTIFIER.ordinal() ) );
+		}
+		this.ppAttributes.setAsLong( id, index,
+				HHMemberAttribute.IDENTIFIER.ordinal() );
 		this.ppAttributes.setAsBigDecimal(
 				now().to( TimeUnits.ANNUM ).subtract( initialAge ).decimal(),
 				index, HHMemberAttribute.BIRTH.ordinal() );
@@ -877,6 +898,13 @@ public class HHModel implements Scenario
 		return this.scheduler;
 	}
 
+	protected Pretty pretty( final Instant t )
+	{
+		return Pretty.of( () -> scheduler().offset().plus(
+				t.to( TimeUnits.MINUTE ).value().longValue(),
+				ChronoUnit.MINUTES ) );
+	}
+
 	protected LocalDate dt()
 	{
 		// FIXME fix daylight savings adjustment, seems to adjust the wrong way
@@ -885,9 +913,9 @@ public class HHModel implements Scenario
 						.toJava8( scheduler().offset().toLocalDate() ));
 	}
 
-	private final Map<Actor.ID, Long> hhIndex = new HashMap<>();
+	private final Map<Long, Long> hhIndex = new HashMap<>();
 
-	private final Map<Actor.ID, Long> ppIndex = new HashMap<>();
+	private final Map<Long, Long> ppIndex = new HashMap<>();
 
 	private void logError( final Throwable e )
 	{
