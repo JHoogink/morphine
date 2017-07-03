@@ -89,13 +89,13 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.impressionDays = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_DAYS.ordinal() );
 		result.impressionInpeers = households.getAsBigDecimal( i,
-				HHAttribute.IMPRESSION_INPEER.ordinal() );
+				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 		result.impressionOutpeers = households.getAsBigDecimal( i,
-				HHAttribute.IMPRESSION_OUTPEER.ordinal() );
+				HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() );
 		result.impressionSelf = households.getAsBigDecimal( i,
-				HHAttribute.IMPRESSION_SELF.ordinal() );
+				HHAttribute.IMPRESSION_SELF_MULTIPLIER.ordinal() );
 		result.impressionAttractor = households.getAsBigDecimal( i,
-				HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+				HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER.ordinal() );
 //		result.schoolAssortativity = households.getAsBigDecimal( i,
 //				HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
 //		result.religious = households.getAsBoolean( i,

@@ -20,7 +20,9 @@
 package nl.rivm.cib.morphine.household;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -94,6 +96,7 @@ public interface HHAttitudePropagator
 		final Matrix newAttributes = Matrix.Factory.zeros( hhTotal, Objects
 				.requireNonNull( attributePressuredCols, "cols null" ).length );
 
+		final Set<Long> attrLogged = new HashSet<>();
 		final long[] changed = LongStream.range( 0, hhTotal ).parallel() // !!
 				.filter( i ->
 				{
@@ -145,10 +148,11 @@ public interface HHAttitudePropagator
 					// determine weights for self and attractor
 					final BigDecimal selfW = sumW.get()
 							.multiply( hhAttributes.getAsBigDecimal( attr,
-									HHAttribute.IMPRESSION_SELF.ordinal() ) ),
+									HHAttribute.IMPRESSION_SELF_MULTIPLIER
+											.ordinal() ) ),
 							attrW = sumW.get().multiply(
 									hhAttributes.getAsBigDecimal( attr,
-											HHAttribute.IMPRESSION_ATTRACTOR
+											HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER
 													.ordinal() ) ),
 							totalW = sumW.get().add( selfW ).add( attrW );
 
@@ -161,24 +165,25 @@ public interface HHAttitudePropagator
 					// get current hesitancy values and insert transformed
 					final Matrix prod = rowW.mtimes( colV )
 							.divide( totalW.doubleValue() );
+//					LOG.trace( "{}:\n{}*\n{}\n / {}\t= {} ", i, rowW,
+//							colV.transpose(), totalW, prod );
 					final Matrix res = sumW.get().signum() != 0 ? prod : colV;
 					MatrixUtil.insertBigDecimal( newAttributes, res, i, 0 );
 
-					final long logSample = 5, logN = hhTotal / logSample;
-					if( i % logN == 0 )
+					if( attrLogged.add( attr ) )
 					{
-						final int s = 4;
+						final int scale = 4;
 						LOG.trace(
 								"hh #{} [{},{}] ---({}%)--> [{},{}] -> [{},{}]",
 								i,
 								DecimalUtil.toScale(
 										hhAttributes.getAsBigDecimal( i,
 												attributePressuredCols[0] ),
-										s ),
+										scale ),
 								DecimalUtil.toScale(
 										hhAttributes.getAsBigDecimal( i,
 												attributePressuredCols[1] ),
-										s ),
+										scale ),
 								DecimalUtil.toScale(
 										100. * sumJ.get()
 												/ hhAttributes.getAsInt( i,
@@ -187,10 +192,10 @@ public interface HHAttitudePropagator
 										1 ),
 								DecimalUtil.toScale(
 										newAttributes.getAsBigDecimal( i, 0 ),
-										s ),
+										scale ),
 								DecimalUtil.toScale(
 										newAttributes.getAsBigDecimal( i, 1 ),
-										s ),
+										scale ),
 								DecimalUtil.toScale(
 										hhAttributes.getAsBigDecimal( attr,
 												attributePressuredCols[0] ),

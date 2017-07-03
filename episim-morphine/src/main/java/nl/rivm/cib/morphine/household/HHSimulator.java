@@ -20,6 +20,7 @@
 package nl.rivm.cib.morphine.household;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,6 +30,8 @@ import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.ConfigurationSource;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.hibernate.cfg.AvailableSettings;
 
 import io.coala.bind.LocalBinder;
@@ -45,6 +48,7 @@ import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.Scheduler;
+import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import io.reactivex.schedulers.Schedulers;
 
@@ -57,10 +61,22 @@ import io.reactivex.schedulers.Schedulers;
 public class HHSimulator
 {
 
+	static
+	{
+		String logConf = HHConfig.CONFIG_BASE_DIR + "log4j2.yaml";
+		try( final InputStream is = FileUtil.toInputStream( logConf ) )
+		{
+			// see https://stackoverflow.com/a/21087859
+			Configurator.initialize( null, new ConfigurationSource( is ) );
+//			System.setProperty(
+//					ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, logConf );
+		} catch( final IOException ignore )
+		{
+		}
+	}
+
 	/** */
 	private static final Logger LOG = LogUtil.getLogger( HHSimulator.class );
-
-	public static final String CONF_ARG = "conf";
 
 	// FIXME remove once fixed in coala
 	@Singleton
@@ -133,10 +149,10 @@ public class HHSimulator
 							.put( AvailableSettings.ORDER_UPDATES, "" + true )
 							.build() )
 					.createEMF();
-			
+
 			// shared between threads generating (sim) and flushing (db) rows
 			final AtomicLong rowsPending = new AtomicLong();
-			
+
 			model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
 					.buffer( 10, TimeUnit.SECONDS, rowsPerTx )
 					.observeOn(

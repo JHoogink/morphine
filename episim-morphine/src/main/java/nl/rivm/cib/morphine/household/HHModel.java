@@ -337,13 +337,13 @@ public class HHModel implements Scenario
 		final Matrix[] assorting = LongStream.range( 0, A ).mapToObj( a ->
 		{
 			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
-					HHAttribute.IMPRESSION_INPEER.ordinal() );
+					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 			return conn.connect( Na, assortK, x -> inpeerW, x -> true );
 		} ).toArray( Matrix[]::new );
 
 		final Matrix dissorting = conn.connect( N, dissortK,
 				x -> this.hhAttributes.getAsBigDecimal( x[0] % A,
-						HHAttribute.IMPRESSION_OUTPEER.ordinal() ),
+						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() ),
 				x -> this.attractorBroker.next( x[0] ) != this.attractorBroker
 						.next( x[1] ) );
 
@@ -378,23 +378,23 @@ public class HHModel implements Scenario
 				final BigDecimal inpeerW = totalW.get(),
 						selfW = inpeerW.multiply(
 								this.hhAttributes.getAsBigDecimal( aOwn,
-										HHAttribute.IMPRESSION_SELF
+										HHAttribute.IMPRESSION_SELF_MULTIPLIER
 												.ordinal() ) ),
 						attrW = inpeerW.multiply(
 								this.hhAttributes.getAsBigDecimal( aOwn,
-										HHAttribute.IMPRESSION_ATTRACTOR
+										HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER
 												.ordinal() ) );
 				// set stubbornness
 //				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
 //				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
 				this.hhAttributes.setAsBigDecimal( inpeerW, i,
-						HHAttribute.IMPRESSION_INPEER.ordinal() );
+						HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 //				this.hhAttributes.setAsBigDecimal( BigDecimal.ZERO, A + i,
 //						HHAttribute.SOCIAL_IMPACT_OUTPEER.ordinal() );
 				this.hhAttributes.setAsBigDecimal( selfW, i,
-						HHAttribute.IMPRESSION_SELF.ordinal() );
+						HHAttribute.IMPRESSION_SELF_MULTIPLIER.ordinal() );
 				this.hhAttributes.setAsBigDecimal( attrW, i,
-						HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+						HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER.ordinal() );
 				this.hhAttributes.setAsInt( inpeers.length, i,
 						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 				this.hhAttributes.setAsBigDecimal( BigDecimal.ONE, i,
@@ -452,23 +452,23 @@ public class HHModel implements Scenario
 						outpeerW = totalDissortW.get(),
 						selfW = inpeerW.add( outpeerW ).multiply(
 								this.hhAttributes.getAsBigDecimal( aOwn,
-										HHAttribute.IMPRESSION_SELF
+										HHAttribute.IMPRESSION_SELF_MULTIPLIER
 												.ordinal() ) ),
 						attrW = inpeerW.add( outpeerW )
 								.multiply( this.hhAttributes.getAsBigDecimal(
-										aOwn, HHAttribute.IMPRESSION_ATTRACTOR
+										aOwn, HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER
 												.ordinal() ) );
 //				HHConnector.setSymmetric( this.hhNetwork, selfW, i );
 //				this.hhNetwork.setAsBigDecimal( attrW, i, aOwn );
 
 				this.hhAttributes.setAsBigDecimal( inpeerW, i,
-						HHAttribute.IMPRESSION_INPEER.ordinal() );
+						HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 				this.hhAttributes.setAsBigDecimal( outpeerW, i,
-						HHAttribute.IMPRESSION_OUTPEER.ordinal() );
+						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() );
 				this.hhAttributes.setAsBigDecimal( selfW, i,
-						HHAttribute.IMPRESSION_SELF.ordinal() );
+						HHAttribute.IMPRESSION_SELF_MULTIPLIER.ordinal() );
 				this.hhAttributes.setAsBigDecimal( attrW, i,
-						HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
+						HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER.ordinal() );
 				this.hhAttributes.setAsInt( peerTotal, i,
 						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 				this.hhAttributes.setAsBigDecimal(

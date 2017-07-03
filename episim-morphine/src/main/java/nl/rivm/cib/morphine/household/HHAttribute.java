@@ -55,19 +55,19 @@ public enum HHAttribute implements HHJsonifiable
 	SOCIAL_NETWORK_SIZE,
 
 	/** drawn from CBS social contact profile {@link RelationFrequencyJson} */
-	IMPRESSION_DAYS, 
+	IMPRESSION_DAYS,
 
 	/** in-group peer pressure */
-	IMPRESSION_INPEER,
+	IMPRESSION_INPEER_WEIGHT,
 
 	/** out-group peer pressure */
-	IMPRESSION_OUTPEER,
+	IMPRESSION_OUTPEER_WEIGHT,
 
 	/** own resolve */
-	IMPRESSION_SELF,
+	IMPRESSION_SELF_MULTIPLIER,
 
 	/** coherence */
-	IMPRESSION_ATTRACTOR,
+	IMPRESSION_ATTRACTOR_MULTIPLIER,
 
 	/**
 	 * social <a
