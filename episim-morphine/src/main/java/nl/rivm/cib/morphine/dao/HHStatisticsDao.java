@@ -59,7 +59,7 @@ public class HHStatisticsDao implements Persistable.Dao
 
 	private static final String TIME_COL_DEF = "DECIMAL(10,4)";
 
-	private static final String ATTITUDE_COL_DEF = "DECIMAL(10,8)";
+	private static final String ATTITUDE_COL_DEF = "DECIMAL(15,8)";
 
 	/**
 	 * @param now current virtual time {@link Instant} for calculating age

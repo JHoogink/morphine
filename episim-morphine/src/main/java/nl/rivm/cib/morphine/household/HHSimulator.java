@@ -30,8 +30,9 @@ import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
-import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.yaml.YamlConfiguration;
 import org.hibernate.cfg.AvailableSettings;
 
 import io.coala.bind.LocalBinder;
@@ -66,10 +67,15 @@ public class HHSimulator
 		String logConf = HHConfig.CONFIG_BASE_DIR + "log4j2.yaml";
 		try( final InputStream is = FileUtil.toInputStream( logConf ) )
 		{
-			// see https://stackoverflow.com/a/21087859
-			Configurator.initialize( null, new ConfigurationSource( is ) );
+			// see https://stackoverflow.com/a/42524443
+			final LoggerContext ctx = LoggerContext.getContext( false );
+			ctx.start( new YamlConfiguration( ctx,
+					new ConfigurationSource( is ) ) );
+			
+			// see https://stackoverflow.com/a/25881592
 //			System.setProperty(
-//					ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, logConf );
+//					ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
+//					new File( logConf ).getAbsolutePath() );
 		} catch( final IOException ignore )
 		{
 		}
