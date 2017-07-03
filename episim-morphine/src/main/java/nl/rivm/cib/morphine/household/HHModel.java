@@ -27,6 +27,7 @@ import javax.measure.quantity.Time;
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
+import org.ujmp.core.calculation.Calculation.Ret;
 import org.ujmp.core.enums.ValueType;
 
 import io.coala.bind.InjectConfig;
@@ -137,7 +138,7 @@ public class HHModel implements Scenario
 	@FunctionalInterface
 	public interface AttractorBroker
 	{
-		String next( Long hhIndex );
+		int next( Long hhIndex );
 	}
 
 	/** */
@@ -251,8 +252,8 @@ public class HHModel implements Scenario
 //		this.hoodDist = this.config.neighborhoodDist( this.distFactory,
 //				regRef -> fallbackRegRef );
 //		final Map<Long, Region.ID> regions = new HashMap<>();
-		final AttractorBroker broker = hhIndex -> this.attractorNames[(int) (hhIndex
-				% this.attractors.size())];
+		final AttractorBroker broker = hhIndex -> (int) (hhIndex
+				% this.attractors.size());
 		this.attractorBroker = broker;
 		this.hhTypeDist = this.config.householdTypeDist( this.distParser );
 		this.hhRefMaleDist = this.config
@@ -306,7 +307,8 @@ public class HHModel implements Scenario
 
 		LOG.info( "Populated: {} pp ({}%) across {} hh & {} attractor/regions",
 				this.persons.get(), this.persons.get() * 100 / ppTotal,
-				this.hhCount.get() - attractors.size(), attractors.size() );
+				this.hhCount.get() - this.attractors.size(),
+				this.attractors.size() );
 
 		final double beta = this.config.hesitancySocialNetworkBeta();
 		final HHConnector conn = new HHConnector.WattsStrogatz( rng, beta );
@@ -342,8 +344,8 @@ public class HHModel implements Scenario
 		final Matrix dissorting = conn.connect( N, dissortK,
 				x -> this.hhAttributes.getAsBigDecimal( x[0] % A,
 						HHAttribute.IMPRESSION_OUTPEER.ordinal() ),
-				x -> !this.attractorBroker.next( x[0] )
-						.equals( this.attractorBroker.next( x[1] ) ) );
+				x -> this.attractorBroker.next( x[0] ) != this.attractorBroker
+						.next( x[1] ) );
 
 		// create the social network (between households/parents)
 		LongStream.range( A, this.hhAttributes.getRowCount() ).forEach( i ->
@@ -418,11 +420,10 @@ public class HHModel implements Scenario
 						} ).toArray();
 				// TODO don't copy, but initialize with outpeers already
 				final long[] outpeers = HHConnector
-						.availablePeers( dissorting, i )
-						.map( j ->
+						.availablePeers( dissorting, i ).map( j ->
 						{
 							final BigDecimal w = HHConnector
-									.getSymmetric( dissorting,i,j );
+									.getSymmetric( dissorting, i, j );
 							totalDissortW.getAndUpdate( bd -> bd.add( w ) );
 							HHConnector.setSymmetric( this.hhNetwork, w, i, j );
 							return j;
@@ -430,7 +431,7 @@ public class HHModel implements Scenario
 				final int peerTotal = inpeers.length + outpeers.length;
 				final long[] stored = contacts( i );
 				final List<Long> peers = Stream.of( inpeers, outpeers ).flatMap(
-						( long[] p ) -> Arrays.stream( p ).mapToObj( l -> l ) )
+						ll -> Arrays.stream( ll ).mapToObj( l -> l ) )
 						.sorted().collect( Collectors.toList() );
 				final String[] diff = Arrays.stream( stored )
 						.filter( l -> !peers.contains( l ) )
@@ -439,15 +440,14 @@ public class HHModel implements Scenario
 										.getSymmetric( this.hhNetwork, i, l ) )
 						.toArray( String[]::new );
 				if( //log || 
-				peerTotal == 0 || peerTotal != stored.length ) 
-				LOG.warn(
+				peerTotal == 0 || peerTotal != stored.length ) LOG.warn(
 						"hh #{} ({}/{} -> {}) peers: in {}({}/{}) "
 								+ "+ out {}({}/{}) = {}/{}, added {}: {}",
 						i, ia, Na, aOwn, inpeers, inpeers.length,
 						DecimalUtil.toScale( assortativity * K, 1 ), outpeers,
 						outpeers.length,
 						DecimalUtil.toScale( dissortativity * K, 1 ), peerTotal,
-						K, diff.length, diff);
+						K, diff.length, diff );
 				final BigDecimal inpeerW = totalAssortW.get(),
 						outpeerW = totalDissortW.get(),
 						selfW = inpeerW.add( outpeerW ).multiply(
@@ -554,14 +554,17 @@ public class HHModel implements Scenario
 				}
 				scheduler.atEach( when ).subscribe( t ->
 				{
-					final int i = this.statsIteration.getAndIncrement();
-					LOG.trace( "t={}, exporting statistics #{}", dt(), i );
+					final int s = this.statsIteration.getAndIncrement();
+					LOG.trace( "t={}, exporting statistics #{}", dt(), s );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
 					LongStream.range( 0, this.hhAttributes.getRowCount() )
-							.mapToObj( j -> HHStatisticsDao.create( cfg, t, i,
-									this.attractorNames, hhAttributes, j,
-									ppAttributes ) )
+							.mapToObj(
+									i -> HHStatisticsDao.create( cfg, t, s,
+											this.attractorNames,
+											hhAttributes.selectRows( Ret.LINK,
+													i ),
+											ppAttributes ) )
 							.forEach( sub::onNext );
 				}, sub::onError, sub::onComplete );
 			} );
@@ -570,14 +573,14 @@ public class HHModel implements Scenario
 
 	private void migrateHousehold( final Instant t )
 	{
-		final long hhIndex = this.attractors.size() + this.distFactory
-				.getStream().nextLong( this.hhAttributes.getRowCount()
-						- this.attractors.size() );
-//		replaceHousehold(hhIndex,-1 );// FIXME
+		final long A = this.attractors.size(),
+				N = this.hhAttributes.getRowCount() - A,
+				i = A + this.distFactory.getStream().nextLong( N );
+//		replaceHousehold(i,-1 );// FIXME
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
 //		LOG.trace( "t={}, replace migrant #{}, next after: {}",
-//				t.prettify( scheduler().offset() ), hhIndex,
+//				t.prettify( scheduler().offset() ), i,
 //				QuantityUtil.toScale( dt, 1 ) );
 		after( dt ).call( this::migrateHousehold );
 	}
@@ -724,11 +727,12 @@ public class HHModel implements Scenario
 	private int replaceHousehold( final long hhIndex, final long id )
 	{
 
-		final String attractorRef =
+		final int attractorRef =
 //				Region.ID.of( hhCat.regionRef() );
 				this.attractorBroker.next( hhIndex );
 
-		final HHAttractor attractor = this.attractors.get( attractorRef );
+		final HHAttractor attractor = this.attractors
+				.get( this.attractorNames[attractorRef] );
 //		final boolean religious = this.hhAttributes.getAsBoolean(
 //				attractorIndex, HHAttribute.RELIGIOUS.ordinal() );
 //		final boolean alternative = this.hhAttributes.getAsBoolean(
@@ -802,7 +806,7 @@ public class HHModel implements Scenario
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
-		this.hhAttributes.setAsString( attractorRef, hhIndex,
+		this.hhAttributes.setAsInt( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
 				QuantityUtil.toBigDecimal( impressDelay, TimeUnits.DAYS ),

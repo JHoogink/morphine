@@ -64,59 +64,60 @@ public class HHStatisticsDao implements Persistable.Dao
 	/**
 	 * @param now current virtual time {@link Instant} for calculating age
 	 * @param households household data {@link Matrix} per {@link HHAttribute}
-	 * @param rowIndex the household's respective row index
+	 * @param i the household's respective row index
 	 * @param members member data {@link Matrix} per {@link HHMemberAttribute}
 	 * @return a {@link HHMemberDao}
 	 */
 	public static HHStatisticsDao create( final HHConfigDao run,
 		final Instant now, final int seq, final String[] attractorNames,
-		final Matrix households, final long rowIndex, final Matrix members )
+		final Matrix households, final Matrix members )
 	{
+		final long i = 0;
 		final HHStatisticsDao result = new HHStatisticsDao();
 //		result.context = context;
 		result.config = run;
-		result.hh = households.getAsInt( rowIndex,
-				HHAttribute.IDENTIFIER.ordinal() );
+		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.attractorRef = attractorNames[households.getAsInt( rowIndex,
-				HHAttribute.ATTRACTOR_REF.ordinal() ) % attractorNames.length];
-		result.socialNetworkSize = households.getAsInt( rowIndex,
+		final int attractorRef = households.getAsInt( i,
+				HHAttribute.ATTRACTOR_REF.ordinal() );
+		result.attractorRef = attractorNames[attractorRef
+				% attractorNames.length];
+		result.socialNetworkSize = households.getAsInt( i,
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
-		result.socialAssortativity = households.getAsBigDecimal( rowIndex,
+		result.socialAssortativity = households.getAsBigDecimal( i,
 				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
-		result.impressionDays = households.getAsBigDecimal( rowIndex,
+		result.impressionDays = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_DAYS.ordinal() );
-		;
-		result.impressionInpeers = households.getAsBigDecimal( rowIndex,
+		result.impressionInpeers = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_INPEER.ordinal() );
-		result.impressionOutpeers = households.getAsBigDecimal( rowIndex,
+		result.impressionOutpeers = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_OUTPEER.ordinal() );
-		result.impressionSelf = households.getAsBigDecimal( rowIndex,
+		result.impressionSelf = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_SELF.ordinal() );
-		result.impressionAttractor = households.getAsBigDecimal( rowIndex,
+		result.impressionAttractor = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_ATTRACTOR.ordinal() );
-//		result.schoolAssortativity = households.getAsBigDecimal( rowIndex,
+//		result.schoolAssortativity = households.getAsBigDecimal( i,
 //				HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
-//		result.religious = households.getAsBoolean( rowIndex,
+//		result.religious = households.getAsBoolean( i,
 //				HHAttribute.RELIGIOUS.ordinal() );
-//		result.alternative = households.getAsBoolean( rowIndex,
+//		result.alternative = households.getAsBoolean( i,
 //				HHAttribute.ALTERNATIVE.ordinal() );
-		result.calculation = households.getAsBigDecimal( rowIndex,
+		result.calculation = households.getAsBigDecimal( i,
 				HHAttribute.CALCULATION.ordinal() );
-		result.confidence = households.getAsBigDecimal( rowIndex,
+		result.confidence = households.getAsBigDecimal( i,
 				HHAttribute.CONFIDENCE.ordinal() );
-		result.complacency = households.getAsBigDecimal( rowIndex,
+		result.complacency = households.getAsBigDecimal( i,
 				HHAttribute.COMPLACENCY.ordinal() );
-		result.referent = HHMemberDao.create( now, members, households
-				.getAsLong( rowIndex, HHAttribute.REFERENT_REF.ordinal() ) );
+		result.referent = HHMemberDao.create( now, members,
+				households.getAsLong( i, HHAttribute.REFERENT_REF.ordinal() ) );
 //		result.partner = MemberDao.create( now, members, households
-//				.getAsLong( rowIndex, HHAttribute.PARTNER_REF.ordinal() ) );
-		result.child1 = HHMemberDao.create( now, members, households
-				.getAsLong( rowIndex, HHAttribute.CHILD1_REF.ordinal() ) );
+//				.getAsLong( i, HHAttribute.PARTNER_REF.ordinal() ) );
+		result.child1 = HHMemberDao.create( now, members,
+				households.getAsLong( i, HHAttribute.CHILD1_REF.ordinal() ) );
 //		result.child2 = MemberDao.create( now, members, households
-//				.getAsLong( rowIndex, HHAttribute.CHILD2_REF.ordinal() ) );
+//				.getAsLong( i, HHAttribute.CHILD2_REF.ordinal() ) );
 //		result.child3 = MemberDao.create( now, members, households
-//				.getAsLong( rowIndex, HHAttribute.CHILD3_REF.ordinal() ) );
+//				.getAsLong( i, HHAttribute.CHILD3_REF.ordinal() ) );
 		return result;
 	}
 

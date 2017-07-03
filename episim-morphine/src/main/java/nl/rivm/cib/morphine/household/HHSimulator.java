@@ -35,6 +35,7 @@ import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
+import io.coala.log.LogUtil.Pretty;
 import io.coala.math.DecimalUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
@@ -132,13 +133,15 @@ public class HHSimulator
 							.put( AvailableSettings.ORDER_UPDATES, "" + true )
 							.build() )
 					.createEMF();
+			
 			// shared between threads generating (sim) and flushing (db) rows
 			final AtomicLong rowsPending = new AtomicLong();
+			
 			model.statistics().doOnNext( dao -> rowsPending.incrementAndGet() )
 					.buffer( 10, TimeUnit.SECONDS, rowsPerTx )
 					.observeOn(
 							// Schedulers.from( Executors.newFixedThreadPool( 4 ) )
-							Schedulers.io() )
+							Schedulers.io() ) // TODO is (unlimited) I/O smart?
 					.subscribe( buffer ->
 					{
 						// TODO hold simulator while pending exceeds a maximum ?
@@ -146,27 +149,26 @@ public class HHSimulator
 						final long n = rowsPending.addAndGet( -buffer.size() );
 						JPAUtil.session( emf ).subscribe( em ->
 						{
-							for( int i = 0; i < buffer.size(); i++ )
+							final AtomicLong it = new AtomicLong();
+							buffer.forEach( dao ->
 							{
-								buffer.get( i ).persist( em, binder.id() );
-								if( i > 0 && i % jdbcBatchSize == 0 )
+								dao.persist( em, binder.id() );
+								if( it.incrementAndGet() % jdbcBatchSize == 0 )
 								{
 									em.flush();
 									em.clear();
 								}
-							}
+							} );
 						}, e -> LOG.error( "Problem persisting stats", e ),
-								() ->
-								{
-									if( buffer.isEmpty() ) return;
-									final Number dt = DecimalUtil.toScale(
-											(System.currentTimeMillis() - start)
-													/ 1000.,
-											1 );
-									LOG.trace(
-											"Persisted {} rows in {}s, {} pending",
-											buffer.size(), dt, n );
-								} );
+								() -> LOG.trace(
+										"Persisted {} rows in {}s, {} pending",
+										buffer.size(), Pretty
+												.of( () -> DecimalUtil.toScale(
+														(System.currentTimeMillis()
+																- start)
+																/ 1000.,
+														1 ) ),
+										n ) );
 					}, e ->
 					{
 						LOG.error( "Problem generating household stats", e );
