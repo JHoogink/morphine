@@ -66,10 +66,10 @@ morphine:
           confidence: 1
           complacency: 0
           # relative impact per it., >1: outweigh soc. network
-          impression-attractor: .01
-          impression-self: 1
-          impression-inpeer: 1
-          impression-outpeer: 1
+          impression-inpeer-weight: 1
+          impression-outpeer-weight: 1
+          impression-self-multiplier: 100
+          impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Protestantists
         rel-reg:
@@ -78,10 +78,10 @@ morphine:
           confidence: .5
           complacency: 1
           # 1 = relative impact per it., >1: outweigh soc. network
-          impression-attractor: .01
-          impression-self: 1
-          impression-inpeer: 1
-          impression-outpeer: 1
+          impression-inpeer-weight: 1
+          impression-outpeer-weight: 1
+          impression-self-multiplier: 100
+          impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Traditionalists
         sec-alt:
@@ -90,10 +90,10 @@ morphine:
           confidence: 0
           complacency: 1
           # 1 = relative impact per it., >1: outweigh soc. network
-          impression-attractor: .01
-          impression-self: 1
-          impression-inpeer: 1
-          impression-outpeer: 1
+          impression-inpeer-weight: 1
+          impression-outpeer-weight: 1
+          impression-self-multiplier: 100
+          impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
       # local pressure, mainly from e.g. Mixture
         rel-alt:
@@ -102,10 +102,10 @@ morphine:
           confidence: .5
           complacency: .5
           # 1 = relative impact per it., >1: outweigh soc. network
-          impression-attractor: .01
-          impression-self: 1
-          impression-inpeer: 1
-          impression-outpeer: 1
+          impression-inpeer-weight: 1
+          impression-outpeer-weight: 1
+          impression-self-multiplier: 100
+          impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
 #        schedule: 
 #        # trigger monthly disturbance and 5-day recovery to original values
