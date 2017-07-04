@@ -240,8 +240,8 @@ public class HHModel implements Scenario
 					HHAttribute.IDENTIFIER.ordinal() );
 			attractor.adjustments().subscribe( map ->
 			{
-				LOG.debug( "t={}, disturbance @{}: {}", prettyDate( now() ), name,
-						map );
+				LOG.debug( "t={}, disturbance @{}: {}", prettyDate( now() ),
+						name, map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
@@ -565,8 +565,8 @@ public class HHModel implements Scenario
 				scheduler.atEach( when ).subscribe( t ->
 				{
 					final int s = this.statsIteration.getAndIncrement();
-					LOG.debug( "t={}, exporting statistics #{}", prettyDate( t ),
-							s );
+					LOG.debug( "t={}, exporting statistics #{}",
+							prettyDate( t ), s );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
 					LongStream.range( 0, this.hhAttributes.getRowCount() )
@@ -636,16 +636,19 @@ public class HHModel implements Scenario
 				.propagate( this.hhNetworkActivity, this.hhAttributes );
 		Arrays.stream( changed ).forEach( this::pushChangedAttributes );
 		this.hhNetworkActivity.clear();
-		LongStream
-				.range( this.attractors.size(),
-						this.hhNetworkActivity.getRowCount() )
-				.forEach(
-						i -> impressFirst( i,
-								QuantityUtil.valueOf(
-										this.hhAttributes.getAsBigDecimal( i,
-												HHAttribute.IMPRESSION_DAYS
-														.ordinal() ),
-										TimeUnits.DAYS ) ) );
+		LongStream.range( this.attractors.size(),
+				this.hhNetworkActivity.getRowCount() ).forEach( i ->
+				{
+					impressFirst( i,
+							QuantityUtil.valueOf(
+									this.hhAttributes.getAsBigDecimal( i,
+											HHAttribute.IMPRESSION_DAYS
+													.ordinal() ),
+									TimeUnits.DAYS ) );
+					final long[] x = { i, HHAttribute.PROPAGATIONS.ordinal() };
+					this.hhAttributes
+							.setAsInt( this.hhAttributes.getAsInt( x ) + 1, x );
+				} );
 	}
 
 	private void vaccinate( final Instant t )
@@ -702,9 +705,12 @@ public class HHModel implements Scenario
 								LOG.debug(
 										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
 										prettyDate( t ), hh, ppRef,
-										this.ppAttributes.getAsBigDecimal(
-												ppRef, HHMemberAttribute.BIRTH
-														.ordinal() ) );
+										prettyDate( Instant.of(
+												this.ppAttributes
+														.getAsBigDecimal( ppRef,
+																HHMemberAttribute.BIRTH
+																		.ordinal() ),
+												TimeUnits.ANNUM ) ) );
 							} );
 				} );
 	}
@@ -719,8 +725,8 @@ public class HHModel implements Scenario
 		createHousehold( i );
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
-		LOG.debug( "t={}, replace migrant #{}, next after: {}", prettyDate( t ), i,
-				QuantityUtil.toScale( dt, 1 ) );
+		LOG.debug( "t={}, replace migrant #{}, next after: {}", prettyDate( t ),
+				i, QuantityUtil.toScale( dt, 1 ) );
 
 		after( dt ).call( this::migrateHousehold );
 	}
@@ -836,6 +842,8 @@ public class HHModel implements Scenario
 				HHAttribute.IDENTIFIER.ordinal() );
 		this.hhAttributes.setAsBigDecimal( now().to( TimeUnits.DAYS ).decimal(),
 				hhIndex, HHAttribute.SINCE_DAYS.ordinal() );
+		this.hhAttributes.setAsInt( 0, hhIndex,
+				HHAttribute.PROPAGATIONS.ordinal() );
 		this.hhAttributes.setAsInt( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
@@ -866,7 +874,8 @@ public class HHModel implements Scenario
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
-			LOG.debug( "t={}, replace home leaver #{}", prettyDate( t ), hhIndex );
+			LOG.debug( "t={}, replace home leaver #{}", prettyDate( t ),
+					hhIndex );
 			createHousehold( hhIndex );
 		} );
 
@@ -916,9 +925,10 @@ public class HHModel implements Scenario
 
 	protected Pretty prettyDate( final Instant t )
 	{
-		return Pretty.of( () -> scheduler().offset().plus(
-				t.to( TimeUnits.MINUTE ).value().longValue(),
-				ChronoUnit.MINUTES ).toLocalDateTime() );
+		return Pretty.of( () -> scheduler().offset()
+				.plus( t.to( TimeUnits.MINUTE ).value().longValue(),
+						ChronoUnit.MINUTES )
+				.toLocalDateTime() );
 	}
 
 	protected LocalDate dt()

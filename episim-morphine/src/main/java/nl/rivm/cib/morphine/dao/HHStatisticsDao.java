@@ -79,7 +79,9 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.config = run;
 		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.includedDays = now.to( TimeUnits.DAYS ).subtract( households
+		result.propagations = households.getAsInt( i,
+				HHAttribute.PROPAGATIONS.ordinal() );
+		result.inclusionDays = now.to( TimeUnits.DAYS ).subtract( households
 				.getAsBigDecimal( i, HHAttribute.SINCE_DAYS.ordinal() ) )
 				.decimal();
 		final int attractorRef = households.getAsInt( i,
@@ -165,9 +167,12 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SEQ", nullable = false, updatable = false )
 	protected int seq;
 
-	@Column( name = "INCLUDED_DAYS", nullable = false, updatable = false,
+	@Column( name = "INCLUSION_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal includedDays;
+	protected BigDecimal inclusionDays;
+
+	@Column( name = "PROPAGATIONS", nullable = false, updatable = false )
+	protected int propagations;
 
 	@Column( name = "ATTRACTOR_REF", nullable = false, updatable = false )
 	protected String attractorRef;

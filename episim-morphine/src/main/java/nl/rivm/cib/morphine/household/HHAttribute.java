@@ -45,6 +45,9 @@ public enum HHAttribute implements HHJsonifiable
 	/** simulation time of household creation */
 	SINCE_DAYS,
 
+	/** number of propagations */
+	PROPAGATIONS,
+
 	/** in-group identifier determines oracle/authority/attractor */
 	ATTRACTOR_REF,
 
