@@ -20,6 +20,9 @@
 package nl.rivm.cib.morphine.household;
 
 import java.text.ParseException;
+import java.time.Duration;
+import java.time.Period;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -27,12 +30,13 @@ import java.util.SortedMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.coala.json.JsonUtil;
-import io.coala.time.Duration;
 import io.coala.time.Instant;
 import io.coala.time.Proactive;
+import io.coala.time.TimeUnits;
 import io.coala.time.Timing;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
@@ -59,8 +63,12 @@ public interface HHScenarioConfigurable extends Proactive
 	/** {@link SignalYaml} specifies position update rule configurations */
 	class SignalYaml
 	{
-		public String recurrence;
-		public Duration interval;
+		@JsonProperty( "occurrence" )
+		public String occurrence;
+
+		@JsonProperty( "period" )
+		public Period period;
+
 		/** an integer-to-value mapping due to array flattening in YamlUtil */
 		public Map<String, SortedMap<Integer, JsonNode>> series;
 	}
@@ -73,11 +81,13 @@ public interface HHScenarioConfigurable extends Proactive
 
 		return Observable.create( sub ->
 		{
+			System.err.println( node );
 			try
 			{
 				final SignalYaml item = JsonUtil.valueOf( node,
 						SignalYaml.class );
-				final Iterable<Instant> timing = Timing.of( item.recurrence )
+				final Iterable<Instant> timing = Timing.of( item.occurrence )
+						.offset( now().toJava8( scheduler().offset() ) )
 						.iterate();
 				final Map<K, List<V>> series = item.series.entrySet()
 						.parallelStream()
@@ -89,7 +99,7 @@ public interface HHScenarioConfigurable extends Proactive
 												valueType ) )
 										.collect( Collectors.toList() ) ) );
 				atEach( timing,
-						t -> scheduleSeries( sub, item.interval, series, 0 ) )
+						t -> scheduleSeries( sub, item.period, series, 0 ) )
 								.subscribe( exp ->
 								{
 								}, sub::onError );
@@ -103,7 +113,7 @@ public interface HHScenarioConfigurable extends Proactive
 
 	/** this method repeatedly schedules itself until the series are complete */
 	default <K, V> void scheduleSeries( final ObservableEmitter<Map<K, V>> sub,
-		final Duration interval, final Map<K, List<V>> series, final int index )
+		final Period period, final Map<K, List<V>> series, final int index )
 	{
 		if( series.isEmpty() || sub.isDisposed() ) return;
 		final Map<K, V> values = series.entrySet().parallelStream()
@@ -115,8 +125,11 @@ public interface HHScenarioConfigurable extends Proactive
 		if( !values.isEmpty() )
 		{
 			sub.onNext( values );
-			after( interval ).call(
-					t -> scheduleSeries( sub, interval, series, index + 1 ) );
+			final ZonedDateTime now = now().toJava8( scheduler().offset() );
+			after( Duration.between( now, now.plus( period ) ).toMillis(),
+					TimeUnits.MILLIS )
+							.call( t -> scheduleSeries( sub, period, series,
+									index + 1 ) );
 		}
 	}
 }

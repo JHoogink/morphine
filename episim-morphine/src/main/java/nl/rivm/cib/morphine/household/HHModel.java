@@ -233,10 +233,10 @@ public class HHModel implements Scenario
 					HHAttribute.ATTRACTOR_REF.ordinal() );
 			this.hhAttributes.setAsInt( index, index,
 					HHAttribute.IDENTIFIER.ordinal() );
-			attractor.position().subscribe( map ->
+			attractor.adjustments().subscribe( map ->
 			{
-				LOG.info( "t={}, attractor/region {} ({}): {}", pretty( now() ),
-						index, name, map );
+				LOG.debug( "t={}, disturbance @{}: {}", pretty( now() ), name,
+						map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
 			}, this::logError );
@@ -339,7 +339,11 @@ public class HHModel implements Scenario
 		{
 			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
 					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
-			return conn.connect( Na, assortK, x -> inpeerW, x -> true );
+			if(inpeerW.signum()<1)
+				LOG.warn("no weight: {}", inpeerW );
+			final Matrix m = conn.connect( Na, assortK, x -> inpeerW,
+					x -> true );
+			return m;
 		} ).toArray( Matrix[]::new );
 
 		final Matrix dissorting = conn.connect( N, dissortK,
@@ -374,7 +378,8 @@ public class HHModel implements Scenario
 						} ).toArray();
 				if( log )
 					LOG.trace( "hh #{} ({}/{} -> {}) in-peers: {} = {}/{}", i,
-							ia, Na, aOwn, inpeers, inpeers.length, K + 1 );
+							ia, Na, this.attractorNames[aOwn], inpeers,
+							inpeers.length, K + 1 );
 
 				final BigDecimal inpeerW = totalW.get(),
 						selfW = inpeerW.multiply(
@@ -440,11 +445,11 @@ public class HHModel implements Scenario
 								+ "\\" + HHConnector
 										.getSymmetric( this.hhNetwork, i, l ) )
 						.toArray( String[]::new );
-				if( //log || 
-				peerTotal == 0 || peerTotal != stored.length ) LOG.warn(
+				if( peerTotal == 0 || peerTotal != stored.length ) LOG.warn(
 						"hh #{} ({}/{} -> {}) peers: in {}({}/{}) "
 								+ "+ out {}({}/{}) = {}/{}, added {}: {}",
-						i, ia, Na, aOwn, inpeers, inpeers.length,
+						i, ia, Na, this.attractorNames[aOwn], inpeers,
+						inpeers.length,
 						DecimalUtil.toScale( assortativity * K, 1 ), outpeers,
 						outpeers.length,
 						DecimalUtil.toScale( dissortativity * K, 1 ), peerTotal,
@@ -472,7 +477,7 @@ public class HHModel implements Scenario
 						HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER.ordinal() );
 				this.hhAttributes.setAsInt( peerTotal, i,
 						HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
-				this.hhAttributes.setAsBigDecimal(
+				if( peerTotal != 0 ) this.hhAttributes.setAsBigDecimal(
 						DecimalUtil.divide( inpeers.length, peerTotal ), i,
 						HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
 			}
@@ -763,8 +768,10 @@ public class HHModel implements Scenario
 
 		impressFirst( hhIndex, impressDelay );
 
-		final HHMemberStatus hhStatus = profile.status == VaccineStatus.none
-				? HHMemberStatus.SUSCEPTIBLE : HHMemberStatus.ARTIFICIAL_IMMUNE;
+		final HHMemberStatus hhStatus = oldIndex == NA
+				|| profile.status == VaccineStatus.none
+						? HHMemberStatus.SUSCEPTIBLE
+						: HHMemberStatus.ARTIFICIAL_IMMUNE;
 		final long referentRef = createPerson(
 				oldIndex == NA ? NA
 						: this.hhAttributes.getAsLong( hhIndex,

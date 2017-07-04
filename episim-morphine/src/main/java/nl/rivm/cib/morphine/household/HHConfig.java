@@ -382,9 +382,8 @@ public interface HHConfig extends GlobalConfig
 		try
 		{
 			return Collections.unmodifiableMap(
-					hesitancyAttractorFactory().newInstance().createAll(
-							toJSON( HESITANCY_PREFIX + "attractors" ),
-							binder ) );
+					binder.inject( hesitancyAttractorFactory() ).createAll(
+							toJSON( HESITANCY_PREFIX + "attractors" ) ) );
 		} catch( final Exception e )
 		{
 			return Thrower.rethrowUnchecked( e );
@@ -548,13 +547,13 @@ public interface HHConfig extends GlobalConfig
 	@DefaultValue( "0 0 0 ? * MON *" )
 	String attitudePropagatorRecurrence();
 
-	default Iterable<Instant> attitudePropagatorRecurrence( final Scheduler scheduler )
-		throws ParseException
+	default Iterable<Instant> attitudePropagatorRecurrence(
+		final Scheduler scheduler ) throws ParseException
 	{
-		return Timing.of( attitudePropagatorRecurrence() ).offset( scheduler.offset() )
-				.iterate();
+		return Timing.of( attitudePropagatorRecurrence() )
+				.offset( scheduler.offset() ).iterate();
 	}
-	
+
 //	@Key( "morphine.measles.contact-period" )
 //	@DefaultValue( "10 h" )
 //	Duration contactPeriod();

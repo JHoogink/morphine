@@ -83,6 +83,13 @@ morphine:
           impression-self-multiplier: 100
           impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
+          schedule: 
+          # spike monthly and adjust every 2 days 5x toward original values
+          - occurrence: 0 0 0 1 * ? *
+            period: P2D
+            series:
+              confidence:  [.5, .6, .7, .8, .9, 1]
+              complacency: [.5, .4, .3, .2, .1, 0]
       # local pressure, mainly from e.g. Traditionalists
         sec-alt:
           religious: 0
@@ -107,10 +114,11 @@ morphine:
           impression-self-multiplier: 100
           impression-attractor-multiplier: 1
           type: nl.rivm.cib.morphine.household.HHAttractor$SignalSchedule
-#        schedule: 
-#        # trigger monthly disturbance and 5-day recovery to original values
-#        - recurrence: 0 0 0 1 * ? *
-#          interval: 1 day
-#          series:
-#            confidence:  [.5, .6, .7, .8, .9, 1]
-#            complacency: [.5, .4, .3, .2, .1, 0]
+          # schedule disturbances by triggering series of new values
+          schedule: 
+          # spike monthly and adjust every 2 days 5x toward original values
+          - occurrence: 0 0 0 1 * ? *
+            period: P2D
+            series:
+              confidence:  [1, .9, .8, .7, .6, .5]
+              complacency: [0, .1, .2, .3, .4, .5]
