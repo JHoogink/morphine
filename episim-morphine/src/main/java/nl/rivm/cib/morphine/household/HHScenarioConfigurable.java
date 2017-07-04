@@ -81,7 +81,6 @@ public interface HHScenarioConfigurable extends Proactive
 
 		return Observable.create( sub ->
 		{
-			System.err.println( node );
 			try
 			{
 				final SignalYaml item = JsonUtil.valueOf( node,

@@ -41,6 +41,7 @@ import io.coala.bind.LocalId;
 import io.coala.persist.JPAUtil;
 import io.coala.persist.Persistable;
 import io.coala.time.Instant;
+import io.coala.time.TimeUnits;
 import nl.rivm.cib.morphine.household.HHAttribute;
 import nl.rivm.cib.morphine.household.HHMemberAttribute;
 
@@ -78,6 +79,9 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.config = run;
 		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
+		result.includedDays = now.to( TimeUnits.DAYS ).subtract( households
+				.getAsBigDecimal( i, HHAttribute.SINCE_DAYS.ordinal() ) )
+				.decimal();
 		final int attractorRef = households.getAsInt( i,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		result.attractorRef = attractorNames[attractorRef
@@ -160,6 +164,10 @@ public class HHStatisticsDao implements Persistable.Dao
 
 	@Column( name = "SEQ", nullable = false, updatable = false )
 	protected int seq;
+
+	@Column( name = "INCLUDED_DAYS", nullable = false, updatable = false,
+		columnDefinition = ATTITUDE_COL_DEF )
+	protected BigDecimal includedDays;
 
 	@Column( name = "ATTRACTOR_REF", nullable = false, updatable = false )
 	protected String attractorRef;

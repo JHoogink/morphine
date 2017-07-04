@@ -294,7 +294,7 @@ public class HHModel implements Scenario
 		for( long time = System.currentTimeMillis(), agPrev = 0; this.persons
 				.get() < ppTotal; )
 		{
-			replaceHousehold( NA );
+			createHousehold( NA );
 			if( System.currentTimeMillis() - time > 1000 )
 			{
 				time = System.currentTimeMillis();
@@ -339,8 +339,7 @@ public class HHModel implements Scenario
 		{
 			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
 					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
-			if(inpeerW.signum()<1)
-				LOG.warn("no weight: {}", inpeerW );
+			if( inpeerW.signum() < 1 ) LOG.warn( "no weight: {}", inpeerW );
 			final Matrix m = conn.connect( Na, assortK, x -> inpeerW,
 					x -> true );
 			return m;
@@ -711,7 +710,7 @@ public class HHModel implements Scenario
 		final long A = this.attractors.size(),
 				N = this.hhAttributes.getRowCount() - A,
 				i = A + this.distFactory.getStream().nextLong( N );
-		replaceHousehold( i );
+		createHousehold( i );
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
 		LOG.debug( "t={}, replace migrant #{}, next after: {}", pretty( t ), i,
@@ -720,7 +719,7 @@ public class HHModel implements Scenario
 		after( dt ).call( this::migrateHousehold );
 	}
 
-	private int replaceHousehold( final long oldIndex )
+	private int createHousehold( final long oldIndex )
 	{
 		final long id = this.hhCount.incrementAndGet();
 		final long hhIndex;
@@ -827,6 +826,8 @@ public class HHModel implements Scenario
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
+		this.hhAttributes.setAsBigDecimal( now().to( TimeUnits.DAYS ).decimal(),
+				hhIndex, HHAttribute.SINCE_DAYS.ordinal() );
 		this.hhAttributes.setAsInt( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
@@ -858,7 +859,7 @@ public class HHModel implements Scenario
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
 			LOG.debug( "t={}, replace home leaver #{}", pretty( t ), hhIndex );
-			replaceHousehold( hhIndex );
+			createHousehold( hhIndex );
 		} );
 
 		return hhType.size();

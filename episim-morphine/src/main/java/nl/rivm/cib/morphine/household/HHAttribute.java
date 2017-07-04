@@ -42,6 +42,9 @@ public enum HHAttribute implements HHJsonifiable
 	/** population-unique identifier (may be replaced upon death/emigration) */
 	IDENTIFIER,
 
+	/** simulation time of household creation */
+	SINCE_DAYS,
+
 	/** in-group identifier determines oracle/authority/attractor */
 	ATTRACTOR_REF,
 
