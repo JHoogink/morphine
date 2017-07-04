@@ -22,8 +22,8 @@ morphine:
   population:
     size: 10000
     hh-type-dist: const(SOLO_1KID)
-    hh-ref-age-dist: uniform(20;40)
-    hh-leavehome-age: 20 yr
+    hh-ref-age-dist: uniform(20;25)
+    hh-leavehome-age: 5 yr
     hh-migrate-rate: .02 annual
 #   vaccination occasions recur to hesitant parents of susceptible children
     vaccination:

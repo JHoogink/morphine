@@ -59,6 +59,7 @@ import nl.rivm.cib.morphine.dao.HHConfigDao;
 import nl.rivm.cib.morphine.dao.HHStatisticsDao;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.VaccineStatus;
+import tec.uom.se.ComparableQuantity;
 import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 
 /**
@@ -148,6 +149,10 @@ public class HHModel implements Scenario
 	private ProbabilityDistribution<CBSHousehold> hhTypeDist;
 	/** */
 	private QuantityDistribution<Time> hhRefAgeDist;
+	/** TODO from config */
+	private final Range<ComparableQuantity<Time>> vaccinationAge = Range.of(
+			DecimalUtil.ONE_HALF, BigDecimal.valueOf( 4 ), TimeUnits.ANNUM );
+
 	/** */
 	private ProbabilityDistribution<Boolean> hhRefMaleDist;
 	/** */
@@ -646,11 +651,9 @@ public class HHModel implements Scenario
 	private void vaccinate( final Instant t )
 	{
 		final VaxOccasion occ = this.vaxOccasionDist.draw();
-		final BigDecimal nowYears = now().to( TimeUnits.ANNUM ).decimal();
 		// TODO from config: vaccination call age
-		final Range<BigDecimal> birthRange = Range.of(
-				nowYears.subtract( BigDecimal.valueOf( 4 ) ),
-				nowYears.subtract( DecimalUtil.ONE_HALF ) );
+		final Range<BigDecimal> birthRange = this.vaccinationAge.map(
+				age -> t.subtract( age ).to( TimeUnits.ANNUM ).decimal() );
 		LOG.debug( "t={}, vaccination occasion: {} for susceptibles born {}",
 				pretty( t ), occ.asMap().values(), birthRange );
 
@@ -767,24 +770,26 @@ public class HHModel implements Scenario
 
 		impressFirst( hhIndex, impressDelay );
 
-		final HHMemberStatus hhStatus = oldIndex == NA
-				|| profile.status == VaccineStatus.none
-						? HHMemberStatus.SUSCEPTIBLE
-						: HHMemberStatus.ARTIFICIAL_IMMUNE;
-		final long referentRef = createPerson(
-				oldIndex == NA ? NA
-						: this.hhAttributes.getAsLong( hhIndex,
-								HHAttribute.REFERENT_REF.ordinal() ),
-				hhRefMale, hhRefAge, hhStatus );
-
 //		final long partnerRef = hhType.adultCount() < 2 ? NA
 //				: createPerson(
 //						hhRefAge.subtract(
 //								QuantityUtil.valueOf( 3, TimeUnits.ANNUM ) ),
 //						hhStatus );
+
 		final Quantity<Time> child1Age = hhRefAge.subtract(
 				// TODO from distribution, e.g. 60036ned, 37201
 				QuantityUtil.valueOf( 20, TimeUnits.ANNUM ) );
+		final HHMemberStatus hhStatus = oldIndex == NA // newborn
+				|| profile.status == VaccineStatus.none
+				|| this.vaccinationAge.lowerValue()
+						.isGreaterThanOrEqualTo( child1Age )
+								? HHMemberStatus.SUSCEPTIBLE
+								: HHMemberStatus.ARTIFICIAL_IMMUNE;
+		final long referentRef = createPerson(
+				oldIndex == NA ? NA
+						: this.hhAttributes.getAsLong( hhIndex,
+								HHAttribute.REFERENT_REF.ordinal() ),
+				hhRefMale, hhRefAge, hhStatus );
 		final boolean child1Male = true;
 		final long child1Ref = hhType
 				.childCount() < 1
