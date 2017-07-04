@@ -79,9 +79,9 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.config = run;
 		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.inclusionDays = now.to( TimeUnits.DAYS ).subtract( households
-				.getAsBigDecimal( i, HHAttribute.SINCE_DAYS.ordinal() ) )
-				.decimal();
+		result.inclusionDays = now.to( TimeUnits.DAYS ).decimal()
+				.subtract( households.getAsBigDecimal( i,
+						HHAttribute.SINCE_DAYS.ordinal() ) );
 		final int attractorRef = households.getAsInt( i,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		result.attractorRef = attractorNames[attractorRef
@@ -90,19 +90,19 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 		result.socialAssortativity = households.getAsBigDecimal( i,
 				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
-		result.impressionRounds = households.getAsInt( i,
+		result.impressNumberRounds = households.getAsInt( i,
 				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
-		result.impressionDays = households.getAsBigDecimal( i,
+		result.impressPeriodDays = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
-		result.impressionFeeds = households.getAsInt( i,
+		result.impressNumberPeers = households.getAsInt( i,
 				HHAttribute.IMPRESSION_FEEDS.ordinal() );
-		result.impressionInpeers = households.getAsBigDecimal( i,
+		result.impressWeightAssortative = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
-		result.impressionOutpeers = households.getAsBigDecimal( i,
+		result.impressWeightDissortative = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() );
-		result.impressionSelf = households.getAsBigDecimal( i,
+		result.impressWeightSelf = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_SELF_MULTIPLIER.ordinal() );
-		result.impressionAttractor = households.getAsBigDecimal( i,
+		result.impressWeightAttractor = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_ATTRACTOR_MULTIPLIER.ordinal() );
 //		result.schoolAssortativity = households.getAsBigDecimal( i,
 //				HHAttribute.SCHOOL_ASSORTATIVITY.ordinal() );
@@ -163,13 +163,13 @@ public class HHStatisticsDao implements Persistable.Dao
 //	@Column( name = "CONFIG", nullable = false, updatable = false )
 	public HHConfigDao config;
 
-	@Column( name = "HH", nullable = false, updatable = false )
-	protected int hh;
-
 	@Column( name = "SEQ", nullable = false, updatable = false )
 	protected int seq;
 
-	@Column( name = "INCLUSION_DAYS", nullable = false, updatable = false,
+	@Column( name = "HH", nullable = false, updatable = false )
+	protected int hh;
+
+	@Column( name = "HH_DT_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal inclusionDays;
 
@@ -183,31 +183,31 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SOCIAL_NETWORK_SIZE", nullable = false, updatable = false )
 	protected int socialNetworkSize;
 
-	@Column( name = "IMPRESSION_ROUNDS", nullable = false, updatable = false )
-	protected int impressionRounds;
+	@Column( name = "IMPRESS_N_ROUNDS", nullable = false, updatable = false )
+	protected int impressNumberRounds;
 
-	@Column( name = "IMPRESSION_DAYS", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_DT_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal impressionDays;
+	protected BigDecimal impressPeriodDays;
 
-	@Column( name = "IMPRESSION_FEEDS", nullable = false, updatable = false )
-	protected int impressionFeeds;
+	@Column( name = "IMPRESS_N_PEERS", nullable = false, updatable = false )
+	protected int impressNumberPeers;
 
-	@Column( name = "IMPRESSION_INPEERS", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_W_ASSORT", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal impressionInpeers;
+	protected BigDecimal impressWeightAssortative;
 
-	@Column( name = "IMPRESSION_OUTPEERS", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_W_DISSORT", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal impressionOutpeers;
+	protected BigDecimal impressWeightDissortative;
 
-	@Column( name = "IMPRESSION_SELF", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_W_SELF", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal impressionSelf;
+	protected BigDecimal impressWeightSelf;
 
-	@Column( name = "IMPRESSION_ATTRACTOR", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_W_ATTRACTOR", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
-	protected BigDecimal impressionAttractor;
+	protected BigDecimal impressWeightAttractor;
 
 //	@Column( name = "SCHOOL_ASSORTATIVITY", nullable = false, updatable = false,
 //		columnDefinition = ATTITUDE_COL_DEF )
