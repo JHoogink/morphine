@@ -21,12 +21,14 @@ package nl.rivm.cib.morphine.household;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -61,7 +63,7 @@ public interface HHAttitudePropagator
 	 *            attribute values (columns)
 	 * @return updated indices
 	 */
-	default long[] propagate( final Matrix hhPressure,
+	default Map<Long, Integer> propagate( final Matrix hhPressure,
 		final Matrix hhAttributes )
 	{
 		return propagate( hhPressure, hhAttributes,
@@ -78,9 +80,9 @@ public interface HHAttitudePropagator
 	 *            attribute values (columns)
 	 * @param attributePressuredCols the indices of {@link HHAttribute} values
 	 *            to replace by their respective newly weighted average
-	 * @return updated indices
+	 * @return updated indices mapped to number of peers causing the change
 	 */
-	default long[] propagate( final Matrix hhPressure,
+	default Map<Long, Integer> propagate( final Matrix hhPressure,
 		final Matrix hhAttributes, final long... attributePressuredCols )
 	{
 		Objects.requireNonNull( hhPressure, "network null" );
@@ -97,8 +99,9 @@ public interface HHAttitudePropagator
 				.requireNonNull( attributePressuredCols, "cols null" ).length );
 
 		final Set<Long> attrLogged = new HashSet<>();
-		final long[] changed = LongStream.range( 0, hhTotal ).parallel() // !!
-				.filter( i ->
+		final Map<Long, Integer> changed = LongStream.range( 0, hhTotal )
+				.parallel() // !!
+				.mapToObj( i ->
 				{
 					hhCount.incrementAndGet();
 					if( System.currentTimeMillis() - duration.get() > 1000 )
@@ -117,7 +120,7 @@ public interface HHAttitudePropagator
 					{
 						MatrixUtil.insertBigDecimal( newAttributes,
 								colV.selectRows( Ret.LINK, i ), i, 0 );
-						return false;
+						return (Number[]) null;
 					}
 					final Matrix rowW = SparseMatrix.Factory.zeros( 1,
 							hhTotal );
@@ -142,7 +145,7 @@ public interface HHAttitudePropagator
 					{
 						MatrixUtil.insertBigDecimal( newAttributes,
 								colV.selectRows( Ret.LINK, i ), i, 0 );
-						return false;
+						return (Number[]) null;
 					}
 
 					// determine weights for self and attractor
@@ -170,11 +173,14 @@ public interface HHAttitudePropagator
 					final Matrix res = sumW.get().signum() != 0 ? prod : colV;
 					MatrixUtil.insertBigDecimal( newAttributes, res, i, 0 );
 
+					final int j = sumJ.get();
 					if( attrLogged.add( attr ) )
 					{
 						final int scale = 4;
+						final int n = hhAttributes.getAsInt( i,
+								HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 						LOG.trace(
-								"hh #{} [{},{}] ---({}%)--> [{},{}] -> [{},{}]",
+								"hh #{} [{},{}] ---({}/{}={}%)--> [{},{}] -> [{},{}]",
 								i,
 								DecimalUtil.toScale(
 										hhAttributes.getAsBigDecimal( i,
@@ -184,12 +190,7 @@ public interface HHAttitudePropagator
 										hhAttributes.getAsBigDecimal( i,
 												attributePressuredCols[1] ),
 										scale ),
-								DecimalUtil.toScale(
-										100. * sumJ.get()
-												/ hhAttributes.getAsInt( i,
-														HHAttribute.SOCIAL_NETWORK_SIZE
-																.ordinal() ),
-										1 ),
+								j, n, DecimalUtil.toScale( 100. * j / n, 1 ),
 								DecimalUtil.toScale(
 										newAttributes.getAsBigDecimal( i, 0 ),
 										scale ),
@@ -205,8 +206,9 @@ public interface HHAttitudePropagator
 												attributePressuredCols[1] ),
 										1 ) );
 					}
-					return true;
-				} ).toArray();
+					return new Number[] { i, j };
+				} ).filter( e -> e != null ).collect( Collectors
+						.toMap( e -> (Long) e[0], e -> (Integer) e[1] ) );
 		if( logged.get() )
 			LOG.trace( "Propagated all {} of {}", hhCount.get(), hhTotal );
 

@@ -79,8 +79,6 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.config = run;
 		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
-		result.propagations = households.getAsInt( i,
-				HHAttribute.PROPAGATIONS.ordinal() );
 		result.inclusionDays = now.to( TimeUnits.DAYS ).subtract( households
 				.getAsBigDecimal( i, HHAttribute.SINCE_DAYS.ordinal() ) )
 				.decimal();
@@ -92,8 +90,12 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 		result.socialAssortativity = households.getAsBigDecimal( i,
 				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
+		result.impressionRounds = households.getAsInt( i,
+				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
 		result.impressionDays = households.getAsBigDecimal( i,
-				HHAttribute.IMPRESSION_DAYS.ordinal() );
+				HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
+		result.impressionFeeds = households.getAsInt( i,
+				HHAttribute.IMPRESSION_FEEDS.ordinal() );
 		result.impressionInpeers = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 		result.impressionOutpeers = households.getAsBigDecimal( i,
@@ -171,9 +173,6 @@ public class HHStatisticsDao implements Persistable.Dao
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal inclusionDays;
 
-	@Column( name = "PROPAGATIONS", nullable = false, updatable = false )
-	protected int propagations;
-
 	@Column( name = "ATTRACTOR_REF", nullable = false, updatable = false )
 	protected String attractorRef;
 
@@ -184,9 +183,15 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SOCIAL_NETWORK_SIZE", nullable = false, updatable = false )
 	protected int socialNetworkSize;
 
+	@Column( name = "IMPRESSION_ROUNDS", nullable = false, updatable = false )
+	protected int impressionRounds;
+
 	@Column( name = "IMPRESSION_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressionDays;
+
+	@Column( name = "IMPRESSION_FEEDS", nullable = false, updatable = false )
+	protected int impressionFeeds;
 
 	@Column( name = "IMPRESSION_INPEERS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )

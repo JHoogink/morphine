@@ -632,9 +632,15 @@ public class HHModel implements Scenario
 	private void propagate( final Instant t )
 	{
 		LOG.debug( "t={}, propagating...", prettyDate( t ) );
-		final long[] changed = this.attitudePropagator
+		final Map<Long, Integer> changed = this.attitudePropagator
 				.propagate( this.hhNetworkActivity, this.hhAttributes );
-		Arrays.stream( changed ).forEach( this::pushChangedAttributes );
+		changed.forEach( ( i, n ) ->
+		{
+			pushChangedAttributes( i );
+			final long[] y = { i, HHAttribute.IMPRESSION_FEEDS.ordinal() };
+			this.hhAttributes.setAsInt( this.hhAttributes.getAsInt( y ) + n,
+					y );
+		} );
 		this.hhNetworkActivity.clear();
 		LongStream.range( this.attractors.size(),
 				this.hhNetworkActivity.getRowCount() ).forEach( i ->
@@ -642,10 +648,11 @@ public class HHModel implements Scenario
 					impressFirst( i,
 							QuantityUtil.valueOf(
 									this.hhAttributes.getAsBigDecimal( i,
-											HHAttribute.IMPRESSION_DAYS
+											HHAttribute.IMPRESSION_PERIOD_DAYS
 													.ordinal() ),
 									TimeUnits.DAYS ) );
-					final long[] x = { i, HHAttribute.PROPAGATIONS.ordinal() };
+					final long[] x = { i,
+					HHAttribute.IMPRESSION_ROUNDS.ordinal() };
 					this.hhAttributes
 							.setAsInt( this.hhAttributes.getAsInt( x ) + 1, x );
 				} );
@@ -843,12 +850,14 @@ public class HHModel implements Scenario
 		this.hhAttributes.setAsBigDecimal( now().to( TimeUnits.DAYS ).decimal(),
 				hhIndex, HHAttribute.SINCE_DAYS.ordinal() );
 		this.hhAttributes.setAsInt( 0, hhIndex,
-				HHAttribute.PROPAGATIONS.ordinal() );
+				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
 		this.hhAttributes.setAsInt( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
 				QuantityUtil.toBigDecimal( impressDelay, TimeUnits.DAYS ),
-				hhIndex, HHAttribute.IMPRESSION_DAYS.ordinal() );
+				hhIndex, HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
+		this.hhAttributes.setAsInt( 0, hhIndex,
+				HHAttribute.IMPRESSION_FEEDS.ordinal() );
 //		this.hhAttributes.setAsBoolean( religious, hhIndex,
 //				HHAttribute.RELIGIOUS.ordinal() );
 //		this.hhAttributes.setAsBoolean( alternative, hhIndex,

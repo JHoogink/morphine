@@ -45,9 +45,6 @@ public enum HHAttribute implements HHJsonifiable
 	/** simulation time of household creation */
 	SINCE_DAYS,
 
-	/** number of propagations */
-	PROPAGATIONS,
-
 	/** in-group identifier determines oracle/authority/attractor */
 	ATTRACTOR_REF,
 
@@ -60,8 +57,14 @@ public enum HHAttribute implements HHJsonifiable
 	/** {@link Matrix} hh indices {@link Matrix#getAsLong} */
 	SOCIAL_NETWORK_SIZE,
 
+	/** number of propagations */
+	IMPRESSION_ROUNDS,
+
 	/** drawn from CBS social contact profile {@link RelationFrequencyJson} */
-	IMPRESSION_DAYS,
+	IMPRESSION_PERIOD_DAYS,
+
+	/** cumulative impression peers per propagation round */
+	IMPRESSION_FEEDS,
 
 	/** in-group peer pressure */
 	IMPRESSION_INPEER_WEIGHT,
