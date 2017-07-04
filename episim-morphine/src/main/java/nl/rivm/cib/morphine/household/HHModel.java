@@ -59,8 +59,8 @@ import nl.rivm.cib.morphine.dao.HHConfigDao;
 import nl.rivm.cib.morphine.dao.HHStatisticsDao;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.VaccineStatus;
-import tec.uom.se.ComparableQuantity;
 import nl.rivm.cib.morphine.json.RelationFrequencyJson;
+import tec.uom.se.ComparableQuantity;
 
 /**
  * {@link HHModel} is a simple example {@link Scenario} implementation, of which
@@ -240,7 +240,7 @@ public class HHModel implements Scenario
 					HHAttribute.IDENTIFIER.ordinal() );
 			attractor.adjustments().subscribe( map ->
 			{
-				LOG.debug( "t={}, disturbance @{}: {}", pretty( now() ), name,
+				LOG.debug( "t={}, disturbance @{}: {}", prettyDate( now() ), name,
 						map );
 				map.forEach( ( att, val ) -> this.hhAttributes
 						.setAsBigDecimal( val, index, att.ordinal() ) );
@@ -565,7 +565,7 @@ public class HHModel implements Scenario
 				scheduler.atEach( when ).subscribe( t ->
 				{
 					final int s = this.statsIteration.getAndIncrement();
-					LOG.debug( "t={}, exporting statistics #{}", pretty( t ),
+					LOG.debug( "t={}, exporting statistics #{}", prettyDate( t ),
 							s );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
@@ -631,7 +631,7 @@ public class HHModel implements Scenario
 
 	private void propagate( final Instant t )
 	{
-		LOG.debug( "t={}, propagating...", pretty( t ) );
+		LOG.debug( "t={}, propagating...", prettyDate( t ) );
 		final long[] changed = this.attitudePropagator
 				.propagate( this.hhNetworkActivity, this.hhAttributes );
 		Arrays.stream( changed ).forEach( this::pushChangedAttributes );
@@ -655,7 +655,10 @@ public class HHModel implements Scenario
 		final Range<BigDecimal> birthRange = this.vaccinationAge.map(
 				age -> t.subtract( age ).to( TimeUnits.ANNUM ).decimal() );
 		LOG.debug( "t={}, vaccination occasion: {} for susceptibles born {}",
-				pretty( t ), occ.asMap().values(), birthRange );
+				prettyDate( t ), occ.asMap().values(),
+				birthRange.map(
+						age -> prettyDate( Instant.of( age, TimeUnits.ANNUM ) )
+								.toString() ) );
 
 //		this.hhNetwork.setAsBigDecimal( BigDecimal.ONE, 0, 0 );
 //		this.hhNetwork.zeros( Ret.ORIG );
@@ -698,7 +701,7 @@ public class HHModel implements Scenario
 										HHMemberAttribute.STATUS.ordinal() );
 								LOG.debug(
 										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
-										pretty( t ), hh, ppRef,
+										prettyDate( t ), hh, ppRef,
 										this.ppAttributes.getAsBigDecimal(
 												ppRef, HHMemberAttribute.BIRTH
 														.ordinal() ) );
@@ -716,7 +719,7 @@ public class HHModel implements Scenario
 		createHousehold( i );
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
-		LOG.debug( "t={}, replace migrant #{}, next after: {}", pretty( t ), i,
+		LOG.debug( "t={}, replace migrant #{}, next after: {}", prettyDate( t ), i,
 				QuantityUtil.toScale( dt, 1 ) );
 
 		after( dt ).call( this::migrateHousehold );
@@ -863,7 +866,7 @@ public class HHModel implements Scenario
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
-			LOG.debug( "t={}, replace home leaver #{}", pretty( t ), hhIndex );
+			LOG.debug( "t={}, replace home leaver #{}", prettyDate( t ), hhIndex );
 			createHousehold( hhIndex );
 		} );
 
@@ -911,11 +914,11 @@ public class HHModel implements Scenario
 		return this.scheduler;
 	}
 
-	protected Pretty pretty( final Instant t )
+	protected Pretty prettyDate( final Instant t )
 	{
 		return Pretty.of( () -> scheduler().offset().plus(
 				t.to( TimeUnits.MINUTE ).value().longValue(),
-				ChronoUnit.MINUTES ) );
+				ChronoUnit.MINUTES ).toLocalDateTime() );
 	}
 
 	protected LocalDate dt()
