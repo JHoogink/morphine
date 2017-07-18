@@ -55,11 +55,11 @@ public interface HHAttractor extends HHScenarioConfigurable
 
 	String RELIGIOUS_KEY = "religious";
 
-	boolean RELIGIOUS_DEFAULT = false;
+	int RELIGIOUS_DEFAULT = 0;
 
 	String ALTERNATIVE_KEY = "alternative";
 
-	boolean ALTERNATIVE_DEFAULT = false;
+	int ALTERNATIVE_DEFAULT = 0;
 
 	/**
 	 * @return an {@link Observable} stream of {@link HHAttribute} values
@@ -125,11 +125,12 @@ public interface HHAttractor extends HHScenarioConfigurable
 		@Override
 		public Category toHesitancyProfile()
 		{
-			return new HesitancyProfileJson.Category(
+			final HesitancyProfileJson.Category result = new HesitancyProfileJson.Category(
 					this.config.get( RELIGIOUS_KEY )
-							.asBoolean( RELIGIOUS_DEFAULT ),
+							.asInt( RELIGIOUS_DEFAULT ) > 0,
 					this.config.get( ALTERNATIVE_KEY )
-							.asBoolean( ALTERNATIVE_DEFAULT ) );
+							.asInt( ALTERNATIVE_DEFAULT ) > 0 );
+			return result;
 		}
 	}
 
