@@ -389,10 +389,6 @@ public interface HHConfig extends GlobalConfig
 			return Thrower.rethrowUnchecked( e );
 		}
 	}
-	
-	@Key( HESITANCY_PREFIX + "relation-impact-rate" )
-	@DefaultValue( ".10" )
-	BigDecimal hesitancyRelationImpactRate();
 
 	/** @see RelationFrequencyJson */
 	@Key( HESITANCY_PREFIX + "relation-frequencies" )
@@ -421,6 +417,10 @@ public interface HHConfig extends GlobalConfig
 					.findFirst().orElse( defaultDelay );
 		};
 	}
+	
+	@Key( HESITANCY_PREFIX + "relation-impact-rate" )
+	@DefaultValue( "1" )
+	BigDecimal hesitancyRelationImpactRate();
 
 	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profiles" )
