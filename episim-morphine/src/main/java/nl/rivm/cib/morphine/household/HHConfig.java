@@ -389,6 +389,10 @@ public interface HHConfig extends GlobalConfig
 			return Thrower.rethrowUnchecked( e );
 		}
 	}
+	
+	@Key( HESITANCY_PREFIX + "relation-impact-rate" )
+	@DefaultValue( ".10" )
+	BigDecimal hesitancyRelationImpactRate();
 
 	/** @see RelationFrequencyJson */
 	@Key( HESITANCY_PREFIX + "relation-frequencies" )

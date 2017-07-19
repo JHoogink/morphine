@@ -98,6 +98,8 @@ public interface HHAttitudePropagator
 		final Matrix newAttributes = Matrix.Factory.zeros( hhTotal, Objects
 				.requireNonNull( attributePressuredCols, "cols null" ).length );
 
+		final Matrix colV = hhAttributes.selectColumns( Ret.LINK,
+				attributePressuredCols );
 		final Set<Long> attrLogged = new HashSet<>();
 		final Map<Long, Integer> changed = LongStream.range( 0, hhTotal )
 				.parallel() // !!
@@ -112,8 +114,6 @@ public interface HHAttitudePropagator
 						logged.set( true );
 					}
 
-					final Matrix colV = hhAttributes.selectColumns( Ret.LINK,
-							attributePressuredCols );
 					final long attr = hhAttributes.getAsLong( i,
 							HHAttribute.ATTRACTOR_REF.ordinal() );
 					if( attr == i || attr < 0 ) // skip attractor
@@ -166,11 +166,13 @@ public interface HHAttitudePropagator
 					rowW.setAsBigDecimal( attrW, 0, attr );
 
 					// get current hesitancy values and insert transformed
-					final Matrix prod = rowW.mtimes( colV )
-							.divide( totalW.doubleValue() );
+//					final Matrix prod = rowW.mtimes( colV )
+//							.divide( totalW.doubleValue() );
 //					LOG.trace( "{}:\n{}*\n{}\n / {}\t= {} ", i, rowW,
 //							colV.transpose(), totalW, prod );
-					final Matrix res = sumW.get().signum() != 0 ? prod : colV;
+					final Matrix res = sumW.get().signum() == 0 ? colV
+							: rowW.mtimes( colV )
+									.divide( totalW.doubleValue() );
 					MatrixUtil.insertBigDecimal( newAttributes, res, i, 0 );
 
 					final int j = sumJ.get();

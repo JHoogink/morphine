@@ -156,6 +156,8 @@ public class HHModel implements Scenario
 	/** */
 	private ProbabilityDistribution<Boolean> hhRefMaleDist;
 	/** */
+	private BigDecimal hhImpressImpactRate;
+	/** */
 	private ConditionalDistribution<Quantity<Time>, RelationFrequencyJson.Category> hhImpressIntervalDist;
 	/** */
 	private QuantityDistribution<Time> hhMigrateDist;
@@ -228,7 +230,7 @@ public class HHModel implements Scenario
 		this.hhNetwork = SparseMatrix.Factory.zeros( edges, edges );
 		this.hhNetworkActivity = SparseMatrix.Factory.zeros( edges, edges );
 
-		this.config.hesitancyRelationFrequencies();
+//		this.config.hesitancyRelationFrequencies();
 
 		this.attractors.forEach( ( name, attractor ) ->
 		{
@@ -247,6 +249,7 @@ public class HHModel implements Scenario
 			}, this::logError );
 		} );
 
+		this.hhImpressImpactRate = this.config.hesitancyRelationImpactRate();
 		this.hhImpressIntervalDist = this.config
 				.hesitancyRelationFrequencyDist( this.distFactory );
 
@@ -590,11 +593,16 @@ public class HHModel implements Scenario
 						HHAttribute.CONFIDENCE, HHAttribute.COMPLACENCY ) ) );
 	}
 
-	private void impressFirst( final long i, final Quantity<Time> dt )
+	private void impressFirst( final long i )
 	{
+		final Quantity<Time> dt = QuantityUtil.valueOf(
+				this.hhAttributes.getAsBigDecimal( i,
+						HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() ),
+				TimeUnits.DAYS ).divide( this.hhImpressImpactRate );
+		// cancel previous (if any) and initiate social network activation
 		this.hhNetworkExpectations.compute( i, ( k, v ) ->
 		{
-			if( v != null ) v.remove(); // cancel previous
+			if( v != null ) v.remove(); 
 			final long[] J = contacts( i );
 			return after( dt )
 					.call( t1 -> impressNext( i, dt, J, J.length - 1 ) );
@@ -645,12 +653,7 @@ public class HHModel implements Scenario
 		LongStream.range( this.attractors.size(),
 				this.hhNetworkActivity.getRowCount() ).forEach( i ->
 				{
-					impressFirst( i,
-							QuantityUtil.valueOf(
-									this.hhAttributes.getAsBigDecimal( i,
-											HHAttribute.IMPRESSION_PERIOD_DAYS
-													.ordinal() ),
-									TimeUnits.DAYS ) );
+					impressFirst( i );
 					final long[] x = { i,
 					HHAttribute.IMPRESSION_ROUNDS.ordinal() };
 					this.hhAttributes
@@ -784,8 +787,6 @@ public class HHModel implements Scenario
 				.reduce( ( f1, f2 ) -> f1.add( f2 ) ).get().inverse()
 				.asType( Time.class );
 
-		impressFirst( hhIndex, impressDelay );
-
 //		final long partnerRef = hhType.adultCount() < 2 ? NA
 //				: createPerson(
 //						hhRefAge.subtract(
@@ -880,6 +881,8 @@ public class HHModel implements Scenario
 //				HHAttribute.CHILD2_REF.ordinal() );
 //		this.hhAttributes.setAsLong( child3Ref, hhIndex,
 //				HHAttribute.CHILD3_REF.ordinal() );
+
+		impressFirst( hhIndex );
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{

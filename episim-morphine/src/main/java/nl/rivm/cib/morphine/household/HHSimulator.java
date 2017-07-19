@@ -178,7 +178,7 @@ public class HHSimulator
 								if( it.incrementAndGet() % jdbcBatchSize == 0 )
 								{
 									em.flush();
-									em.clear();
+//									em.clear();
 								}
 							} );
 						}, e -> LOG.error( "Problem persisting stats", e ),
