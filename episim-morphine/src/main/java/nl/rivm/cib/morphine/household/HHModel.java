@@ -106,13 +106,13 @@ public class HHModel implements Scenario
 	private transient LocalDate dtCache = null;
 	/** */
 	private final AtomicInteger statsIteration = new AtomicInteger();
-	/** */
+	/** (A + N) x |HHAttr| */
 	private Matrix hhAttributes;
-	/** */
+	/** (P) x |HHMemberAttr| social network */
 	private Matrix ppAttributes;
-	/** */
+	/** (A + N) x (A + N) social network */
 	private Matrix hhNetwork;
-	/** */
+	/** (A + N) x (A + N) social network activity */
 	private Matrix hhNetworkActivity;
 	/** */
 	private final Map<Long, Expectation> hhNetworkExpectations = new HashMap<>();
@@ -433,12 +433,13 @@ public class HHModel implements Scenario
 						} ).toArray();
 				// TODO don't copy, but initialize with outpeers already
 				final long[] outpeers = HHConnector
-						.availablePeers( dissorting, i ).map( j ->
+						.availablePeers( dissorting, i - A ).map( j ->
 						{
 							final BigDecimal w = HHConnector
-									.getSymmetric( dissorting, i, j );
+									.getSymmetric( dissorting, i - A, j );
 							totalDissortW.getAndUpdate( bd -> bd.add( w ) );
-							HHConnector.setSymmetric( this.hhNetwork, w, i, j );
+							HHConnector.setSymmetric( this.hhNetwork, w, i,
+									A + j );
 							return j;
 						} ).toArray();
 				final int peerTotal = inpeers.length + outpeers.length;
@@ -583,6 +584,12 @@ public class HHModel implements Scenario
 												j -> this.hhNetworkActivity
 														.getAsBigDecimal( i,
 																j ) ) );
+								final int size = this.hhAttributes.getAsInt( i,
+										HHAttribute.SOCIAL_NETWORK_SIZE
+												.ordinal() );
+								if( activity.size() != size ) LOG.warn(
+										"Unexpected network size {}, expected {} for hh: {}",
+										activity.size(), size, i );
 								return HHStatisticsDao.create( cfg, t, s,
 										this.attractorNames,
 										hhAttributes.selectRows( Ret.LINK, i ),
