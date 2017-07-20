@@ -72,14 +72,14 @@ public class HHStatisticsDao implements Persistable.Dao
 	 * @param members member data {@link Matrix} per {@link HHMemberAttribute}
 	 * @return a {@link HHMemberDao}
 	 */
-	public static HHStatisticsDao create( final HHConfigDao run,
+	public static HHStatisticsDao create( final HHConfigDao run, final long i,
 		final Instant now, final int seq, final String[] attractorNames,
 		final Matrix households, final Matrix members,
 		final Map<Long, BigDecimal> activity )
 	{
-		final long i = 0;
 		final HHStatisticsDao result = new HHStatisticsDao();
 		result.config = run;
+		result.index = i;
 		result.hh = households.getAsInt( i, HHAttribute.IDENTIFIER.ordinal() );
 		result.seq = seq;
 		result.inclusionDays = now.to( TimeUnits.DAYS ).decimal()
@@ -170,8 +170,11 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SEQ", nullable = false, updatable = false )
 	protected int seq;
 
+	@Column( name = "INDEX", nullable = false, updatable = false )
+	protected long index;
+
 	@Column( name = "HH", nullable = false, updatable = false )
-	protected int hh;
+	protected long hh;
 
 	@Column( name = "HH_DT_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )

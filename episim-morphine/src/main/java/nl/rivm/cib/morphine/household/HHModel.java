@@ -28,7 +28,6 @@ import javax.measure.quantity.Time;
 import org.apache.logging.log4j.Logger;
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
-import org.ujmp.core.calculation.Calculation.Ret;
 import org.ujmp.core.enums.ValueType;
 
 import io.coala.bind.InjectConfig;
@@ -590,9 +589,9 @@ public class HHModel implements Scenario
 								if( activity.size() != size ) LOG.warn(
 										"Unexpected network size {}, expected {} for hh: {}",
 										activity.size(), size, i );
-								return HHStatisticsDao.create( cfg, t, s,
+								return HHStatisticsDao.create( cfg, i, t, s,
 										this.attractorNames,
-										hhAttributes.selectRows( Ret.LINK, i ),
+										hhAttributes,
 										ppAttributes, activity );
 							} ).forEach( sub::onNext );
 				}, sub::onError, sub::onComplete );
@@ -758,7 +757,7 @@ public class HHModel implements Scenario
 
 	private int createHousehold( final long oldIndex )
 	{
-		final long id = this.hhCount.incrementAndGet();
+		final long id = this.hhCount.getAndIncrement();
 		final long hhIndex;
 		if( oldIndex == NA )
 		{
