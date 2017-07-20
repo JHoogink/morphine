@@ -572,14 +572,22 @@ public class HHModel implements Scenario
 							prettyDate( t ), s );
 					final Matrix hhAttributes = this.hhAttributes.clone();
 					final Matrix ppAttributes = this.ppAttributes.clone();
+
 					LongStream.range( 0, this.hhAttributes.getRowCount() )
-							.mapToObj(
-									i -> HHStatisticsDao.create( cfg, t, s,
-											this.attractorNames,
-											hhAttributes.selectRows( Ret.LINK,
-													i ),
-											ppAttributes ) )
-							.forEach( sub::onNext );
+							.mapToObj( i ->
+							{
+								final Map<Long, BigDecimal> activity = HHConnector
+										.availablePeers( this.hhNetwork, i )
+										.mapToObj( j -> j )
+										.collect( Collectors.toMap( j -> j,
+												j -> this.hhNetworkActivity
+														.getAsBigDecimal( i,
+																j ) ) );
+								return HHStatisticsDao.create( cfg, t, s,
+										this.attractorNames,
+										hhAttributes.selectRows( Ret.LINK, i ),
+										ppAttributes, activity );
+							} ).forEach( sub::onNext );
 				}, sub::onError, sub::onComplete );
 			} );
 		} );
@@ -602,7 +610,7 @@ public class HHModel implements Scenario
 		// cancel previous (if any) and initiate social network activation
 		this.hhNetworkExpectations.compute( i, ( k, v ) ->
 		{
-			if( v != null ) v.remove(); 
+			if( v != null ) v.remove();
 			final long[] J = contacts( i );
 			return after( dt )
 					.call( t1 -> impressNext( i, dt, J, J.length - 1 ) );

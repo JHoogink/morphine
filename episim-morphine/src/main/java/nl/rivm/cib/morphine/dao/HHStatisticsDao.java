@@ -20,6 +20,7 @@
 package nl.rivm.cib.morphine.dao;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
@@ -31,6 +32,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
@@ -38,6 +40,7 @@ import javax.persistence.Table;
 import org.ujmp.core.Matrix;
 
 import io.coala.bind.LocalId;
+import io.coala.json.JsonUtil;
 import io.coala.persist.JPAUtil;
 import io.coala.persist.Persistable;
 import io.coala.time.Instant;
@@ -71,7 +74,8 @@ public class HHStatisticsDao implements Persistable.Dao
 	 */
 	public static HHStatisticsDao create( final HHConfigDao run,
 		final Instant now, final int seq, final String[] attractorNames,
-		final Matrix households, final Matrix members )
+		final Matrix households, final Matrix members,
+		final Map<Long, BigDecimal> activity )
 	{
 		final long i = 0;
 		final HHStatisticsDao result = new HHStatisticsDao();
@@ -89,12 +93,13 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 		result.socialAssortativity = households.getAsBigDecimal( i,
 				HHAttribute.SOCIAL_ASSORTATIVITY.ordinal() );
-		result.impressNumberRounds = households.getAsInt( i,
-				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
 		result.impressPeriodDays = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
+		result.impressNumberRounds = households.getAsInt( i,
+				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
 		result.impressNumberPeers = households.getAsInt( i,
 				HHAttribute.IMPRESSION_FEEDS.ordinal() );
+		result.impressWeightActivity = JsonUtil.stringify( activity );
 		result.impressWeightAssortative = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 		result.impressWeightDissortative = households.getAsBigDecimal( i,
@@ -117,14 +122,14 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.COMPLACENCY.ordinal() );
 		result.referent = HHMemberDao.create( now, members,
 				households.getAsLong( i, HHAttribute.REFERENT_REF.ordinal() ) );
-		result.partner = HHMemberDao.create( now, members,
-				households.getAsLong( i, HHAttribute.PARTNER_REF.ordinal() ) );
+//		result.partner = HHMemberDao.create( now, members,
+//				households.getAsLong( i, HHAttribute.PARTNER_REF.ordinal() ) );
 		result.child1 = HHMemberDao.create( now, members,
 				households.getAsLong( i, HHAttribute.CHILD1_REF.ordinal() ) );
-		result.child2 = HHMemberDao.create( now, members,
-				households.getAsLong( i, HHAttribute.CHILD2_REF.ordinal() ) );
-		result.child3 = HHMemberDao.create( now, members,
-				households.getAsLong( i, HHAttribute.CHILD3_REF.ordinal() ) );
+//		result.child2 = HHMemberDao.create( now, members,
+//				households.getAsLong( i, HHAttribute.CHILD2_REF.ordinal() ) );
+//		result.child3 = HHMemberDao.create( now, members,
+//				households.getAsLong( i, HHAttribute.CHILD3_REF.ordinal() ) );
 		return result;
 	}
 
@@ -182,15 +187,20 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "SOCIAL_NETWORK_SIZE", nullable = false, updatable = false )
 	protected int socialNetworkSize;
 
-	@Column( name = "IMPRESS_N_ROUNDS", nullable = false, updatable = false )
-	protected int impressNumberRounds;
-
 	@Column( name = "IMPRESS_DT_DAYS", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
 	protected BigDecimal impressPeriodDays;
 
+	@Column( name = "IMPRESS_N_ROUNDS", nullable = false, updatable = false )
+	protected int impressNumberRounds;
+
 	@Column( name = "IMPRESS_N_PEERS", nullable = false, updatable = false )
 	protected int impressNumberPeers;
+
+	@Column( name = "IMPRESS_W_ACTIVITY", nullable = false, updatable = false,
+		columnDefinition = "CLOB NOT NULL" )
+	@Lob
+	protected String impressWeightActivity;
 
 	@Column( name = "IMPRESS_W_ASSORT", nullable = false, updatable = false,
 		columnDefinition = ATTITUDE_COL_DEF )
@@ -241,22 +251,22 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Embedded
 	protected HHMemberDao referent;
 
-	@AttributeOverrides( {
-			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
-				column = @Column( name = "PARTNER_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
-				column = @Column( name = "PARTNER_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
-				column = @Column( name = "PARTNER_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
-//					updatable = false ) )
-	} )
-	@Embedded
-	protected HHMemberDao partner;
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
+//				column = @Column( name = "PARTNER_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
+//				column = @Column( name = "PARTNER_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
+//				column = @Column( name = "PARTNER_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "PARTNER_BEHAVIOR", nullable = true,
+////					updatable = false ) )
+//	} )
+//	@Embedded
+//	protected HHMemberDao partner;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
@@ -275,39 +285,39 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Embedded
 	protected HHMemberDao child1;
 
-	@AttributeOverrides( {
-			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
-				column = @Column( name = "CHILD2_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
-				column = @Column( name = "CHILD2_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
-				column = @Column( name = "CHILD2_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
-//					updatable = false ) ) 
-	} )
-	@Embedded
-	protected HHMemberDao child2;
-
-	@AttributeOverrides( {
-			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
-				column = @Column( name = "CHILD3_AGE", nullable = true,
-					updatable = false, columnDefinition = TIME_COL_DEF ) ),
-			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
-				column = @Column( name = "CHILD3_STATUS", nullable = true,
-					updatable = false ) ),
-			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
-				column = @Column( name = "CHILD3_MALE", nullable = true,
-					updatable = false ) ),
-//			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
-//				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
-//					updatable = false ) ) 
-	} )
-	@Embedded
-	protected HHMemberDao child3;
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
+//				column = @Column( name = "CHILD2_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
+//				column = @Column( name = "CHILD2_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
+//				column = @Column( name = "CHILD2_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "CHILD2_BEHAVIOR", nullable = true,
+////					updatable = false ) ) 
+//	} )
+//	@Embedded
+//	protected HHMemberDao child2;
+//
+//	@AttributeOverrides( {
+//			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
+//				column = @Column( name = "CHILD3_AGE", nullable = true,
+//					updatable = false, columnDefinition = TIME_COL_DEF ) ),
+//			@AttributeOverride( name = HHMemberDao.STATUS_ATTR,
+//				column = @Column( name = "CHILD3_STATUS", nullable = true,
+//					updatable = false ) ),
+//			@AttributeOverride( name = HHMemberDao.MALE_ATTR,
+//				column = @Column( name = "CHILD3_MALE", nullable = true,
+//					updatable = false ) ),
+////			@AttributeOverride( name = MemberDao.BEHAVIOR_ATTR,
+////				column = @Column( name = "CHILD3_BEHAVIOR", nullable = true,
+////					updatable = false ) ) 
+//	} )
+//	@Embedded
+//	protected HHMemberDao child3;
 
 	@Override
 	public String toString()
