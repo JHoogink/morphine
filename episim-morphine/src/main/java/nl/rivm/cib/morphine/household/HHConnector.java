@@ -25,7 +25,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
@@ -48,17 +47,28 @@ public interface HHConnector
 	 * utility method
 	 * 
 	 * @param x
-	 * @return
+	 * @return (min_x,max_x)
 	 */
-	static long[] top( final long... x )
+	static long[] rowSmallest( final long... x )
 	{
 		return x[0] > x[1] ? new long[] { x[1], x[0] } : x;
+	}
+
+	/**
+	 * utility method
+	 * 
+	 * @param x
+	 * @return (max_x,min_x)
+	 */
+	static long[] rowLargest( final long... x )
+	{
+		return x[0] < x[1] ? new long[] { x[1], x[0] } : x;
 	}
 
 	static BigDecimal putSymmetric( final Matrix W, final BigDecimal wNew,
 		final long... x )
 	{
-		final long[] x_top = HHConnector.top( x );
+		final long[] x_top = HHConnector.rowSmallest( x );
 		final BigDecimal wOld = getSymmetric( W, x_top );
 		setSymmetric( W, wNew, x_top );
 		return wOld;
@@ -71,7 +81,7 @@ public interface HHConnector
 
 	static void setSymmetric( final Matrix W, final Object w, final long... x )
 	{
-		final long[] y = top( x );
+		final long[] y = rowSmallest( x );
 		if( w != null && w instanceof BigDecimal )
 			W.setAsBigDecimal( (BigDecimal) w, y );
 		else
@@ -80,36 +90,31 @@ public interface HHConnector
 
 	static BigDecimal getSymmetric( final Matrix W, final long... x )
 	{
-		return W.getAsBigDecimal( HHConnector.top( x ) );
+		return W.getAsBigDecimal( HHConnector.rowSmallest( x ) );
 	}
 
 	/**
-	 * <B>NOTE</b> JVM/UJMP-BUG: don't parallelize, coord array reused by JVM?
-	 * 
-	 * @param W
-	 * @return
+	 * @param W the weight {@link Matrix}
+	 * @param x the link (between peers x[0] and x[1])
+	 * @return {@code true} iff W_(min(x),max(x)) > 0
 	 */
-	static Stream<long[]> availableCoordinates( final Matrix W )
-	{
-		return W == null ? Stream.empty()
-				: StreamSupport.stream( W.availableCoordinates().spliterator(),
-						false ); // 
-	}
-
 	static boolean isPeer( final Matrix W, final long... x )
 	{
-		final long[] y = top( x );
+		final long[] y = rowSmallest( x );
 		return W.containsCoordinates( y )
 				&& W.getAsBigDecimal( y ).signum() > 0;
 	}
 
+	/**
+	 * @param W the weight {@link Matrix}
+	 * @param i the focal peer
+	 * @return a stream of all peers (j) of i having {@code W_(i,j) > 0}
+	 * @see #isPeer
+	 */
 	static LongStream availablePeers( final Matrix W, final long i )
 	{
-		// bug 1: W.selectColumns( Ret.LINK, i ).availableCoordinates() does not LINK but creates new
-		// bug 2: W.selectRows( Ret.LINK, i ).transpose() fails
-
 		return Stream
-				.of( LongStream.range( 0, i ).filter( j -> isPeer( W, i, j ) ),
+				.of( LongStream.range( 0, i ).filter( j -> isPeer( W, j, i ) ),
 						LongStream.range( i + 1, W.getColumnCount() )
 								.filter( j -> isPeer( W, i, j ) ) )
 				.flatMapToLong( s -> s );
@@ -147,7 +152,7 @@ public interface HHConnector
 						final long[] x = { i, (i + 1 + k) % size };
 						if( legalJ.test( x ) )
 						{
-							final long[] y = HHConnector.top( x );
+							final long[] y = HHConnector.rowSmallest( x );
 							result.setAsBigDecimal( initialW.apply( y ), y );
 							continue;
 						}

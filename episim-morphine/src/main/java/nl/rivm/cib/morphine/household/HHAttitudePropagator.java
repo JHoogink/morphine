@@ -133,12 +133,13 @@ public interface HHAttitudePropagator
 					HHConnector.availablePeers( hhPressure, i ).forEach( j ->
 					{
 						sumJ.incrementAndGet();
-						final BigDecimal w = HHConnector
-								.getSymmetric( hhPressure, i, j );
-						// apply calculation threshold function to peers
-						sumW.getAndUpdate(
-								s -> s.add( filteredAppreciation( w, calc ) ) );
+
+						// get peer weight and apply calculation/filter function
+						final BigDecimal w = filteredAppreciation(
+								HHConnector.getSymmetric( hhPressure, i, j ),
+								calc );
 						rowW.setAsBigDecimal( w, 0, j );
+						sumW.getAndUpdate( s -> s.add( w ) );
 					} );
 
 					if( sumW.get().signum() < 1 )

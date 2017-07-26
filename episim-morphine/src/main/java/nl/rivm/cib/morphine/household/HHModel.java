@@ -111,7 +111,10 @@ public class HHModel implements Scenario
 	private Matrix ppAttributes;
 	/** (A + N) x (A + N) social network */
 	private Matrix hhNetwork;
-	/** (A + N) x (A + N) social network activity */
+	/**
+	 * (A + N) x (A + N) social network activity, with (i,j) >0: activity and
+	 * (j,i):n_rounds
+	 */
 	private Matrix hhNetworkActivity;
 	/** */
 	private final Map<Long, Expectation> hhNetworkExpectations = new HashMap<>();
@@ -576,23 +579,32 @@ public class HHModel implements Scenario
 					LongStream.range( 0, this.hhAttributes.getRowCount() )
 							.mapToObj( i ->
 							{
-								final Map<Long, BigDecimal> activity = HHConnector
-										.availablePeers( this.hhNetwork, i )
-										.mapToObj( j -> j )
-										.collect( Collectors.toMap( j -> j,
-												j -> this.hhNetworkActivity
-														.getAsBigDecimal( i,
-																j ) ) );
-								final int size = this.hhAttributes.getAsInt( i,
-										HHAttribute.SOCIAL_NETWORK_SIZE
-												.ordinal() );
-								if( activity.size() != size ) LOG.warn(
-										"Unexpected network size {}, expected {} for hh: {}",
-										activity.size(), size, i );
+								final Map<Long, Integer> activity;
+								if( i < this.attractorNames.length )
+									activity = Collections.emptyMap();
+								else
+								{
+									activity = HHConnector
+											.availablePeers( this.hhNetwork, i )
+											.mapToObj( j -> j )
+											.collect( Collectors.toMap( j -> j,
+													j -> this.hhNetworkActivity
+															.getAsInt(
+																	HHConnector
+																			.rowLargest(
+																					i,
+																					j ) ) ) );
+									final int size = this.hhAttributes.getAsInt(
+											i, HHAttribute.SOCIAL_NETWORK_SIZE
+													.ordinal() );
+									if( activity.size() != size ) LOG.warn(
+											"Unexpected network size {}, expected {} for hh: {}",
+											activity.size(), size, i );
+								}
 								return HHStatisticsDao.create( cfg, i, t, s,
-										this.attractorNames,
-										hhAttributes,
-										ppAttributes, activity );
+										this.attractorNames, hhAttributes,
+										ppAttributes, activity,
+										this.attitudeEvaluator );
 							} ).forEach( sub::onNext );
 				}, sub::onError, sub::onComplete );
 			} );
@@ -637,9 +649,13 @@ public class HHModel implements Scenario
 					J[k] = J[n];
 					J[n] = j;
 				}
-				final BigDecimal w = HHConnector.getSymmetric( this.hhNetwork,
-						i, j );
-				HHConnector.setSymmetric( this.hhNetworkActivity, w, i, j );
+				final long[] x = HHConnector.rowSmallest( i, j ),
+						y =
+								{ x[1], x[0] };
+				final Object w = this.hhNetwork.getAsObject( x );
+				this.hhNetworkActivity.setAsObject( w, x );
+				this.hhNetworkActivity.setAsInt(
+						this.hhNetworkActivity.getAsInt( y ) + 1, y );
 			}
 //			LOG.trace( "hh #{} {}", i, n );
 			this.hhNetworkExpectations.put( i, after( dt )
@@ -663,16 +679,17 @@ public class HHModel implements Scenario
 			this.hhAttributes.setAsInt( this.hhAttributes.getAsInt( y ) + n,
 					y );
 		} );
-		this.hhNetworkActivity.clear();
-		LongStream.range( this.attractors.size(),
-				this.hhNetworkActivity.getRowCount() ).forEach( i ->
-				{
-					impressFirst( i );
-					final long[] x = { i,
-					HHAttribute.IMPRESSION_ROUNDS.ordinal() };
-					this.hhAttributes
-							.setAsInt( this.hhAttributes.getAsInt( x ) + 1, x );
-				} );
+//		this.hhNetworkActivity.clear();
+		final long n = this.hhNetworkActivity.getRowCount();
+		LongStream.range( this.attractors.size(), n ).forEach( i ->
+		{
+			LongStream.range( i + 1, n )
+					.forEach( j -> this.hhNetworkActivity.setAsInt( 0, i, j ) );
+			impressFirst( i );
+			final long[] x = { i, HHAttribute.IMPRESSION_ROUNDS.ordinal() };
+			this.hhAttributes.setAsInt( this.hhAttributes.getAsInt( x ) + 1,
+					x );
+		} );
 	}
 
 	private void vaccinate( final Instant t )
@@ -726,15 +743,15 @@ public class HHModel implements Scenario
 												.ordinal(),
 										ppRef,
 										HHMemberAttribute.STATUS.ordinal() );
-								LOG.debug(
-										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
-										prettyDate( t ), hh, ppRef,
-										prettyDate( Instant.of(
-												this.ppAttributes
-														.getAsBigDecimal( ppRef,
-																HHMemberAttribute.BIRTH
-																		.ordinal() ),
-												TimeUnits.ANNUM ) ) );
+//								LOG.debug(
+//										"t={}, Vax! (pos) hh #{} (sus) pp #{} born {}",
+//										prettyDate( t ), hh, ppRef,
+//										prettyDate( Instant.of(
+//												this.ppAttributes
+//														.getAsBigDecimal( ppRef,
+//																HHMemberAttribute.BIRTH
+//																		.ordinal() ),
+//												TimeUnits.ANNUM ) ) );
 							} );
 				} );
 	}
@@ -759,11 +776,11 @@ public class HHModel implements Scenario
 	{
 		final long id = this.hhCount.getAndIncrement();
 		final long hhIndex;
-		if( oldIndex == NA )
+		if( oldIndex == NA ) // no replacement
 		{
 			hhIndex = this.attractors.size() + this.hhIndex.computeIfAbsent( id,
 					key -> (long) this.hhIndex.size() );
-		} else
+		} else // replacement household
 		{
 			hhIndex = oldIndex;
 			this.hhIndex.remove( this.hhAttributes.getAsLong( hhIndex,
@@ -859,6 +876,12 @@ public class HHModel implements Scenario
 		final Map<HHAttribute, BigDecimal> initialHesitancy = this.hesitancyDist
 				.draw( profile );
 
+		// update attractor values
+		final long[] x_a = { attractorRef,
+				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() };
+		this.hhAttributes.setAsInt( this.hhAttributes.getAsInt( x_a ) + 1,
+				x_a );
+
 		// set household attribute values
 		this.hhAttributes.setAsLong( id, hhIndex,
 				HHAttribute.IDENTIFIER.ordinal() );
@@ -895,6 +918,13 @@ public class HHModel implements Scenario
 //				HHAttribute.CHILD2_REF.ordinal() );
 //		this.hhAttributes.setAsLong( child3Ref, hhIndex,
 //				HHAttribute.CHILD3_REF.ordinal() );
+
+		// reset network activity
+		Arrays.stream( contacts( hhIndex ) ).forEach( j ->
+		{
+			this.hhNetworkActivity.setAsInt( 0, hhIndex, j );
+			this.hhNetworkActivity.setAsInt( 0, j, hhIndex );
+		} );
 
 		impressFirst( hhIndex );
 
@@ -971,6 +1001,6 @@ public class HHModel implements Scenario
 
 	private void logError( final Throwable e )
 	{
-		LOG.error( "Problem", e );
+		LOG.error( "Reporting a problem from upstream", e );
 	}
 }

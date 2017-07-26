@@ -41,10 +41,12 @@ import org.ujmp.core.Matrix;
 
 import io.coala.bind.LocalId;
 import io.coala.json.JsonUtil;
+import io.coala.math.DecimalUtil;
 import io.coala.persist.JPAUtil;
 import io.coala.persist.Persistable;
 import io.coala.time.Instant;
 import io.coala.time.TimeUnits;
+import nl.rivm.cib.morphine.household.HHAttitudeEvaluator;
 import nl.rivm.cib.morphine.household.HHAttribute;
 import nl.rivm.cib.morphine.household.HHMemberAttribute;
 
@@ -63,7 +65,7 @@ public class HHStatisticsDao implements Persistable.Dao
 
 	private static final String TIME_COL_DEF = "DECIMAL(10,4)";
 
-	private static final String ATTITUDE_COL_DEF = "DECIMAL(15,8)";
+	private static final String DECIMAL_COL_DEF = "DECIMAL(15,8)";
 
 	/**
 	 * @param now current virtual time {@link Instant} for calculating age
@@ -75,7 +77,7 @@ public class HHStatisticsDao implements Persistable.Dao
 	public static HHStatisticsDao create( final HHConfigDao run, final long i,
 		final Instant now, final int seq, final String[] attractorNames,
 		final Matrix households, final Matrix members,
-		final Map<Long, BigDecimal> activity )
+		final Map<Long, Integer> activity, final HHAttitudeEvaluator evaluator )
 	{
 		final HHStatisticsDao result = new HHStatisticsDao();
 		result.config = run;
@@ -85,10 +87,8 @@ public class HHStatisticsDao implements Persistable.Dao
 		result.inclusionDays = now.to( TimeUnits.DAYS ).decimal()
 				.subtract( households.getAsBigDecimal( i,
 						HHAttribute.SINCE_DAYS.ordinal() ) );
-		final int attractorRef = households.getAsInt( i,
-				HHAttribute.ATTRACTOR_REF.ordinal() );
-		result.attractorRef = attractorNames[attractorRef
-				% attractorNames.length];
+		result.attractorRef = attractorNames[households.getAsInt( i,
+				HHAttribute.ATTRACTOR_REF.ordinal() ) % attractorNames.length];
 		result.socialNetworkSize = households.getAsInt( i,
 				HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
 		result.socialAssortativity = households.getAsBigDecimal( i,
@@ -99,7 +99,13 @@ public class HHStatisticsDao implements Persistable.Dao
 				HHAttribute.IMPRESSION_ROUNDS.ordinal() );
 		result.impressNumberPeers = households.getAsInt( i,
 				HHAttribute.IMPRESSION_FEEDS.ordinal() );
-		result.impressWeightActivity = JsonUtil.stringify( activity );
+		result.impressNumberByPeer = JsonUtil.stringify( activity );
+		result.attitude = evaluator.isPositive( null, households, i );
+		final long pos = activity.keySet().stream().mapToLong( j -> j ).map(
+				j -> evaluator.isPositive( null, households, j ) ? 1L : 0L )
+				.sum();
+		result.impressFractionPositive = pos == 0 ? BigDecimal.ZERO
+				: DecimalUtil.divide( pos, activity.size() );
 		result.impressWeightAssortative = households.getAsBigDecimal( i,
 				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 		result.impressWeightDissortative = households.getAsBigDecimal( i,
@@ -177,21 +183,21 @@ public class HHStatisticsDao implements Persistable.Dao
 	protected long hh;
 
 	@Column( name = "HH_DT_DAYS", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal inclusionDays;
 
 	@Column( name = "ATTRACTOR_REF", nullable = false, updatable = false )
 	protected String attractorRef;
 
 	@Column( name = "SOCIAL_ASSORTATIVITY", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal socialAssortativity;
 
 	@Column( name = "SOCIAL_NETWORK_SIZE", nullable = false, updatable = false )
 	protected int socialNetworkSize;
 
 	@Column( name = "IMPRESS_DT_DAYS", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressPeriodDays;
 
 	@Column( name = "IMPRESS_N_ROUNDS", nullable = false, updatable = false )
@@ -200,25 +206,29 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Column( name = "IMPRESS_N_PEERS", nullable = false, updatable = false )
 	protected int impressNumberPeers;
 
-	@Column( name = "IMPRESS_W_ACTIVITY", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_N_BY_PEER", nullable = false, updatable = false,
 		columnDefinition = "CLOB NOT NULL" )
 	@Lob
-	protected String impressWeightActivity;
+	protected String impressNumberByPeer;
+
+	@Column( name = "IMPRESS_F_POSITIVE", nullable = false, updatable = false,
+		columnDefinition = DECIMAL_COL_DEF )
+	protected BigDecimal impressFractionPositive;
 
 	@Column( name = "IMPRESS_W_ASSORT", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressWeightAssortative;
 
 	@Column( name = "IMPRESS_W_DISSORT", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressWeightDissortative;
 
 	@Column( name = "IMPRESS_W_SELF", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressWeightSelf;
 
 	@Column( name = "IMPRESS_W_ATTRACTOR", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressWeightAttractor;
 
 //	@Column( name = "SCHOOL_ASSORTATIVITY", nullable = false, updatable = false,
@@ -226,16 +236,19 @@ public class HHStatisticsDao implements Persistable.Dao
 //	protected BigDecimal schoolAssortativity;
 
 	@Column( name = "CALCULATION", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal calculation;
 
 	@Column( name = "CONFIDENCE", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal confidence;
 
 	@Column( name = "COMPLACENCY", nullable = false, updatable = false,
-		columnDefinition = ATTITUDE_COL_DEF )
+		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal complacency;
+
+	@Column( name = "ATTITUDE", nullable = false, updatable = false )
+	protected boolean attitude;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = HHMemberDao.AGE_ATTR,
