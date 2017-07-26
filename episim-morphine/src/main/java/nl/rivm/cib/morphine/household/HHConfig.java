@@ -5,17 +5,14 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.text.ParseException;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Period;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.measure.Quantity;
@@ -24,7 +21,6 @@ import javax.measure.quantity.Time;
 
 import org.aeonbits.owner.Config.Sources;
 import org.aeonbits.owner.ConfigCache;
-import org.aeonbits.owner.ConfigFactory;
 
 import io.coala.bind.LocalBinder;
 import io.coala.config.ConfigUtil;
@@ -43,7 +39,6 @@ import io.coala.random.ProbabilityDistribution.Parser;
 import io.coala.random.PseudoRandom;
 import io.coala.random.QuantityDistribution;
 import io.coala.time.Instant;
-import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
 import io.coala.time.Timing;
@@ -51,13 +46,13 @@ import io.coala.util.FileUtil;
 import io.coala.util.InputStreamConverter;
 import io.coala.util.MapBuilder;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
-import nl.rivm.cib.episim.cbs.TimeUtil;
 import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.HesitancyDimension;
 import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 import nl.rivm.cib.util.LocalDateConverter;
 import nl.rivm.cib.util.PeriodConverter;
+import nl.rivm.cib.util.RandomSeedConverter;
 
 /**
  * {@link HHConfig}
@@ -66,7 +61,7 @@ import nl.rivm.cib.util.PeriodConverter;
  * @author Rick van Krevelen
  */
 @Sources( { "file:" + HHConfig.CONFIG_BASE_DIR + HHConfig.CONFIG_YAML_FILE,
-//		"file:${user.home}/" + HHConfig.CONFIG_YAML_FILE, // does this work?
+//		"file:${user.home}/" + HHConfig.CONFIG_YAML_FILE,
 		"classpath:" + HHConfig.CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
 {
@@ -156,31 +151,16 @@ public interface HHConfig extends GlobalConfig
 	@Key( JPAConfig.JPA_JDBC_USER_KEY )
 	String jdbcPassword();
 
-	default <T extends JPAConfig> T toJPAConfig( final Class<T> jpaConfigType,
-		final Map<?, ?>... imports )
-	{
-
-		// bind a local HSQL data source for exporting statistics
-//		JndiUtil.bindLocally( HHConfig.DATASOURCE_JNDI, '/', () ->
-//		{
-//			final JDBCDataSource ds = new JDBCDataSource();
-//			ds.setUrl( hhConfig.hsqlUrl() );
-//			ds.setUser( hhConfig.hsqlUser() );
-//			ds.setPassword( hhConfig.hsqlPassword() );
-//			return ds;
-//		} );
-
-		return ConfigFactory.create( jpaConfigType,
-				ConfigUtil.join( export( Pattern.compile(
-						"^(" + Pattern.quote( "javax.persistence" ) + ").*" ) ),
-						imports ) );
-	}
-
 	/////////////////////////////////////////////////////////////////////////
 
-	@Key( REPLICATION_PREFIX + "run-name" )
+	@Key( REPLICATION_PREFIX + "setup-name" )
 	@DefaultValue( "morphine" )
-	String runName();
+	String setupName();
+
+	@Key( REPLICATION_PREFIX + "random-seed" )
+	@DefaultValue( "NAN" )
+	@ConverterClass( RandomSeedConverter.class )
+	Long randomSeed();
 
 	@Key( REPLICATION_PREFIX + "duration-period" )
 	@DefaultValue( "P1Y" )
@@ -191,20 +171,6 @@ public interface HHConfig extends GlobalConfig
 	@DefaultValue( "2012-01-01" )
 	@ConverterClass( LocalDateConverter.class )
 	LocalDate offset();
-
-	/** globally (re)configure replication run length etc. */
-	default ReplicateConfig toReplicateConfig()
-	{
-		final ZonedDateTime offset = offset().atStartOfDay( TimeUtil.NL_TZ );
-		final long durationDays = Duration
-				.between( offset, offset.plus( duration() ) ).toDays();
-		return ConfigCache.getOrCreate( ReplicateConfig.class,
-				MapBuilder.unordered()
-						.put( ReplicateConfig.ID_KEY, "" + runName() )
-						.put( ReplicateConfig.OFFSET_KEY, "" + offset )
-						.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
-						.build() );
-	}
 
 	/**
 	 * <a
@@ -417,7 +383,7 @@ public interface HHConfig extends GlobalConfig
 					.findFirst().orElse( defaultDelay );
 		};
 	}
-	
+
 	@Key( HESITANCY_PREFIX + "relation-impact-rate" )
 	@DefaultValue( "1" )
 	BigDecimal hesitancyRelationImpactRate();
@@ -477,11 +443,7 @@ public interface HHConfig extends GlobalConfig
 				} ) );
 	}
 
-	/**
-	 * TODO from profile-data
-	 * 
-	 * @see HesitancyProfileJson
-	 */
+	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "calculation-dist" )
 	@DefaultValue( "const(0.5)" )
 	String hesitancyCalculationDist();

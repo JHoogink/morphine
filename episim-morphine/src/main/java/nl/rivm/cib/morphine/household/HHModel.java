@@ -550,7 +550,7 @@ public class HHModel implements Scenario
 		return Observable.create( sub ->
 		{
 			final HHConfigDao cfg = HHConfigDao.create( this.binder.id(),
-					this.config );
+					this.config, this.distFactory.getStream().seed() );
 			scheduler().onReset( scheduler ->
 			{
 				// TODO copy/move completion trigger to Scheduler

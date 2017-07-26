@@ -21,14 +21,17 @@ package nl.rivm.cib.morphine.household;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 
+import org.aeonbits.owner.ConfigCache;
+import org.aeonbits.owner.ConfigFactory;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
@@ -37,6 +40,7 @@ import org.hibernate.cfg.AvailableSettings;
 
 import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
+import io.coala.config.ConfigUtil;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.log.LogUtil.Pretty;
@@ -48,10 +52,12 @@ import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
+import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
 import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import io.reactivex.schedulers.Schedulers;
+import nl.rivm.cib.episim.cbs.TimeUtil;
 
 /**
  * {@link HHSimulator}
@@ -71,7 +77,7 @@ public class HHSimulator
 			final LoggerContext ctx = LoggerContext.getContext( false );
 			ctx.start( new YamlConfiguration( ctx,
 					new ConfigurationSource( is ) ) );
-			
+
 			// see https://stackoverflow.com/a/25881592
 //			System.setProperty(
 //					ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
@@ -83,20 +89,6 @@ public class HHSimulator
 
 	/** */
 	private static final Logger LOG = LogUtil.getLogger( HHSimulator.class );
-
-	// FIXME remove once fixed in coala
-	@Singleton
-	public static class DistributionFactory
-		extends Math3ProbabilityDistribution.Factory
-	{
-		@Inject
-		public DistributionFactory( final LocalBinder binder,
-			final PseudoRandom.Factory rngFactory )
-		{
-			super( rngFactory.create( PseudoRandom.Config.NAME_DEFAULT,
-					binder.id().unwrap().hashCode() ) ); // workaround for 'bug'
-		}
-	}
 
 	/**
 	 * @param args arguments from the command line
@@ -110,27 +102,46 @@ public class HHSimulator
 		LOG.info( "Starting {}, args: {} -> config: {}",
 				HHSimulator.class.getSimpleName(), args, hhConfig );
 
-		// configure tooling FIXME move to morphine.yaml
+		// FIXME move binder configuration to morphine.yaml
 		final LocalConfig binderConfig = LocalConfig.builder()
-				.withId( hhConfig.runName() ) // replication name, sets random seeds
+				.withId( hhConfig.setupName() ) // replication name, sets random seeds
 
 				// configure event scheduler
 				.withProvider( Scheduler.class, Dsol3Scheduler.class )
 
 				// configure randomness
-				.withProvider( PseudoRandom.Factory.class,
-						Math3PseudoRandom.MersenneTwisterFactory.class )
-				.withProvider( ProbabilityDistribution.Factory.class,
-						DistributionFactory.class )
 				.withProvider( ProbabilityDistribution.Parser.class,
 						DistributionParser.class )
 
+				// FIXME skip until work-around is no longer needed
+//				.withProvider( ProbabilityDistribution.Factory.class,
+//						Math3ProbabilityDistribution.class )
+//				.withProvider( PseudoRandom.Factory.class,
+//						Math3PseudoRandom.MersenneTwisterFactory.class )
+
 				.build();
 
-		// FIXME via binder config
-		hhConfig.toReplicateConfig();
+		// FIXME workaround until scheduler becomes configurable in coala binder
+		final ZonedDateTime offset = hhConfig.offset()
+				.atStartOfDay( TimeUtil.NL_TZ );
+		final long durationDays = Duration
+				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
+		ConfigCache.getOrCreate( ReplicateConfig.class, MapBuilder.unordered()
+				.put( ReplicateConfig.ID_KEY, "" + binderConfig.rawId() )
+				.put( ReplicateConfig.OFFSET_KEY, "" + offset )
+				.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
+				.build() );
 
-		final LocalBinder binder = binderConfig.createBinder();
+		// FIXME workaround until seed becomes configurable in coala
+		final LocalBinder binder = binderConfig
+				.createBinder( MapBuilder.<Class<?>, Object>unordered()
+						.put( ProbabilityDistribution.Factory.class,
+								new Math3ProbabilityDistribution.Factory(
+										new Math3PseudoRandom.MersenneTwisterFactory()
+												.create( PseudoRandom.Config.NAME_DEFAULT,
+														hhConfig.randomSeed() ) ) )
+						.build() );
+
 		final HHModel model = binder.inject( HHModel.class );
 
 		// persist statistics
@@ -143,17 +154,20 @@ public class HHSimulator
 			// trade-off; 50K+ are postponed until sim ends, flooding the stack
 			final int rowsPerTx = 10000;
 
-			final EntityManagerFactory emf = hhConfig.toJPAConfig(
+			final Pattern pattern = Pattern.compile(
+					"^(" + Pattern.quote( "javax.persistence" ) + ").*" );
+			// JPA config with vendor (i.e. Hibernate)-specific settings
+			final EntityManagerFactory emf = ConfigFactory.create(
 					HibernateJPAConfig.class,
-					// add vendor-specific JPA settings (i.e. Hibernate)
-					MapBuilder.unordered()
+					ConfigUtil.join( hhConfig.export( pattern ), MapBuilder
+							.unordered()
 							.put( AvailableSettings.STATEMENT_BATCH_SIZE,
 									"" + jdbcBatchSize )
 							.put( AvailableSettings.BATCH_VERSIONED_DATA,
 									"" + true )
 							.put( AvailableSettings.ORDER_INSERTS, "" + true )
 							.put( AvailableSettings.ORDER_UPDATES, "" + true )
-							.build() )
+							.build() ) )
 					.createEMF();
 
 			// shared between threads generating (sim) and flushing (db) rows

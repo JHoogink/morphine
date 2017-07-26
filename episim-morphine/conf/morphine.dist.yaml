@@ -13,7 +13,8 @@ morphine:
   # anything below is persisted, except for YAML comments
   comment: blabla
   replication:
-    run-name: run1
+    setup-name: setup1
+    random-seed: 2
     duration-period: P18M
     offset-date: 2012-06-01
     statistics:
