@@ -191,7 +191,7 @@ public class RelationFrequencyJson
 			return (Relation) values().get( 1 );
 		}
 
-		@SuppressWarnings( "unchecked" )
+//		@SuppressWarnings( "unchecked" )
 		public BigDecimal floorAge()
 		{
 			return (BigDecimal) values().get( 2 );
