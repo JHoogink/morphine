@@ -350,16 +350,16 @@ public class HHModel implements Scenario
 			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
 					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
 			if( inpeerW.signum() < 1 ) LOG.warn( "no weight: {}", inpeerW );
-			final Matrix m = conn.connect( Na, assortK, x -> inpeerW,
-					x -> true );
+			final Matrix m = conn.connect( Na, assortK, x -> true,
+					x -> inpeerW );
 			return m;
 		} ).toArray( Matrix[]::new );
 
 		final Matrix dissorting = conn.connect( N, dissortK,
-				x -> this.hhAttributes.getAsBigDecimal( x[0] % A,
-						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() ),
 				x -> this.attractorBroker.next( x[0] ) != this.attractorBroker
-						.next( x[1] ) );
+						.next( x[1] ),
+				x -> this.hhAttributes.getAsBigDecimal( x[0] % A,
+						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() ) );
 
 		// create the social network (between households/parents)
 		LongStream.range( A, this.hhAttributes.getRowCount() ).forEach( i ->
@@ -670,6 +670,9 @@ public class HHModel implements Scenario
 	private void propagate( final Instant t )
 	{
 		LOG.debug( "t={}, propagating...", prettyDate( t ) );
+
+		// TODO optimize: execute network activation in this single event
+
 		final Map<Long, Integer> changed = this.attitudePropagator
 				.propagate( this.hhNetworkActivity, this.hhAttributes );
 		changed.forEach( ( i, n ) ->

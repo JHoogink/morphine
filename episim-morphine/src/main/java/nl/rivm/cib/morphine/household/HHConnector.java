@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.ujmp.core.Matrix;
 import org.ujmp.core.SparseMatrix;
@@ -40,8 +41,52 @@ import io.coala.random.PseudoRandom;
 public interface HHConnector
 {
 
-	Matrix connect( long size, Supplier<Long> degree,
-		Function<long[], BigDecimal> initialW, Predicate<long[]> legalJ );
+	/**
+	 * @param size number of nodes to connect
+	 * @param k the average connection degree
+	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
+	 */
+	default Matrix connect( long size, long k )
+	{
+		return connect( size, () -> k );
+	}
+
+	/**
+	 * @param size number of nodes to connect
+	 * @param initialK the initial degree supplier, e.g. a constant
+	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
+	 */
+	default Matrix connect( long size, Supplier<Long> initialK )
+	{
+		return connect( size, initialK, x -> true );
+	}
+
+	/**
+	 * @param size number of nodes to connect
+	 * @param initialK the initial degree supplier, e.g. a constant
+	 * @param legalJ a link accepter, e.g. some assortativity filter
+	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
+	 */
+	Matrix connect( long size, Supplier<Long> initialK,
+		Predicate<long[]> legalJ );
+
+	/**
+	 * @param size number of nodes to connect
+	 * @param initialK the initial degree supplier, e.g. a constant
+	 * @param legalJ a link accepter, e.g. some assortativity filter
+	 * @param initialW the initial weight distribution, e.g. a constant
+	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
+	 */
+	default Matrix connect( long size, Supplier<Long> initialK,
+		Predicate<long[]> legalJ, Function<long[], BigDecimal> initialW )
+	{
+		final Matrix result = connect( size, initialK, legalJ );
+		StreamSupport
+				.stream( result.availableCoordinates().spliterator(), false )
+				.filter( x -> result.getAsDouble( x ) != 0.0 ).forEach(
+						x -> result.setAsBigDecimal( initialW.apply( x ), x ) );
+		return result;
+	}
 
 	/**
 	 * utility method
@@ -120,6 +165,18 @@ public interface HHConnector
 				.flatMapToLong( s -> s );
 	}
 
+	/**
+	 * {@link WattsStrogatz} implements a <a href=
+	 * "https://www.wikiwand.com/en/Watts_and_Strogatz_model">Watts–Strogatz
+	 * (WS) model</a> for connecting random graphs with small-world (social)
+	 * network properties, which are more "realistic" than random graphs from
+	 * the <a href=
+	 * "https://www.wikiwand.com/en/Erd%C5%91s%E2%80%93R%C3%A9nyi_model">Erdős-Rényi
+	 * (ER) model</a> but lack preferential attachment and respective power-law
+	 * distributions as in the random scale-free networks from the <a href=
+	 * "https://www.wikiwand.com/en/Barab%C3%A1si%E2%80%93Albert_model">Barabási-Albert
+	 * (BA) model</a>.
+	 */
 	class WattsStrogatz implements HHConnector
 	{
 		private final PseudoRandom rng;
@@ -133,7 +190,6 @@ public interface HHConnector
 
 		@Override
 		public Matrix connect( final long size, final Supplier<Long> degree,
-			final Function<long[], BigDecimal> initialW,
 			final Predicate<long[]> legalJ )
 		{
 			final Matrix result = SparseMatrix.Factory.zeros( size, size );
@@ -153,8 +209,8 @@ public interface HHConnector
 						if( legalJ.test( x ) )
 						{
 							final long[] y = HHConnector.rowSmallest( x );
-							result.setAsBigDecimal( initialW.apply( y ), y );
-							continue;
+							result.setAsDouble( 1, y );
+							break;
 						}
 					}
 				}
@@ -177,17 +233,14 @@ public interface HHConnector
 									y[1] = i + this.rng.nextLong( size - i );
 
 								// weight to move from i,j to i,k
-								final BigDecimal w = HHConnector
-										.getSymmetric( result, x );
+								final double w = result.getAsDouble( x );
 								// reset old position
-								HHConnector.setSymmetric( result, null, x );
+								result.setAsDouble( 0, x );
 								// set new position
-								HHConnector.setSymmetric( result, w, y );
+								result.setAsDouble( w, y );
 							} ) );
 
 			return result;
 		}
-
 	}
-
 }
