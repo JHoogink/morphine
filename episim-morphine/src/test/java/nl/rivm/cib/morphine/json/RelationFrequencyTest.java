@@ -36,6 +36,7 @@ import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.util.FileUtil;
+import nl.rivm.cib.morphine.household.HHConfig;
 import nl.rivm.cib.morphine.json.RelationFrequencyJson;
 
 /**
@@ -50,7 +51,8 @@ public class RelationFrequencyTest
 	private static final Logger LOG = LogUtil
 			.getLogger( RelationFrequencyTest.class );
 
-	private static final String FREQUENCIES_FILE = "conf/relation-frequency.json";
+	private static final String FREQUENCIES_FILE = HHConfig.CONFIG_BASE_DIR
+			+"relation-frequency.json";
 
 	private LocalBinder binder;
 

@@ -68,7 +68,7 @@ public interface HHConfig extends GlobalConfig
 {
 
 	/** configuration file name */
-	String CONFIG_BASE_DIR = "conf/";
+	String CONFIG_BASE_DIR = "dist/";
 
 	/** configuration file name */
 	String CONFIG_BASE_KEY = "config.base";
@@ -161,7 +161,7 @@ public interface HHConfig extends GlobalConfig
 	//	"jdbc:mysql://localhost/hhdb" 
 	// jdbc:h2:~/morphdat/h2_hhdb
 	// jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb
-	@DefaultValue( "jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb" )
+	@DefaultValue( "jdbc:h2:~/morphine_db" )
 	@Key( JPAConfig.JPA_JDBC_URL_KEY )
 	URI jdbcUrl();
 

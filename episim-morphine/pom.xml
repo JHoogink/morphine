@@ -47,7 +47,7 @@
 		<!-- stand-alone runnable JAR config -->
 		<maven-clean-plugin.version>3.0.0</maven-clean-plugin.version>
 		<maven-shade-plugin.version>3.0.0</maven-shade-plugin.version>
-		<dist.dir>${basedir}/conf</dist.dir>
+		<dist.dir>${basedir}/dist</dist.dir>
 		<main.class>nl.rivm.cib.morphine.household.HHSimulator</main.class>
 	</properties>
 
@@ -313,6 +313,7 @@
 							<directory>${dist.dir}</directory>
 							<includes>
 								<include>*.jar</include>
+								<include>*.db</include>
 								<include>**/*.log</include>
 							</includes>
 							<followSymlinks>false</followSymlinks>

@@ -37,6 +37,7 @@ import io.coala.math3.Math3PseudoRandom;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.util.FileUtil;
+import nl.rivm.cib.morphine.household.HHConfig;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.HesitancyDimension;
 import nl.rivm.cib.morphine.json.HesitancyProfileJson.VaccineStatus;
@@ -53,7 +54,11 @@ public class HesitantProfileTest
 	private static final Logger LOG = LogUtil
 			.getLogger( HesitantProfileTest.class );
 
-	private static final String PROFILES_FILE = "conf/hesitancy-univariate.json";
+	private static final String PROFILES_FILE = HHConfig.CONFIG_BASE_DIR
+			+ "hesitancy-univariate.json";
+
+	private static final String HESITANCY_FILE = HHConfig.CONFIG_BASE_DIR
+			+ "hesitancy-initial.json";
 
 	private LocalBinder binder;
 
@@ -87,8 +92,7 @@ public class HesitantProfileTest
 				.createCategorical( profileDensity );
 
 		final float[][] initial = JsonUtil.valueOf(
-				FileUtil.toInputStream( "conf/hesitancy-initial.json" ),
-				float[][].class );
+				FileUtil.toInputStream( HESITANCY_FILE ), float[][].class );
 		final VaccineStatus reportStatus = VaccineStatus.all;
 		int i = 0, j = 0, k = 0, l = 0, n = 100000;
 		for( ; i < n; i++ )
