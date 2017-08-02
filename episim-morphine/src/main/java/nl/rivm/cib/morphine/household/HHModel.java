@@ -321,18 +321,21 @@ public class HHModel implements Scenario {
 		// dissortativeK = A < 2 ? 0
 		// : Math.max( 1, (K - assortativeK) / (A - 1) );
 
-		final Matrix[] assorting = LongStream.range(0, A).mapToObj(a -> {
-			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal(a,
-					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal());
-			if (inpeerW.signum() < 1)
-				LOG.warn("no weight: {}", inpeerW);
-			final Matrix m = conn.connect(Na, assortK, x -> inpeerW, x -> true);
+		final Matrix[] assorting = LongStream.range( 0, A ).mapToObj( a ->
+		{
+			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
+					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
+			if( inpeerW.signum() < 1 ) LOG.warn( "no weight: {}", inpeerW );
+			final Matrix m = conn.connect( Na, assortK, x -> true,
+					x -> inpeerW );
 			return m;
 		}).toArray(Matrix[]::new);
 
-		final Matrix dissorting = conn.connect(N, dissortK,
-				x -> this.hhAttributes.getAsBigDecimal(x[0] % A, HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal()),
-				x -> this.attractorBroker.next(x[0]) != this.attractorBroker.next(x[1]));
+		final Matrix dissorting = conn.connect( N, dissortK,
+				x -> this.attractorBroker.next( x[0] ) != this.attractorBroker
+						.next( x[1] ),
+				x -> this.hhAttributes.getAsBigDecimal( x[0] % A,
+						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() ) );
 
 		// create the social network (between households/parents)
 		LongStream.range(A, this.hhAttributes.getRowCount()).forEach(i -> {
@@ -555,11 +558,17 @@ public class HHModel implements Scenario {
 		}
 	}
 
-	private void propagate(final Instant t) {
-		LOG.debug("t={}, propagating...", prettyDate(t));
-		final Map<Long, Integer> changed = this.attitudePropagator.propagate(this.hhNetworkActivity, this.hhAttributes);
-		changed.forEach((i, n) -> {
-			pushChangedAttributes(i);
+	private void propagate( final Instant t )
+	{
+		LOG.debug( "t={}, propagating...", prettyDate( t ) );
+
+		// TODO optimize: execute network activation in this single event
+
+		final Map<Long, Integer> changed = this.attitudePropagator
+				.propagate( this.hhNetworkActivity, this.hhAttributes );
+		changed.forEach( ( i, n ) ->
+		{
+			pushChangedAttributes( i );
 			final long[] y = { i, HHAttribute.IMPRESSION_FEEDS.ordinal() };
 			this.hhAttributes.setAsInt(this.hhAttributes.getAsInt(y) + n, y);
 		});
@@ -632,7 +641,8 @@ public class HHModel implements Scenario {
 		createHousehold(i);
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
-		LOG.debug("t={}, replace migrant #{}, next after: {}", prettyDate(t), i, QuantityUtil.toScale(dt, 1));
+		LOG.trace( "t={}, replace migrant #{}, next after: {}", prettyDate( t ),
+				i, QuantityUtil.toScale( dt, 1 ) );
 
 		after(dt).call(this::migrateHousehold);
 	}
@@ -764,10 +774,12 @@ public class HHModel implements Scenario {
 
 		impressFirst(hhIndex);
 
-		after(this.hhLeaveHomeAge.subtract(child1Age)).call(t -> {
-			LOG.debug("t={}, replace home leaver #{}", prettyDate(t), hhIndex);
-			createHousehold(hhIndex);
-		});
+		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
+		{
+			LOG.trace( "t={}, replace home leaver #{}", prettyDate( t ),
+					hhIndex );
+			createHousehold( hhIndex );
+		} );
 
 		return hhType.size();
 	}

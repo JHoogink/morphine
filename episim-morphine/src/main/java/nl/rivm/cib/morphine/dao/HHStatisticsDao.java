@@ -34,7 +34,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 import org.ujmp.core.Matrix;
@@ -58,7 +57,6 @@ import nl.rivm.cib.morphine.household.HHMemberAttribute;
  */
 @Entity
 @Table( name = "HOUSEHOLDS" )
-@SequenceGenerator( name = HHStatisticsDao.HH_SEQ, allocationSize = 25 )
 public class HHStatisticsDao implements Persistable.Dao
 {
 	public static final String HH_SEQ = "HH_SEQ";
@@ -152,7 +150,8 @@ public class HHStatisticsDao implements Persistable.Dao
 	}
 
 	@Id
-	@GeneratedValue( generator = HH_SEQ )
+	@GeneratedValue//( generator = HH_SEQ )
+//	@SequenceGenerator( name = HH_SEQ, sequenceName = HH_SEQ )
 	@Column( name = "PK", nullable = false, updatable = false )
 	protected Integer pk = null;
 
@@ -211,7 +210,7 @@ public class HHStatisticsDao implements Persistable.Dao
 	@Lob
 	protected String impressNumberByPeer;
 
-	@Column( name = "IMPRESS_F_POSITIVE", nullable = false, updatable = false,
+	@Column( name = "IMPRESS_F_POSITIVE", nullable = true, updatable = false,
 		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal impressFractionPositive;
 
@@ -247,8 +246,8 @@ public class HHStatisticsDao implements Persistable.Dao
 		columnDefinition = DECIMAL_COL_DEF )
 	protected BigDecimal complacency;
 
-	@Column( name = "ATTITUDE", nullable = false, updatable = false )
-	protected boolean attitude;
+	@Column( name = "ATTITUDE", nullable = true, updatable = false )
+	protected Boolean attitude;
 
 	@AttributeOverrides( {
 			@AttributeOverride( name = HHMemberDao.AGE_ATTR,

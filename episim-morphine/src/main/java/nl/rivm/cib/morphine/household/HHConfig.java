@@ -60,7 +60,8 @@ import nl.rivm.cib.util.RandomSeedConverter;
  * @version $Id$
  * @author Rick van Krevelen
  */
-@Sources( { "file:" + HHConfig.CONFIG_BASE_DIR + HHConfig.CONFIG_YAML_FILE,
+@Sources( {
+		"file:${" + HHConfig.CONFIG_BASE_KEY + "}" + HHConfig.CONFIG_YAML_FILE,
 //		"file:${user.home}/" + HHConfig.CONFIG_YAML_FILE,
 		"classpath:" + HHConfig.CONFIG_YAML_FILE } )
 public interface HHConfig extends GlobalConfig
@@ -68,6 +69,9 @@ public interface HHConfig extends GlobalConfig
 
 	/** configuration file name */
 	String CONFIG_BASE_DIR = "conf/";
+
+	/** configuration file name */
+	String CONFIG_BASE_KEY = "config.base";
 
 	String CONFIG_YAML_FILE = "morphine.yaml";
 
@@ -100,6 +104,10 @@ public interface HHConfig extends GlobalConfig
 	/** configuration key */
 	String VACCINATION_PREFIX = POPULATION_PREFIX + "vaccination" + KEY_SEP;
 
+	@DefaultValue( CONFIG_BASE_DIR )
+	@Key( CONFIG_BASE_KEY )
+	String configBase();
+
 	/**
 	 * provide a universal approach for loading the {@link HHConfig}
 	 * 
@@ -110,18 +118,32 @@ public interface HHConfig extends GlobalConfig
 	 */
 	static HHConfig getOrCreate( final String... args ) throws IOException
 	{
+
 		// convert command-line arguments to map
+
 		final Map<String, String> argMap = Arrays.stream( args )
 				.filter( arg -> arg.contains( "=" ) )
-				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length == 2 )
-				.collect( Collectors.toMap( arr -> arr[0], arr -> arr[1] ) );
-		argMap.computeIfAbsent( CONF_ARG,
-				key -> CONFIG_BASE_DIR + CONFIG_YAML_FILE );
+				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length > 1 )
+				.collect( Collectors.toMap( arr -> arr[0], arr ->
+				{
+					final String[] value = new String[arr.length - 1];
+					System.arraycopy( arr, 1, value, 0, value.length );
+					return String.join( "=", value );
+				} ) );
+		
+		// set default configuration data file base directory/url
+		argMap.computeIfAbsent( CONFIG_BASE_KEY, baseKey -> System
+				.getProperty( CONFIG_BASE_KEY, CONFIG_BASE_DIR ) );
 
 		// merge arguments into configuration imported from YAML file
-		return ConfigCache.getOrCreate( HHConfig.class, argMap,
-				YamlUtil.flattenYaml(
-						FileUtil.toInputStream( argMap.get( CONF_ARG ) ) ) );
+		return ConfigCache.getOrCreate( HHConfig.class,
+				// CLI args added first: override config resource and defaults 
+				argMap,
+				YamlUtil.flattenYaml( FileUtil
+						.toInputStream( argMap.computeIfAbsent( CONF_ARG,
+								confArg -> System.getProperty( CONF_ARG,
+										argMap.get( CONFIG_BASE_KEY )
+												+ CONFIG_YAML_FILE ) ) ) ) );
 	}
 
 	// match unit name from persistence.xml
@@ -358,7 +380,7 @@ public interface HHConfig extends GlobalConfig
 
 	/** @see RelationFrequencyJson */
 	@Key( HESITANCY_PREFIX + "relation-frequencies" )
-	@DefaultValue( CONFIG_BASE_DIR + "relation-frequency.json" )
+	@DefaultValue( "${" + CONFIG_BASE_KEY + "}relation-frequency.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyRelationFrequencies();
 
@@ -390,7 +412,7 @@ public interface HHConfig extends GlobalConfig
 
 	/** @see HesitancyProfileJson */
 	@Key( HESITANCY_PREFIX + "profiles" )
-	@DefaultValue( CONFIG_BASE_DIR + "hesitancy-univariate.json" )
+	@DefaultValue( "${" + CONFIG_BASE_KEY + "}hesitancy-univariate.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfiles();
 
@@ -413,7 +435,7 @@ public interface HHConfig extends GlobalConfig
 	}
 
 	@Key( HESITANCY_PREFIX + "profile-sample" )
-	@DefaultValue( CONFIG_BASE_DIR + "hesitancy-initial.json" )
+	@DefaultValue( "${" + CONFIG_BASE_KEY + "}hesitancy-initial.json" )
 	@ConverterClass( InputStreamConverter.class )
 	InputStream hesitancyProfileSample();
 
