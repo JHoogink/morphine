@@ -5,46 +5,50 @@
 
 	<groupId>nl.rivm.cib.morphine</groupId>
 	<artifactId>epidemes-morphine</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 
 	<name>${project.artifactId} ${project.version}</name>
 	<description>
 		Modeling Components for MORPHINE
 		$Id$
 	</description>
-	<url>http://www.rivm.nl/en/Topics/M/Modelling_infectious_diseases</url>
+	<url>http://www.strategischprogrammarivm.nl/Wiskundige_modellering_van_ziekten#cat-8</url>
 
 	<properties>
 		<source>1.8</source>
 		<encoding>UTF-8</encoding>
 		<skipTests>false</skipTests>
 
-		<maven.test.skip>${skipTests}</maven.test.skip>
-		<project.build.sourceLevel>${source}</project.build.sourceLevel>
-		<project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>${encoding}</project.reporting.outputEncoding>
-
-		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
-
-		<log4j.version>2.8.2</log4j.version>
-		<jackson.version>2.8.8</jackson.version>
-		<epidemes.version>0.1.0</epidemes.version> <!-- epidemiology -->
-		<!-- <hsqldb.version>2.3.4</hsqldb.version> --> <!-- file/in-memory database -->
-		<h2.version>1.4.196</h2.version>
-		<jta.version>1.1</jta.version> <!-- java (db) transaction API -->
-		<hibernate.version>5.1.0.Final</hibernate.version> <!-- orm/ogm provider -->
-		<hikari.version>2.4.7</hikari.version> <!-- db connection pool -->
-		<maven-processor-plugin.version>3.3.1</maven-processor-plugin.version>
-		<!-- <tomcat.version>8.5.13</tomcat.version> --> <!-- local JNDI -->
-
 		<!-- Eclipse Maven2 project lifecycle mapping -->
 		<lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
 		<!-- Eclipse JPA activation, see http://stackoverflow.com/a/37604836 -->
 		<m2e.jpa.activation>false</m2e.jpa.activation>
 
+		<maven.test.skip>${skipTests}</maven.test.skip>
+		<project.build.sourceLevel>${source}</project.build.sourceLevel>
+		<project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>${encoding}</project.reporting.outputEncoding>
+		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
+
+		<log4j.version>2.8.2</log4j.version>
+		<jackson.version>2.8.8</jackson.version>
+		<coala.version>0.2.0-b6</coala.version> <!-- coala binder -->
+		<epidemes.version>0.1.0</epidemes.version> <!-- epidemiology -->
+		<h2.version>1.4.196</h2.version> <!-- file/in-memory database -->
+		<jta.version>1.1</jta.version> <!-- java (db) transaction API -->
+		<hibernate.version>5.1.0.Final</hibernate.version> <!-- orm/ogm provider -->
+		<hikari.version>2.4.7</hikari.version> <!-- db connection pool -->
+		<maven-processor-plugin.version>3.3.1</maven-processor-plugin.version>
+
 		<!-- testing -->
 		<junit.version>4.12</junit.version>
 		<concurrentunit.version>0.4.2</concurrentunit.version>
+
+		<!-- stand-alone runnable JAR config -->
+		<maven-clean-plugin.version>3.0.0</maven-clean-plugin.version>
+		<maven-shade-plugin.version>3.0.0</maven-shade-plugin.version>
+		<dist.dir>${basedir}/conf</dist.dir>
+		<main.class>nl.rivm.cib.morphine.household.HHSimulator</main.class>
 	</properties>
 
 	<repositories>
@@ -123,19 +127,34 @@
 	<dependencies>
 		<dependency>
 			<groupId>nl.rivm.cib</groupId>
-			<artifactId>epidemes-demo</artifactId>
+			<artifactId>epidemes-connect-cbs</artifactId>
 			<version>${epidemes.version}</version>
 		</dependency>
 
-		<!-- Java Enterprise eXtension APIs, including JPA 2.1 -->
-		<!-- <dependency> <groupId>javax</groupId> <artifactId>javaee-api</artifactId> 
-			<scope>provided</scope> </dependency> -->
-		<!-- javax.transaction needed BEFORE Hibernate (eg in Kundera RDBMS) -->
 		<dependency>
-			<groupId>javax.transaction</groupId>
-			<artifactId>jta</artifactId>
-			<version>${jta.version}</version>
-			<scope>provided</scope>
+			<groupId>io.coala</groupId>
+			<artifactId>guice4-coala-adapter</artifactId>
+			<version>${coala.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.coala</groupId>
+			<artifactId>math3-coala-adapter</artifactId>
+			<version>${coala.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.coala</groupId>
+			<artifactId>dsol3-coala-adapter</artifactId>
+			<version>${coala.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>java3d</groupId>
+					<artifactId>vecmath</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>java3d</groupId>
+					<artifactId>j3d-core</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- incl. in-memory JDBC database -->
@@ -154,6 +173,7 @@
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
 		</dependency>
+
 		<!-- <dependency> <groupId>org.hibernate</groupId> <artifactId>hibernate-spatial</artifactId> 
 			<version>${hibernate.version}</version> <exclusions> <exclusion> <groupId>org.slf4j</groupId> 
 			<artifactId>slf4j-api</artifactId> </exclusion> </exclusions> </dependency> -->
@@ -173,6 +193,19 @@
 			<artifactId>HikariCP</artifactId>
 			<version>${hikari.version}</version>
 		</dependency>
+
+		<!-- Java Enterprise eXtension APIs, including JPA 2.1 -->
+		<!-- <dependency> <groupId>javax</groupId> <artifactId>javaee-api</artifactId> 
+			<scope>provided</scope> </dependency> -->
+
+		<!-- javax.transaction needed BEFORE Hibernate -->
+		<dependency>
+			<groupId>javax.transaction</groupId>
+			<artifactId>jta</artifactId>
+			<version>${jta.version}</version>
+			<optional>true</optional> <!-- remove from uberjar -->
+		</dependency>
+
 		<dependency>
 			<groupId>org.javassist</groupId>
 			<artifactId>javassist</artifactId>
@@ -269,6 +302,56 @@
 						<Xlint />
 					</compilerArguments>
 				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>${maven-clean-plugin.version}</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>${dist.dir}</directory>
+							<includes>
+								<include>*.jar</include>
+								<include>**/*.log</include>
+							</includes>
+							<followSymlinks>false</followSymlinks>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>${maven-shade-plugin.version}</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<finalName>morphine-full-${project.version}</finalName>
+							<outputDirectory>${dist.dir}</outputDirectory>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>${main.class}</mainClass>
+								</transformer>
+							</transformers>
+							<filters>
+								<filter>
+									<artifact>*:*:*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

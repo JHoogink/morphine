@@ -34,6 +34,7 @@ import org.aeonbits.owner.ConfigCache;
 import org.aeonbits.owner.ConfigFactory;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.yaml.YamlConfiguration;
 import org.hibernate.cfg.AvailableSettings;
@@ -47,7 +48,7 @@ import io.coala.log.LogUtil.Pretty;
 import io.coala.math.DecimalUtil;
 import io.coala.math3.Math3ProbabilityDistribution;
 import io.coala.math3.Math3PseudoRandom;
-import io.coala.persist.HibernateJPAConfig;
+import io.coala.persist.HikariHibernateJPAConfig;
 import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
@@ -68,28 +69,6 @@ import nl.rivm.cib.episim.cbs.TimeUtil;
 public class HHSimulator
 {
 
-	static
-	{
-		String logConf = HHConfig.CONFIG_BASE_DIR + "log4j2.yaml";
-		try( final InputStream is = FileUtil.toInputStream( logConf ) )
-		{
-			// see https://stackoverflow.com/a/42524443
-			final LoggerContext ctx = LoggerContext.getContext( false );
-			ctx.start( new YamlConfiguration( ctx,
-					new ConfigurationSource( is ) ) );
-
-			// see https://stackoverflow.com/a/25881592
-//			System.setProperty(
-//					ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
-//					new File( logConf ).getAbsolutePath() );
-		} catch( final IOException ignore )
-		{
-		}
-	}
-
-	/** */
-	private static final Logger LOG = LogUtil.getLogger( HHSimulator.class );
-
 	/**
 	 * @param args arguments from the command line
 	 * @throws IOException
@@ -99,8 +78,23 @@ public class HHSimulator
 		throws IOException, InterruptedException
 	{
 		final HHConfig hhConfig = HHConfig.getOrCreate( args );
+
+		if( System.getProperty(
+				ConfigurationFactory.CONFIGURATION_FILE_PROPERTY ) == null )
+			try( final InputStream is = FileUtil
+					.toInputStream( hhConfig.configBase() + "log4j2.yaml" ) )
+			{
+			// see https://stackoverflow.com/a/42524443
+			final LoggerContext ctx = LoggerContext.getContext( false );
+			ctx.start( new YamlConfiguration( ctx, new ConfigurationSource( is ) ) );
+			} catch( final IOException ignore )
+			{
+			}
+
+		final Logger LOG = LogUtil.getLogger( HHSimulator.class );
 		LOG.info( "Starting {}, args: {} -> config: {}",
-				HHSimulator.class.getSimpleName(), args, hhConfig );
+				HHSimulator.class.getSimpleName(), args,
+				hhConfig.toJSON( HHConfig.MORPHINE_BASE ) );
 
 		// FIXME move binder configuration to morphine.yaml
 		final LocalConfig binderConfig = LocalConfig.builder()
@@ -158,7 +152,7 @@ public class HHSimulator
 					"^(" + Pattern.quote( "javax.persistence" ) + ").*" );
 			// JPA config with vendor (i.e. Hibernate)-specific settings
 			final EntityManagerFactory emf = ConfigFactory.create(
-					HibernateJPAConfig.class,
+					HikariHibernateJPAConfig.class,
 					ConfigUtil.join( hhConfig.export( pattern ), MapBuilder
 							.unordered()
 							.put( AvailableSettings.STATEMENT_BATCH_SIZE,

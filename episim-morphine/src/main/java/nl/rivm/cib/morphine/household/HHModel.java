@@ -769,7 +769,7 @@ public class HHModel implements Scenario
 		createHousehold( i );
 
 		final Quantity<Time> dt = this.hhMigrateDist.draw();
-		LOG.debug( "t={}, replace migrant #{}, next after: {}", prettyDate( t ),
+		LOG.trace( "t={}, replace migrant #{}, next after: {}", prettyDate( t ),
 				i, QuantityUtil.toScale( dt, 1 ) );
 
 		after( dt ).call( this::migrateHousehold );
@@ -933,7 +933,7 @@ public class HHModel implements Scenario
 
 		after( this.hhLeaveHomeAge.subtract( child1Age ) ).call( t ->
 		{
-			LOG.debug( "t={}, replace home leaver #{}", prettyDate( t ),
+			LOG.trace( "t={}, replace home leaver #{}", prettyDate( t ),
 					hhIndex );
 			createHousehold( hhIndex );
 		} );

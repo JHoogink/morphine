@@ -182,7 +182,7 @@ public interface HHAttitudePropagator
 						final int scale = 4;
 						final int n = hhAttributes.getAsInt( i,
 								HHAttribute.SOCIAL_NETWORK_SIZE.ordinal() );
-						LOG.trace(
+						LOG.debug(
 								"hh #{} [{},{}] ---({}/{}={}%)--> [{},{}] -> [{},{}]",
 								i,
 								DecimalUtil.toScale(

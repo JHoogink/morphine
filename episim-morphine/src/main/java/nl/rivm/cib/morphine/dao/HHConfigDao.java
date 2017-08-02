@@ -35,7 +35,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.NoResultException;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -65,7 +64,6 @@ import nl.rivm.cib.morphine.household.HHConfig;
  */
 @Entity
 @Table( name = "RUNS" )
-@SequenceGenerator( name = HHConfigDao.CFG_SEQ, allocationSize = 25 )
 public class HHConfigDao implements Persistable.Dao
 {
 	public static final String CFG_SEQ = "CFG_SEQ";
@@ -82,7 +80,8 @@ public class HHConfigDao implements Persistable.Dao
 					.createQuery( HHConfigDao.class );
 			final Root<HHConfigDao> root = qry.from( HHConfigDao.class );
 			final Predicate filter = cb.and();
-			filter.getExpressions().add( cb.equal( root.get( //HHConfigDao_.context 
+			filter.getExpressions().add( cb.equal( root.get( 
+					// FIXME HHConfigDao_.context missing due to custom type? 
 					"context" ), contextRef ) );
 			return em.createQuery( qry.select( root ).where( filter ) )
 					.getSingleResult();
@@ -123,7 +122,8 @@ public class HHConfigDao implements Persistable.Dao
 	}
 
 	@Id
-	@GeneratedValue( generator = CFG_SEQ )
+	@GeneratedValue//( generator = CFG_SEQ )
+//	@SequenceGenerator( name = CFG_SEQ, sequenceName = CFG_SEQ )
 	@Column( name = "PK", nullable = false, updatable = false )
 	protected Integer pk = null;
 
