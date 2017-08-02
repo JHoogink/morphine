@@ -104,20 +104,12 @@ Run 3 iterations of the custom setup, each with a new `RUNS.SEED` value
 >epidemes-morphine\dist\morphine 3
 ```
 
-# Analysis
-The default setup will export the current statistics at instants matching the 
-[CRON expression](http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html) 
-configured in `morphine.replication.statistics.recurrence`. For instance: 
-`1 0 0 L-2 * ? *` means: the first second after midnight (`1s 0m 0h`) at the 
-second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
-year (`*`).
-
-## Exportable statistics
+# Results Data Structure
 Statistics are exported using [JPA](https://www.wikiwand.com/en/Java_Persistence_API) 
 into two tables: `RUNS` and `HOUSEHOLDS` using their respective 
 [Data Access Objects](https://www.wikiwand.com/en/Data_access_object).
 
-### RUNS Table: Setup configurations
+## Setup configurations
 Populated using `nl.rivm.cib.morphine.dao.HHConfigDao`, the `RUNS` table has 
 the following columns:
 
@@ -130,13 +122,13 @@ the following columns:
   - `JSON`: the effective setup configuration as [JSON](http://json.org/) tree
   - `YAML`: the effective setup configuration as [YAML](http://yaml.org/) tree
 
-## HOUSEHOLDS Table: Individual time lines
+## Individual and household time lines
 Populated using `nl.rivm.cib.morphine.dao.HHStatisticsDao` the `HOUSEHOLDS` 
 table has the following columns:
 
   - `PK`: the primary key of this record
-  - 'CONFIG_PK': foreign key of the respective `RUNS` record
-  - `SEQ`: the statistics export sequence iteration, depends on the pattern configured in `morphine.replication.statistics.recurrence`
+  - `CONFIG_PK`: foreign key of the respective `RUNS` record
+  - `SEQ`: the statistics export sequence iteration
   - `INDEX`: the household (contact network row) index (0..N/2)
   - `HH`: household identifier (may be replaced to to death/birth or migration)
   - `HH_DT_DAYS`: the number of days between social impressions on this household
@@ -159,9 +151,17 @@ table has the following columns:
   - `IMPRESS_N_PEERS`: number of times any peer applied pressure so far
   - `IMPRESS_N_BY_PEER`: number of times each peer applied pressured so far
   - `IMPRESS_W_ASSORT`: weight of in-group peer attitudes (of same attractor)
-  - `IMPRESS_W_DISSORT`: weight of out-group peer attitudes (of other attractor)
+  - `IMPRESS_W_DISSORT`: weight of out-group peer attitudes (of other attractors)
   - `IMPRESS_W_SELF`: maximum weight of own current opinion (stubbornness)
   - `IMPRESS_W_ATTRACTOR`: maximum weight of attractor's attitude (conformance)
+
+# Analysis
+The default setup will export the current statistics at instants matching the 
+[CRON expression](http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html) 
+configured in `morphine.replication.statistics.recurrence`. For instance: 
+`1 0 0 L-2 * ? *` means: the first second after midnight (`1s 0m 0h`) at the 
+second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
+year (`*`).
 
 ## SQL inspection via Web-based H2 Console
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
