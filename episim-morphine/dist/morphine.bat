@@ -20,7 +20,7 @@ FOR /L %%P IN (1000,100,1000) DO (
       config.base=./ ^
       morphine.replication.setup-name=setup_n_%%P ^
       morphine.population.size=%%P ^
-      javax.persistence.jdbc.url=jdbc:h2:./morphine;AUTO_SERVER=TRUE
+      javax.persistence.jdbc.url=jdbc:h2:./morphine;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false
   )
 )
 IF NOT ["%ERRORLEVEL%"]==["0"] PAUSE

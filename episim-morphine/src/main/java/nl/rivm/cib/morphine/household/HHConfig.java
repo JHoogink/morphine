@@ -161,7 +161,7 @@ public interface HHConfig extends GlobalConfig
 	//	"jdbc:mysql://localhost/hhdb" 
 	// jdbc:h2:~/morphdat/h2_hhdb
 	// jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb
-	@DefaultValue( "jdbc:h2:~/morphine_db" )
+	@DefaultValue( "jdbc:h2:./morphine;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false" )
 	@Key( JPAConfig.JPA_JDBC_URL_KEY )
 	URI jdbcUrl();
 
