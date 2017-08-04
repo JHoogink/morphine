@@ -113,12 +113,12 @@ different notation, e.g. for [float or string values](https://stackoverflow.com/
 
 # Results Data Structure
 Statistics are exported using [JPA](https://www.wikiwand.com/en/Java_Persistence_API) 
-into two tables: `RUNS` and `HOUSEHOLDS` using their respective 
-[Data Access Objects](https://www.wikiwand.com/en/Data_access_object).
+into two [SQL](https://www.wikiwand.com/en/SQL) tables: `RUNS` and `HOUSEHOLDS` 
+using their respective [Data Access Objects](https://www.wikiwand.com/en/Data_access_object).
 
 ## Setup configurations
-Populated using `nl.rivm.cib.morphine.dao.HHConfigDao`, the `RUNS` table has 
-the following columns:
+Populated using [`nl.rivm.cib.morphine.dao.HHConfigDao`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/dao/HHConfigDao.java), 
+the `RUNS` table has the following columns:
 
   - `PK`: the primary key used for reference across the database
   - `CREATED_TS`: the database timestamp of this record's creation
@@ -130,8 +130,8 @@ the following columns:
   - `YAML`: the effective setup configuration as [YAML](http://yaml.org/) tree
 
 ## Individual and household time lines
-Populated using `nl.rivm.cib.morphine.dao.HHStatisticsDao` the `HOUSEHOLDS` 
-table has the following columns:
+Populated using [`nl.rivm.cib.morphine.dao.HHStatisticsDao`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/dao/HHStatisticsDao.java), 
+the `HOUSEHOLDS` table has the following columns:
 
   - `PK`: the primary key of this record
   - `CONFIG_PK`: foreign key of the respective `RUNS` record
@@ -166,7 +166,8 @@ table has the following columns:
 The default setup will export the current statistics at instants matching the 
 [CRON expression](http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html) 
 configured in `morphine.replication.statistics.recurrence`. For instance: 
-`1 0 0 L-2 * ? *` means: the first second after midnight (`1s 0m 0h`) at the 
+
+  - `1 0 0 L-2 * ? *` means: the first second after midnight (`1s 0m 0h`) at the 
 second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
 year (`*`).
 
@@ -178,11 +179,12 @@ The simplest option to inspect the results directtly is to use the [H2 database 
 > h2_console
 ```
 
-In the web form that now becomes available typically at 
-`http://192.168.56.1:8082/` provide the JDBC connection details:
+In the web form that now becomes available (typically at 
+[`http://localhost:8082/`](http://localhost:8082/)) provide the 
+[JDBC](https://www.wikiwand.com/en/Java_Database_Connectivity) connection details:
 
-- URL: `jdbc:h2:./morphine;AUTO_SERVER=TRUE`
-- User: `sa`
+- JDBC-URL: `jdbc:h2:./morphine;AUTO_SERVER=TRUE`
+- Username: `sa`
 - Password: `sa`
 
 ## R import and statistics
@@ -191,19 +193,19 @@ The simulation results can be easily imported into your R session.
 First, install and load the required packages, e.g. 
 [`RJDBC`](https://cran.r-project.org/web/packages/RJDBC/) and 
 [`data.table`](https://cran.r-project.org/web/packages/data.table/).
-```
-install.packages(c('RJDBC','data.table'),dep=TRUE)
-require(RJDBC)
-require(data.table)
+```r
+install.packages( c('RJDBC','data.table'), dep=TRUE )
+require( RJDBC )
+require( data.table )
 ```
 
 Next, after editing the below URLs to match your environment, connect to the 
 (H2 or other) SQL-compatible database via JDBC:
-```
+```r
 baseUrl <- 'path/to/morphine/episim-morphine/dist/' # match your environment
 h2dbUrl <- paste0(baseUrl, 'morphine') # default, must match your setup
 drv <- RJDBC::JDBC( driverClass='org.h2.Driver' 
-  , classPath=paste0(baseUrl,'morphine-full-1.0.jar')
+  , classPath=paste0( baseUrl, 'morphine-full-1.0.jar' )
   , identifier.quote="`" )
 conn <- RJDBC::dbConnect( drv
   , paste0('jdbc:h2:', h2dbUrl, ';AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE')
@@ -211,8 +213,8 @@ conn <- RJDBC::dbConnect( drv
 ```
 
 Finally, check the connection, import the data, and disconnect
-```
-RJDBC::dbListTables(conn) 
-MORPHINE <- data.table(dbGetQuery(conn, "select * from HOUSEHOLDS"))
-dbDisconnect(conn)
+```r
+RJDBC::dbListTables( conn ) 
+MORPHINE <- data.table( dbGetQuery( conn, "select * from HOUSEHOLDS" ) )
+dbDisconnect( conn )
 ```
