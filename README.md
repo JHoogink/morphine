@@ -88,33 +88,31 @@ The basic shell script `morphine.bat` repeats a call to run the morphine
 scenario *n* times, and also provides an example on how to override some 
 configuration settings between replications so as to run entire experiments.
 
-Run the custom setup configuration 1x only, using the shell script:
+### Single replication
+Call the executable jar directly, optionally overriding any setup parameter 
+values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)):
 ```
 > cd ./morphine/episim-morphine/dist
-> morphine
-```
-or call the executable jar directly:
-```
-> cd ./morphine/episim-morphine/dist
-> java -jar ./morphine/episim-morphine/dist/morphine-full-1.0.jar
+> java -jar ./morphine-full-1.0.jar [key1=val1 [key2=val2 [...]]]
 ```
 
 ### Batch mode
 To run multiple iterations of the custom setup configuration, each with a 
 new pseudorandom generator seed value (unless `morphine.replication.random-seed` 
-is configured with some integer), e.g. for 3 iterations:
+is configured with some integer):
 ```
 > cd ./morphine/episim-morphine/dist
-> morphine 3
+> morphine [number-of-replications]
 ```
-Note that you can create variations of the `morphine.bat` script that iterate 
-over your own choice of (independent) setup parameter settings, using a slightly
-different notation, e.g. for [float or string values](https://stackoverflow.com/a/3439978).
+Feel free to create variations of the `morphine.bat` script, and iterate 
+over your own choice of (independent) setup parameter settings. *NOTE*: `float` 
+or `string`-type parameter values may require a slightly 
+[different notation](https://stackoverflow.com/a/3439978).
 
 # Results Data Structure
 Statistics are exported using [JPA](https://www.wikiwand.com/en/Java_Persistence_API) 
 into two [SQL](https://www.wikiwand.com/en/SQL) tables: `RUNS` and `HOUSEHOLDS` 
-using their respective [Data Access Objects](https://www.wikiwand.com/en/Data_access_object).
+using their respective [Data Access Objects](https://www.wikiwand.com/en/Data_access_object) (DAOs).
 
 ## Setup configurations
 Populated using [`nl.rivm.cib.morphine.dao.HHConfigDao`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/dao/HHConfigDao.java), 
@@ -171,7 +169,7 @@ configured in `morphine.replication.statistics.recurrence`. For instance:
 second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
 year (`*`).
 
-## SQL inspection via Web-based H2 Console
+## SQL inspection via web-based H2 Console
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
 
 ```
