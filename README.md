@@ -4,8 +4,8 @@ The [MORPHINE project](http://www.strategischprogrammarivm.nl/Wiskundige_modelle
 funded by the [Strategic Programme of the RIVM](http://www.strategischprogrammarivm.nl), 
 contains a simulation model that is implemented on the 
 [EPIDEMES framework](https://github.com/krevelen/epidemes/), 
-for micro-simulation of synthetic populations. EPIDEMESE applies open-source 
-tooling including the [COALA binder](https://github.com/krevelen/coala-binder) 
+for micro-simulation of synthetic populations using open-source 
+tooling such as the [COALA binder](https://github.com/krevelen/coala-binder) 
 and the [DSOL simulator](http://www.simulation.tudelft.nl/). 
 
 The MORPHINE synthetic population exhibits *vaccination hesitancy* behaviour 
