@@ -57,23 +57,30 @@ categories by [Betsch et al. (2015)](http://dx.doi.org/10.1177/2372732215600716)
 
 # Getting started
 
-## 1. Prerequisites
-Please install clients for the following tools:
+## 1. Install
+
+### A. Ready-made
+Download and unzip the [latest release](https://github.com/JHoogink/morphine/releases/latest).
+
+### B. Build from source
+Install clients for the prerequisite tools:
 
 * Git versioning system (e.g. [git-scm](https://git-scm.com/downloads/))
 * Java development kit (e.g. [Oracle's SE JDK](http://www.oracle.com/technetwork/java/javase/downloads/))
 * [Apache Maven](https://maven.apache.org/) build manager
 
-Although `git` and `mvn` are usually embedded within modern [IDEs](https://www.wikiwand.com/en/Integrated_development_environment) like [Eclipse](http://www.eclipse.org/), [Netbeans](https://netbeans.org/), or [IntelliJ IDEA](https://www.jetbrains.com/idea/), you may wish to install them into your command shell's `PATH` environment variable.
+Although `git` and `mvn` are usually embedded within modern 
+[IDEs](https://www.wikiwand.com/en/Integrated_development_environment) 
+like [Eclipse](http://www.eclipse.org/), [Netbeans](https://netbeans.org/), or 
+[IntelliJ IDEA](https://www.jetbrains.com/idea/), you may wish to install 
+them into your command shell's `PATH` environment variable.
 
-## 2. Build
 Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
 > git clone git@github.com:JHoogink/morphine.git
 > mvn install -f morphine/episim-morphine
 ```
 
-## 3. Configure
 Customize the default distributed configuration files for both logging
 and simulation:
 ```
@@ -81,11 +88,11 @@ and simulation:
 > copy log4j2.dist.yaml   log4j2.yaml
 > copy morphine.dist.yaml morphine.yaml
 ```
-For more details, see the 
+For more configuration details, see the 
 [Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)
 and the example scenario configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml) (imported by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)).
 
-## 4. Run
+## 2. Run
 The basic shell script `morphine.bat` repeats a call to run the morphine 
 scenario *n* times, and also provides an example on how to override some 
 configuration settings between replications so as to run entire experiments.
@@ -94,7 +101,6 @@ configuration settings between replications so as to run entire experiments.
 Call the executable jar directly, optionally overriding any setup parameter 
 values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)):
 ```
-> cd ./morphine/episim-morphine/dist
 > java -jar ./morphine-full-1.0.jar [key1=val1 [key2=val2 [...]]]
 ```
 
@@ -103,7 +109,6 @@ To run multiple iterations of the custom setup configuration, each with a
 new pseudorandom generator seed value (unless `morphine.replication.random-seed` 
 is configured with some integer):
 ```
-> cd ./morphine/episim-morphine/dist
 > morphine [number-of-replications]
 ```
 Feel free to create variations of the `morphine.bat` script, and iterate 
@@ -179,7 +184,6 @@ configured in `morphine.replication.statistics.recurrence`. For instance:
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
 
 ```
-> cd ./morphine/episim-morphine/dist
 > h2_console
 ```
 
