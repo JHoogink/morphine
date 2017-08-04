@@ -81,30 +81,36 @@ Clone the repository (switched to 'master' branch) and compile the uber-jar
 > mvn install -f morphine/episim-morphine
 ```
 
-Customize the default distributed configuration files for both logging
-and simulation:
+Create the configuration files for both logging and simulation:
 ```
 > cd ./morphine/episim-morphine/dist
 > copy log4j2.dist.yaml   log4j2.yaml
 > copy morphine.dist.yaml morphine.yaml
 ```
-For more configuration details, see the 
-[Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)
-and the example scenario configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml) (imported by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)).
 
-## 2. Run
-The basic shell script `morphine.bat` repeats a call to run the morphine 
-scenario *n* times, and also provides an example on how to override some 
-configuration settings between replications so as to run entire experiments.
+## 2. Configure
+The scenario configuration is processed by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java). 
+You can refer to the code to see default values, or to the distributed sample 
+configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml)
+for some simple parameter settings.
 
-### Single replication
+To configure the logger, see e.g. the 
+[Log4j 2.0 YAML docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML).
+
+## 3. Run
+
+### A. Single replication
 Call the executable jar directly, optionally overriding any setup parameter 
 values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)):
 ```
 > java -jar ./morphine-full-1.0.jar [key1=val1 [key2=val2 [...]]]
 ```
 
-### Batch mode
+### B. Batch mode
+The basic shell script `morphine.bat` repeats a call to run the morphine 
+scenario *n* times, and also provides an example on how to override some 
+configuration settings between replications so as to run entire experiments.
+
 To run multiple iterations of the setup configuration in `morphine.yaml`:
 ```
 > morphine [number-of-replications]
