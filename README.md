@@ -74,7 +74,7 @@ Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
 
 ## 3. Configure
-Customize the default distributed configuration files for both logging  
+Customize the default distributed configuration files for both logging
 and simulation:
 ```
 > cd ./morphine/episim-morphine/dist
@@ -175,7 +175,7 @@ configured in `morphine.replication.statistics.recurrence`. For instance:
   second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
   year (`*`).
 
-## SQL inspection via web-based H2 Console
+## Inspection via web-based H2 Console
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
 
 ```
@@ -187,9 +187,14 @@ In the web form that now becomes available (typically at
 [`http://localhost:8082/`](http://localhost:8082/)) provide the 
 [JDBC](https://www.wikiwand.com/en/Java_Database_Connectivity) connection details:
 
-- JDBC-URL: `jdbc:h2:./morphine;AUTO_SERVER=TRUE`
+- JDBC-URL: `jdbc:h2:./morphine;AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE`
 - Username: `sa`
 - Password: `sa`
+
+Now the console is ready to perform your SQL queries. For example:
+
+- left-click the `HOUSEHOLDS` table name (in the left-side explorer panel) to generate a default browse query (`SELECT * FROM HOUSEHOLDS`); and
+- left-click the `RUN` tab/button (in the right-hand side query editor) to fetch the first 1000 records or rows.
 
 ## R import and statistics
 The simulation results can be easily imported into your R session.
