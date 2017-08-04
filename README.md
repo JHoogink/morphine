@@ -74,14 +74,16 @@ Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
 
 ## 3. Configure
-Customize the default distributed configuration files for both logging 
-(see [Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)) 
+Customize the default distributed configuration files for both logging  
 and simulation:
 ```
 > cd ./morphine/episim-morphine/dist
 > copy log4j2.dist.yaml   log4j2.yaml
 > copy morphine.dist.yaml morphine.yaml
 ```
+For more details, see the 
+[Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)
+and the example scenario configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml) (imported by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)).
 
 ## 4. Run
 The basic shell script `morphine.bat` repeats a call to run the morphine 
