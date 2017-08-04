@@ -165,9 +165,13 @@ The default setup will export the current statistics at instants matching the
 [CRON expression](http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html) 
 configured in `morphine.replication.statistics.recurrence`. For instance: 
 
-  - `1 0 0 L-2 * ? *` means: the first second after midnight (`1s 0m 0h`) at the 
-second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
-year (`*`).
+  - `0 0 0 ?    * MON *` means: midnight (`0s 0m 0h`) of any day-of-month (`? *`) 
+  every Monday (`MON`) of any year (`*`)
+  - `0 0 0 1,15 * ?   *` means: midnight (`0s 0m 0h`) on every 1st and 15th day of 
+  any month (`1,15 *`), of any year (`*`)
+  - `1 0 0 L-2  * ?   *` means: the first second after midnight (`1s 0m 0h`) at the 
+  second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
+  year (`*`).
 
 ## SQL inspection via web-based H2 Console
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
@@ -217,7 +221,9 @@ Finally, check the connection, import the data, and disconnect
 > dbDisconnect( conn )
 > str( MORPHINE )
 ```
-...produces:
+...may produce something like the following (first 4 values are for the 
+4 attractors, configured in the default [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml#L62-#L63)
+with names `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`):
 ```
 Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ PK                  : num  2 3 4 5 6 7 8 9 10 11 ...
