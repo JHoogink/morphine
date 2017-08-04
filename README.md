@@ -58,14 +58,15 @@ categories by [Betsch et al. (2015)](http://dx.doi.org/10.1177/2372732215600716)
 # Getting started
 
 ## 1. Prerequisites
-Although `git` and `mvn` are usually embedded within modern [IDE](https://www.wikiwand.com/en/Integrated_development_environment)'s like [Eclipse](http://www.eclipse.org/), [Netbeans](https://netbeans.org/), or [IntelliJ IDEA](https://www.jetbrains.com/idea/), you might want to install them into your shell's `PATH` environment variable:
+Please install clients for the following tools:
 
-* `java` (e.g. [Oracle's SE JDK](http://www.oracle.com/technetwork/java/javase/downloads/))
-* `git` (e.g. [git-scm](https://git-scm.com/downloads/))
-* `mvn` (e.g. [Apache Maven](https://maven.apache.org/))
+* Git versioning system (e.g. [git-scm](https://git-scm.com/downloads/))
+* Java development kit (e.g. [Oracle's SE JDK](http://www.oracle.com/technetwork/java/javase/downloads/))
+* [Apache Maven](https://maven.apache.org/) build manager
+
+Although `git` and `mvn` are usually embedded within modern [IDEs](https://www.wikiwand.com/en/Integrated_development_environment) like [Eclipse](http://www.eclipse.org/), [Netbeans](https://netbeans.org/), or [IntelliJ IDEA](https://www.jetbrains.com/idea/), you may wish to install them into your command shell's `PATH` environment variable.
 
 ## 2. Build
-
 Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
 > git clone git@github.com:JHoogink/morphine.git
@@ -73,7 +74,6 @@ Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
 
 ## 3. Configure
-
 Customize the default distributed configuration files for both logging 
 (see [Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)) 
 and simulation:
