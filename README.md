@@ -5,7 +5,7 @@ funded by the [Strategic Programme of the RIVM](http://www.strategischprogrammar
 contains a simulation model that is implemented on the 
 [EPIDEMES framework](https://github.com/krevelen/epidemes/), 
 for micro-simulation of synthetic populations using open-source 
-tooling such as the [COALA binder](https://github.com/krevelen/coala-binder) 
+tooling such as the [COALA binder](https://github.com/krevelen/coala-binder/releases) 
 and the [DSOL simulator](http://www.simulation.tudelft.nl/). 
 
 The MORPHINE synthetic population exhibits *vaccination hesitancy* behaviour 
@@ -89,29 +89,31 @@ Create the configuration files for both logging and simulation:
 ```
 
 ## 2. Configure
-The scenario configuration is processed by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java). 
+The scenario configuration is processed by [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java). 
 You can refer to the code to see default values, or to the distributed sample 
-configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml)
+configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml)
 for some simple parameter settings.
 
-To configure the logger, see e.g. the 
-[Log4j 2.0 YAML docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML).
+To configure the logger, please refer to the 
+[Log4j 2.0 YAML docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)
+or check out the [`log4j2.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/log4j2.dist.yaml) souce for some default settings.
 
 ## 3. Run
 
 ### A. Single replication
 Call the executable jar directly, optionally overriding any setup parameter 
-values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)):
+values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHConfig.java)):
 ```
 > java -jar ./morphine-full-1.0.jar [key1=val1 [key2=val2 [...]]]
 ```
 
 ### B. Batch mode
-The basic shell script `morphine.bat` repeats a call to run the morphine 
+The basic shell script [`morphine.bat`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.bat) 
+repeats a call to run the morphine 
 scenario *n* times, and also provides an example on how to override some 
 configuration settings between replications so as to run entire experiments.
 
-To run multiple iterations of the setup configuration in `morphine.yaml`:
+To run multiple iterations of the setup configuration in `./morphine.yaml`:
 ```
 > morphine [number-of-replications]
 ```
@@ -145,7 +147,7 @@ the `RUNS` table has the following columns:
   - `YAML`: the effective setup configuration as [YAML](http://yaml.org/) tree
 
 ## Individual and household time lines
-Populated using [`nl.rivm.cib.morphine.dao.HHStatisticsDao`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/dao/HHStatisticsDao.java), 
+Populated using [`nl.rivm.cib.morphine.dao.HHStatisticsDao`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/src/main/java/nl/rivm/cib/morphine/dao/HHStatisticsDao.java), 
 the `HOUSEHOLDS` table has the following columns:
 
   - `PK`: the primary key of this record
@@ -156,10 +158,10 @@ the `HOUSEHOLDS` table has the following columns:
   - `HH_DT_DAYS`: the number of days between social impressions on this household
   - `ATTRACTOR_REF`: household designated *attractor* (social network row) index (0..A)
   - `REFERENT_AGE`:  household referent (parent) current age (years)
-  - `REFERENT_STATUS`: household referent (parent) status (see [`nl.rivm.cib.morphine.household.HHMemberStatus`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHMemberStatus.java))
+  - `REFERENT_STATUS`: household referent (parent) status (see [`nl.rivm.cib.morphine.household.HHMemberStatus`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHMemberStatus.java))
   - `REFERENT_MALE`: household referent (parent) masculine gender (true/false)
   - `CHILD1_AGE`: household child current age (years)
-  - `CHILD1_STATUS`: household child status (see [`nl.rivm.cib.morphine.household.HHMemberStatus`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHMemberStatus.java))
+  - `CHILD1_STATUS`: household child status (see [`nl.rivm.cib.morphine.household.HHMemberStatus`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/src/main/java/nl/rivm/cib/morphine/household/HHMemberStatus.java))
   - `CHILD1_MALE`: household child masculine gender (true/false)
   - `CONFIDENCE`: household (referent) confidence level (vaccine utility in 0..1)
   - `COMPLACENCY`: household (referent) complacency level (disease utility in 0..1)
@@ -273,4 +275,4 @@ Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ CONFIG_PK           : num  1 1 1 1 1 1 1 1 1 1 ...
 ```
 
-Note that in this case, observations with the first 4 `INDEX` values (0..3) in each combination of `CONFIG_PK` and `SEQ` are for the 4 attractors (named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`) as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml#L62-#L63).
+Note that in this case, observations with the first 4 `INDEX` values (0..3) in each combination of `CONFIG_PK` and `SEQ` are for the 4 attractors (named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`) as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml#L62-#L63).
