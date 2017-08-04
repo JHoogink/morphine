@@ -201,7 +201,7 @@ The simulation results can be easily imported into your R session.
 
 First, install and load the required packages, e.g. 
 [`RJDBC`](https://cran.r-project.org/web/packages/RJDBC/) and 
-[`data.table`](https://cran.r-project.org/web/packages/data.table/).
+[`data.table`](https://cran.r-project.org/web/packages/data.table/) (see also [this cheat sheet](https://www.datacamp.com/community/tutorials/data-table-cheat-sheet)).
 ```r
 install.packages( c( 'RJDBC','data.table' ), dep=TRUE )
 require( RJDBC )
@@ -211,26 +211,22 @@ require( data.table )
 Next, after editing the below URLs to match your environment, connect to the 
 (H2 or other) SQL-compatible database via JDBC:
 ```r
-baseUrl <- 'path/to/morphine/episim-morphine/dist/' # match your environment
-h2dbUrl <- paste0( baseUrl, 'morphine' ) # default, must match your setup
-drv <- RJDBC::JDBC( driverClass='org.h2.Driver' 
-  , classPath=paste0( baseUrl, 'morphine-full-1.0.jar' )
-  , identifier.quote="`" )
+h2dbFile <- 'path/to/morphine/episim-morphine/dist/morphine'
+drv <- RJDBC::JDBC( driverClass='org.h2.Driver', identifier.quote="`"
+  , classPath='path/to/morphine/episim-morphine/dist/morphine-full-1.0.jar' )
 conn <- RJDBC::dbConnect( drv
-  , paste0('jdbc:h2:', h2dbUrl, ';AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE')
+  , paste0('jdbc:h2:', h2dbFile, ';AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE')
   , 'sa', 'sa' ) 
 ```
 
-Finally, check the connection, import the data, and disconnect
+Finally, check the connection, import the data, disconnect, and check contents:
 ```r
 > RJDBC::dbListTables( conn ) 
-> MORPHINE <- data.table( dbGetQuery( conn, "select * from HOUSEHOLDS" ) )
-> dbDisconnect( conn )
-> str( MORPHINE )
+> DT <- data.table( RJDBC::dbGetQuery( conn, "select * from HOUSEHOLDS" ) )
+> RJDBC::dbDisconnect( conn )
+> str( DT )
 ```
-...may produce something like the following (first 4 values are for the 
-4 attractors, configured in the default [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml#L62-#L63)
-with names `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`):
+Data table `DT` now contains all records for each households `INDEX` (0..A+N/2) in each statistics export iteration `SEQ` (0...) of each simulation run `CONFIG_PK` (0..). Thus you should get something like:
 ```
 Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ PK                  : num  2 3 4 5 6 7 8 9 10 11 ...
@@ -261,5 +257,6 @@ Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ SOCIAL_ASSORTATIVITY: num  0 0 0 0 0.852 ...
  $ SOCIAL_NETWORK_SIZE : num  126 128 128 126 27 26 27 27 16 17 ...
  $ CONFIG_PK           : num  1 1 1 1 1 1 1 1 1 1 ...
- - attr(*, ".internal.selfref")=<externalptr> 
 ```
+
+Note that in this case, observations with the first 4 `INDEX` values (0..3) in each combination of `CONFIG_PK` and `SEQ` are for the 4 attractors (named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`) as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/master/episim-morphine/dist/morphine.dist.yaml#L62-#L63).
