@@ -57,52 +57,59 @@ categories by [Betsch et al. (2015)](http://dx.doi.org/10.1177/2372732215600716)
 
 # Getting started
 
-Prerequisites, typically already embedded with IDE's like [Eclipse](), [Netbeans](), or [IntelliJ]():
+## 1. Prerequisites
+Although `git` and `mvn` are usually embedded within modern [IDE](https://www.wikiwand.com/en/Integrated_development_environment)'s like [Eclipse](http://www.eclipse.org/), [Netbeans](https://netbeans.org/), or [IntelliJ IDEA](https://www.jetbrains.com/idea/), you might want to install them into your shell's `PATH` environment variable:
 
-* `git` (e.g. [git-scm](https://git-scm.com/downloads))
+* `java` (e.g. [Oracle's SE JDK](http://www.oracle.com/technetwork/java/javase/downloads/))
+* `git` (e.g. [git-scm](https://git-scm.com/downloads/))
 * `mvn` (e.g. [Apache Maven](https://maven.apache.org/))
 
-## Build from source
+## 2. Build
 
-Clone the repository and switch to 'master' branch
+Clone the repository (switched to 'master' branch) and compile the uber-jar
 ```
-git clone git@github.com:JHoogink/morphine.git
-```
-
-Build the uber-jar
-```
-cd episim-morphine\
-mvn install
+> git clone git@github.com:JHoogink/morphine.git
+> mvn install -f morphine/episim-morphine
 ```
 
-Create custom configuration 
+## 3. Configure
+
+Customize the default distributed configuration files for both logging 
+(see [Log4j2 docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)) 
+and simulation:
 ```
-cd dist\
-copy .\log4j.dist.yaml .\log4j.yaml
-copy .\morphine.dist.yaml .\morphine.yaml
+> cd ./morphine/episim-morphine/dist
+> copy log4j2.dist.yaml   log4j2.yaml
+> copy morphine.dist.yaml morphine.yaml
 ```
 
-## Run the uber-jar
+## 4. Run
 The basic shell script `morphine.bat` repeats a call to run the morphine 
 scenario *n* times, and also provides an example on how to override some 
 configuration settings between replications so as to run entire experiments.
 
-### Usage example 
-Run the custom setup 1x only using the shell script:
+Run the custom setup configuration 1x only, using the shell script:
 ```
->epidemes-morphine\dist\morphine
+> cd ./morphine/episim-morphine/dist
+> morphine
 ```
 or call the executable jar directly:
 ```
->java -jar epidemes-morphine\dist\morphine-full-1.0.jar
+> cd ./morphine/episim-morphine/dist
+> java -jar ./morphine/episim-morphine/dist/morphine-full-1.0.jar
 ```
 
 ### Batch mode
-Run 3 iterations of the custom setup, each with a new `RUNS.SEED` value
-(unless `morphine.replication.random-seed` is configured with some integer)
+To run multiple iterations of the custom setup configuration, each with a 
+new pseudorandom generator seed value (unless `morphine.replication.random-seed` 
+is configured with some integer), e.g. for 3 iterations:
 ```
->epidemes-morphine\dist\morphine 3
+> cd ./morphine/episim-morphine/dist
+> morphine 3
 ```
+Note that you can create variations of the `morphine.bat` script that iterate 
+over your own choice of (independent) setup parameter settings, using a slightly
+different notation, e.g. for [float or string values](https://stackoverflow.com/a/3439978).
 
 # Results Data Structure
 Statistics are exported using [JPA](https://www.wikiwand.com/en/Java_Persistence_API) 
@@ -114,10 +121,10 @@ Populated using `nl.rivm.cib.morphine.dao.HHConfigDao`, the `RUNS` table has
 the following columns:
 
   - `PK`: the primary key used for reference across the database
-  - `CREATED_TS`: the timestamp of this record's creation
-  - `CONTEXT`: the [UUID](https://www.wikiwand.com/en/Universally_unique_identifier) of the setup
-  - `SETUP`: the name of this setup, configured in `morphine.replication.setup-name`
-  - `SEED`: the seed of the pseudorandom number generator, possibly configured in `morphine.replication.random-seed`
+  - `CREATED_TS`: the database timestamp of this record's creation
+  - `CONTEXT`: the [UUID](https://www.wikiwand.com/en/Universally_unique_identifier) of the simulation run
+  - `SETUP`: the name of this setup, configured (in `morphine.replication.setup-name`)
+  - `SEED`: the pseudorandom number generator seed, generated or configured (in `morphine.replication.random-seed`)
   - `HASH`: the MD5 hash of the effective configuration (ignoring comments)
   - `JSON`: the effective setup configuration as [JSON](http://json.org/) tree
   - `YAML`: the effective setup configuration as [YAML](http://yaml.org/) tree
@@ -129,10 +136,10 @@ table has the following columns:
   - `PK`: the primary key of this record
   - `CONFIG_PK`: foreign key of the respective `RUNS` record
   - `SEQ`: the statistics export sequence iteration
-  - `INDEX`: the household (contact network row) index (0..N/2)
+  - `INDEX`: the household (contact network row) index (0..A+N/2)
   - `HH`: household identifier (may be replaced to to death/birth or migration)
   - `HH_DT_DAYS`: the number of days between social impressions on this household
-  - `ATTRACTOR_REF`: household designated *attractor* (social network row) index 
+  - `ATTRACTOR_REF`: household designated *attractor* (social network row) index (0..A)
   - `REFERENT_AGE`:  household referent (parent) current age (years)
   - `REFERENT_STATUS`: household referent (parent) status (vaccinated, susceptible, ...)
   - `REFERENT_MALE`: household referent (parent) masculine gender (true/false)
@@ -167,7 +174,8 @@ year (`*`).
 The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
 
 ```
->epidemes-morphine\dist\h2_console
+> cd ./morphine/episim-morphine/dist
+> h2_console
 ```
 
 In the web form that now becomes available typically at 
@@ -178,15 +186,9 @@ In the web form that now becomes available typically at
 - Password: `sa`
 
 ## R import and statistics
-Another option is to import the results to your R session.
+The simulation results can be easily imported into your R session.
 
-First, edit the base URL to match your environment, e.g.:
-```
-baseUrl <- 'C:/path/to/morphine/episim-morphine/dist/'
-dbName <- 'morphine'
-```
-
-Then install and load the required packages, e.g. 
+First, install and load the required packages, e.g. 
 [`RJDBC`](https://cran.r-project.org/web/packages/RJDBC/) and 
 [`data.table`](https://cran.r-project.org/web/packages/data.table/).
 ```
@@ -195,14 +197,16 @@ require(RJDBC)
 require(data.table)
 ```
 
-Connect to the SQL database `.../morphine` via JDBC:
+Next, after editing the below URLs to match your environment, connect to the 
+(H2 or other) SQL-compatible database via JDBC:
 ```
+baseUrl <- 'path/to/morphine/episim-morphine/dist/' # match your environment
+h2dbUrl <- paste0(baseUrl, 'morphine') # default, must match your setup
 drv <- RJDBC::JDBC( driverClass='org.h2.Driver' 
   , classPath=paste0(baseUrl,'morphine-full-1.0.jar')
-  , identifier.quote="`"
-  )
-conn <- RJDBC::dbConnect(drv
-  , paste0('jdbc:h2:', baseUrl, dbName, ';AUTO_SERVER=TRUE')
+  , identifier.quote="`" )
+conn <- RJDBC::dbConnect( drv
+  , paste0('jdbc:h2:', h2dbUrl, ';AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE')
   , 'sa', 'sa' ) 
 ```
 
