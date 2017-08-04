@@ -105,12 +105,16 @@ values (as defined in [`nl.rivm.cib.morphine.household.HHConfig`](https://github
 ```
 
 ### Batch mode
-To run multiple iterations of the custom setup configuration, each with a 
-new pseudorandom generator seed value (unless `morphine.replication.random-seed` 
-is configured with some integer):
+To run multiple iterations of the setup configuration in `morphine.yaml`:
 ```
 > morphine [number-of-replications]
 ```
+
+Unless `morphine.replication.random-seed` is configured with some integer 
+(for instance to reproduce an earlier run), each iteration takes a 
+new seed value for pseudorandom generator, which is exported in the 
+`RUNS.SEED` column for later replication if required.
+
 Feel free to create variations of the `morphine.bat` script, and iterate 
 over your own choice of (independent) setup parameter settings. *NOTE*: `float` 
 or `string`-type parameter values may require a slightly 
