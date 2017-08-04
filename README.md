@@ -161,15 +161,15 @@ the `HOUSEHOLDS` table has the following columns:
   - `IMPRESS_W_ATTRACTOR`: maximum weight of attractor's attitude (conformance)
 
 # Analysis
-The default setup will export the current statistics at instants matching the 
+The default setup will export the current statistics at virtual time instants matching the 
 [CRON expression](http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html) 
 configured in `morphine.replication.statistics.recurrence`. For instance: 
 
-  - `0 0 0 ?    * MON *` means: midnight (`0s 0m 0h`) of any day-of-month (`? *`) 
-  every Monday (`MON`) of any year (`*`)
-  - `0 0 0 1,15 * ?   *` means: midnight (`0s 0m 0h`) on every 1st and 15th day of 
+  - `0 0 0 1,15 * ? *` matches midnight (`0s 0m 0h`) on every 1st and 15th day of 
   any month (`1,15 *`), of any year (`*`)
-  - `1 0 0 L-2  * ?   *` means: the first second after midnight (`1s 0m 0h`) at the 
+  - `0 30 9,14 ? * MON-FRI *` matches 9:30am and 2:30pm (`0s 30m 9,14h`) on any date (`? *`) 
+  every weekday (`MON-FRI`) of any year (`*`)
+  - `1 0 0 L-2  * ? *` matches the first second after midnight (`1s 0m 0h`) at the 
   second-to-last day of any month (`L-2 *`), whatever the weekday (`?`), of any 
   year (`*`).
 
