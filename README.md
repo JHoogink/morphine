@@ -2,9 +2,9 @@
 
 The [MORPHINE project](http://www.strategischprogrammarivm.nl/Wiskundige_modellering_van_ziekten#cat-8), 
 funded by the [Strategic Programme of the RIVM](http://www.strategischprogrammarivm.nl), 
-contains a simulation model that is implemented on the 
-[EPIDEMES framework](https://github.com/krevelen/epidemes/), 
-for micro-simulation of synthetic populations using open-source 
+contains a simulation model that is implemented with the 
+[EPIDEMES framework](https://github.com/krevelen/epidemes/) supported by [ZonMW](https://www.zonmw.nl/nl/onderzoek-resultaten/gezondheidsbescherming/programmas/project-detail/infectieziektebestrijding-2014-2017/from-individual-perception-of-vaccination-risks-and-benefits-to-compliance-costs-and-effects-of-vac/)
+for micro-simulation of synthetic populations, which uses open-source 
 tooling such as the [COALA binder](https://github.com/krevelen/coala-binder/releases) 
 and the [DSOL simulator](http://www.simulation.tudelft.nl/). 
 
@@ -96,7 +96,8 @@ for some simple parameter settings.
 
 To configure the logger, please refer to the 
 [Log4j 2.0 YAML docs](https://logging.apache.org/log4j/2.0/manual/configuration.html#Configuration_with_YAML)
-or check out the [`log4j2.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/log4j2.dist.yaml) souce for some default settings.
+or to [`log4j2.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/log4j2.dist.yaml) 
+example for some default settings.
 
 ## 3. Run
 
@@ -120,8 +121,8 @@ To run multiple iterations of the setup configuration in `./morphine.yaml`:
 
 Unless `morphine.replication.random-seed` is configured with some integer 
 (for instance to reproduce an earlier run), each iteration takes a 
-new seed value for pseudorandom generator, which is exported in the 
-`RUNS.SEED` column for later replication if required.
+new seed value for the pseudorandom number generator, which is exported in 
+the `RUNS.SEED` column for later replication if required.
 
 Feel free to create variations of the `morphine.bat` script, and iterate 
 over your own choice of (independent) setup parameter settings. *NOTE*: `float` 
