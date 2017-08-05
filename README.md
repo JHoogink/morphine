@@ -212,11 +212,7 @@ Now the console is ready to perform your SQL queries. For example:
 - left-click the `HOUSEHOLDS` table name (in the left-side explorer panel) to generate a default browse query (`SELECT * FROM HOUSEHOLDS`); and
 - left-click the `RUN` tab/button (in the right-hand side query editor) to fetch the first 1000 records or rows.
 
-For instance, the query:
-```
-SHOW COLUMNS FROM HOUSEHOLDS
-```
-...should yield something like:
+For instance, the query `SHOW COLUMNS FROM HOUSEHOLDS` should yield something like:
 
 | FIELD | TYPE | NULL | KEY | DEFAULT |  
 | ----- | ---- | ---- | --- | ------- |
@@ -240,13 +236,13 @@ SHOW COLUMNS FROM HOUSEHOLDS
 | IMPRESS_W_DISSORT | DECIMAL(15) | NO |  | NULL | 
 | IMPRESS_W_SELF | DECIMAL(15) | NO |  | NULL | 
 | HH_DT_DAYS | DECIMAL(15) | NO |  | NULL | 
-| INDEX	BIGINT(19) | NO |  | NULL | 
+| INDEX	| BIGINT(19) | NO |  | NULL | 
 | REFERENT_AGE | DECIMAL(10 | NO |  | NULL | 
 | REFERENT_MALE | BOOLEAN(1) | NO |  | NULL | 
 | REFERENT_STATUS | VARCHAR(255) | NO |  | NULL | 
 | SEQ | INTEGER(10) | NO |  | NULL | 
 | SOCIAL_ASSORTATIVITY | DECIMAL(15) | NO |  | NULL | 
-| SOCIAL_NETWORK_SIZE	| INTEGER(10)	NO | | NULL | 
+| SOCIAL_NETWORK_SIZE	| INTEGER(10)	| NO |  | NULL | 
 | CONFIG_PK	| INTEGER(10)	| NO | | NULL | 
 
 ## R import and statistics
@@ -314,6 +310,6 @@ Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ CONFIG_PK           : num  1 1 1 1 1 1 1 1 1 1 ...
 ```
 
-Note that all observations containing the lowest values in `INDEX` (and conversely `HH`) are for the attractors as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml#L62-#L63). In this case, the first 4 indices (0..3) are constant throughout all of the simulation run's statistics iteration (uniquely identifiable with `CONFIG_PK` and `SEQ` respectively) for the 4 attractors named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`.
+Note that all observations containing the lowest values in `INDEX` (and conversely `HH`) are for the attractors as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml#L62-#L63). In this case, the first 4 indices (0..3) are constant throughout all of the run's statistics iterations (uniquely identifiable with `CONFIG_PK` and `SEQ` respectively) for the 4 attractors named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`.
 
 Unfortunately, `RJDBC` translates the `BOOLEAN` columns (`ATTITUDE`, `CHILD1_MALE`, `REFERENT_MALE`) to `character` values (`TRUE` and `FALSE`) rather than integers (`1` and `0` respectively).
