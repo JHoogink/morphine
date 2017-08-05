@@ -194,8 +194,7 @@ configured in `morphine.replication.statistics.recurrence`. For instance:
   year (`*`).
 
 ## Inspection via web-based H2 Console
-The simplest option to inspect the results directtly is to use the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
-
+One straight-forward approach to inspecting the results is to use SQL directly, for instance in the [H2 database web console](http://www.h2database.com/html/tutorial.html#console_settings).
 ```
 > h2_console
 ```
@@ -213,12 +212,50 @@ Now the console is ready to perform your SQL queries. For example:
 - left-click the `HOUSEHOLDS` table name (in the left-side explorer panel) to generate a default browse query (`SELECT * FROM HOUSEHOLDS`); and
 - left-click the `RUN` tab/button (in the right-hand side query editor) to fetch the first 1000 records or rows.
 
+For instance, the query:
+```
+SHOW COLUMNS FROM HOUSEHOLDS
+```
+...should yield something like:
+
+| FIELD | TYPE | NULL | KEY | DEFAULT |  
+| ----- | ---- | ---- | --- | ------- |
+| PK | INTEGER(10) | NO | PRI | NULL | 
+| ATTITUDE | BOOLEAN(1) | YES |  | NULL | 
+| ATTRACTOR_REF | VARCHAR(255) | NO |  | NULL | 
+| CALCULATION | DECIMAL(15) | NO |  | NULL | 
+| CHILD1_AGE | DECIMAL(10) | YES |  | NULL | 
+| CHILD1_MALE | BOOLEAN(1) | YES |  | NULL | 
+| CHILD1_STATUS | VARCHAR(255) | YES |  | NULL | 
+| COMPLACENCY | DECIMAL(15) | NO |  | NULL | 
+| CONFIDENCE | DECIMAL(15) | NO |  | NULL | 
+| HH | BIGINT(19) | NO |  | NULL | 
+| IMPRESS_F_POSITIVE | DECIMAL(15) | YES |  | NULL | 
+| IMPRESS_N_BY_PEER | CLOB(2147483647) | NO |  | NULL | 
+| IMPRESS_N_PEERS | INTEGER(10) | NO |  | NULL | 
+| IMPRESS_N_ROUNDS | INTEGER(10) | NO |  | NULL | 
+| IMPRESS_DT_DAYS | DECIMAL(15) | NO |  | NULL | 
+| IMPRESS_W_ASSORT | DECIMAL(15) | NO |  | NULL | 
+| IMPRESS_W_ATTRACTOR | DECIMAL(15) | NO |  | NULL | 
+| IMPRESS_W_DISSORT | DECIMAL(15) | NO |  | NULL | 
+| IMPRESS_W_SELF | DECIMAL(15) | NO |  | NULL | 
+| HH_DT_DAYS | DECIMAL(15) | NO |  | NULL | 
+| INDEX	BIGINT(19) | NO |  | NULL | 
+| REFERENT_AGE | DECIMAL(10 | NO |  | NULL | 
+| REFERENT_MALE | BOOLEAN(1) | NO |  | NULL | 
+| REFERENT_STATUS | VARCHAR(255) | NO |  | NULL | 
+| SEQ | INTEGER(10) | NO |  | NULL | 
+| SOCIAL_ASSORTATIVITY | DECIMAL(15) | NO |  | NULL | 
+| SOCIAL_NETWORK_SIZE	| INTEGER(10)	NO | | NULL | 
+| CONFIG_PK	| INTEGER(10)	| NO | | NULL | 
+
 ## R import and statistics
 The simulation results can be easily imported into your R session.
 
 First, install and load the required packages, e.g. 
 [`RJDBC`](https://cran.r-project.org/web/packages/RJDBC/) and 
-[`data.table`](https://cran.r-project.org/web/packages/data.table/) (see also [this cheat sheet](https://www.datacamp.com/community/tutorials/data-table-cheat-sheet)).
+[`data.table`](https://cran.r-project.org/web/packages/data.table/)
+(see also [this cheat sheet](https://www.datacamp.com/community/tutorials/data-table-cheat-sheet)).
 ```r
 install.packages( c( 'RJDBC','data.table' ), dep=TRUE )
 require( RJDBC )
@@ -226,11 +263,12 @@ require( data.table )
 ```
 
 Next, after editing the below URLs to match your environment, connect to the 
-(H2 or other) SQL-compatible database via JDBC:
+(H2 or other) SQL-compatible database via JDBC (a JDBC driver for H2 is 
+embedded in the uber-jar):
 ```r
-h2dbFile <- 'path/to/morphine/episim-morphine/dist/morphine'
+h2dbFile <- 'path/to/morphine/dist'
 drv <- RJDBC::JDBC( driverClass='org.h2.Driver', identifier.quote="`"
-  , classPath='path/to/morphine/episim-morphine/dist/morphine-full-1.0.jar' )
+  , classPath='path/to/morphine/dist/morphine-full-1.0.jar' )
 conn <- RJDBC::dbConnect( drv
   , paste0('jdbc:h2:', h2dbFile, ';AUTO_SERVER=TRUE;DB_CLOSE_ON_EXIT=FALSE')
   , 'sa', 'sa' ) 
@@ -276,4 +314,6 @@ Classes ‘data.table’ and 'data.frame':	6048 obs. of  28 variables:
  $ CONFIG_PK           : num  1 1 1 1 1 1 1 1 1 1 ...
 ```
 
-Note that in this case, observations with the first 4 `INDEX` values (0..3) in each combination of `CONFIG_PK` and `SEQ` are for the 4 attractors (named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`) as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml#L62-#L63).
+Note that all observations containing the lowest values in `INDEX` (and conversely `HH`) are for the attractors as per the default configuration [`morphine.dist.yaml`](https://github.com/JHoogink/morphine/blob/v1.0/episim-morphine/dist/morphine.dist.yaml#L62-#L63). In this case, the first 4 indices (0..3) are constant throughout all of the simulation run's statistics iteration (uniquely identifiable with `CONFIG_PK` and `SEQ` respectively) for the 4 attractors named `rel-alt`, `rel-reg`, `sec-alt` and `sec-reg`.
+
+Unfortunately, `RJDBC` translates the `BOOLEAN` columns (`ATTITUDE`, `CHILD1_MALE`, `REFERENT_MALE`) to `character` values (`TRUE` and `FALSE`) rather than integers (`1` and `0` respectively).
