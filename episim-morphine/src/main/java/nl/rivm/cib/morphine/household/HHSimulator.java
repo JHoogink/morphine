@@ -23,10 +23,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManagerFactory;
 
@@ -42,6 +45,7 @@ import org.hibernate.cfg.AvailableSettings;
 import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
 import io.coala.config.ConfigUtil;
+import io.coala.config.YamlUtil;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.log.LogUtil.Pretty;
@@ -69,6 +73,8 @@ import nl.rivm.cib.episim.cbs.TimeUtil;
 public class HHSimulator
 {
 
+	private static final String CONF_ARG = "conf";
+
 	/**
 	 * @param args arguments from the command line
 	 * @throws IOException
@@ -77,7 +83,30 @@ public class HHSimulator
 	public static void main( final String[] args )
 		throws IOException, InterruptedException
 	{
-		final HHConfig hhConfig = HHConfig.getOrCreate( args );
+		// convert command-line arguments to map
+		final Map<String, String> argMap = Arrays.stream( args )
+				.filter( arg -> arg.contains( "=" ) )
+				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length > 1 )
+				.collect( Collectors.toMap( arr -> arr[0], arr ->
+				{
+					final String[] value = new String[arr.length - 1];
+					System.arraycopy( arr, 1, value, 0, value.length );
+					return String.join( "=", value );
+				} ) );
+
+		// merge arguments into configuration imported from YAML file
+		final HHConfig hhConfig = ConfigCache.getOrCreate( HHConfig.class,
+				// CLI args added first: override config resource and defaults 
+				argMap,
+				YamlUtil.flattenYaml( FileUtil
+						.toInputStream( argMap.computeIfAbsent( CONF_ARG,
+								confArg -> System.getProperty( CONF_ARG,
+										// set default configuration data file base directory/url
+										argMap.computeIfAbsent(
+												HHConfig.CONFIG_BASE_KEY,
+												baseKey -> System.getProperty(
+														HHConfig.CONFIG_BASE_KEY, HHConfig.CONFIG_BASE_DIR ) )
+												+ HHConfig.CONFIG_YAML_FILE ) ) ) ) );
 
 		if( System.getProperty(
 				ConfigurationFactory.CONFIGURATION_FILE_PROPERTY ) == null )

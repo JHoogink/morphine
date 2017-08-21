@@ -26,9 +26,12 @@ Configuration:
       level: warn
     - name: org.hibernate
       level: warn
+    # hide deprecation warning from hikari to hibernate
+    - name: com.zaxxer.hikari.HikariDataSource
+      level: error
     # hide constraint warnings for 'create-drop' DDL and 'in-memory' database
     - name: org.hibernate.tool.schema.internal.ExceptionHandlerLoggedImpl
       level: error
-#    # show (unformatted) SQL
+    # show (unformatted) SQL
 #    - name: org.hibernate.SQL
 #      level: debug

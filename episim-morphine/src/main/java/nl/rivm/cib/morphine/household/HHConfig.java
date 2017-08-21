@@ -1,31 +1,26 @@
 package nl.rivm.cib.morphine.household;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.Period;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.measure.Quantity;
 import javax.measure.quantity.Frequency;
 import javax.measure.quantity.Time;
 
 import org.aeonbits.owner.Config.Sources;
-import org.aeonbits.owner.ConfigCache;
 
 import io.coala.bind.LocalBinder;
 import io.coala.config.ConfigUtil;
 import io.coala.config.GlobalConfig;
-import io.coala.config.YamlUtil;
 import io.coala.exception.Thrower;
 import io.coala.json.JsonUtil;
 import io.coala.math.DecimalUtil;
@@ -42,7 +37,6 @@ import io.coala.time.Instant;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
 import io.coala.time.Timing;
-import io.coala.util.FileUtil;
 import io.coala.util.InputStreamConverter;
 import io.coala.util.MapBuilder;
 import nl.rivm.cib.epidemes.cbs.json.CBSHousehold;
@@ -77,8 +71,6 @@ public interface HHConfig extends GlobalConfig
 
 	String DATASOURCE_JNDI = "jdbc/hhDB";
 
-	String CONF_ARG = "conf";
-
 	/** configuration key separator */
 	String KEY_SEP = ConfigUtil.CONFIG_KEY_SEP;
 
@@ -108,45 +100,6 @@ public interface HHConfig extends GlobalConfig
 	@Key( CONFIG_BASE_KEY )
 	String configBase();
 
-	/**
-	 * provide a universal approach for loading the {@link HHConfig}
-	 * 
-	 * @param args the command-line arguments, any "..=.." will be imported as
-	 *            override to the , if any
-	 * @return a (cached) {@link HHConfig} instance
-	 * @throws IOException
-	 */
-	static HHConfig getOrCreate( final String... args ) throws IOException
-	{
-
-		// convert command-line arguments to map
-
-		final Map<String, String> argMap = Arrays.stream( args )
-				.filter( arg -> arg.contains( "=" ) )
-				.map( arg -> arg.split( "=" ) ).filter( arr -> arr.length > 1 )
-				.collect( Collectors.toMap( arr -> arr[0], arr ->
-				{
-					final String[] value = new String[arr.length - 1];
-					System.arraycopy( arr, 1, value, 0, value.length );
-					return String.join( "=", value );
-				} ) );
-		
-		// set default configuration data file base directory/url
-		argMap.computeIfAbsent( CONFIG_BASE_KEY, baseKey -> System
-				.getProperty( CONFIG_BASE_KEY, CONFIG_BASE_DIR ) );
-
-		// merge arguments into configuration imported from YAML file
-		return ConfigCache.getOrCreate( HHConfig.class,
-				// CLI args added first: override config resource and defaults 
-				argMap,
-				YamlUtil.flattenYaml( FileUtil
-						.toInputStream( argMap.computeIfAbsent( CONF_ARG,
-								confArg -> System.getProperty( CONF_ARG,
-										argMap.get( CONFIG_BASE_KEY )
-												+ CONFIG_YAML_FILE ) ) ) ) );
-	}
-
-	// match unit name from persistence.xml
 	@DefaultValue( "" + false )
 	@Key( STATISTICS_PREFIX + "db-enabled" )
 	boolean dbEnabled();
@@ -157,10 +110,9 @@ public interface HHConfig extends GlobalConfig
 	@Separator( JPAConfig.NAME_DELIMITER )
 	String[] jpaPersistenceUnitNames();
 
-	//	"jdbc:neo4j:bolt://192.168.99.100:7687/db/data" 
-	//	"jdbc:mysql://localhost/hhdb" 
+	// jdbc:neo4j:bolt://192.168.99.100:7687/db/data 
+	// jdbc:mysql://localhost/hhdb
 	// jdbc:h2:~/morphdat/h2_hhdb
-	// jdbc:h2:tcp://localhost/~/morphdat/h2_hhdb
 	@DefaultValue( "jdbc:h2:./morphine;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false" )
 	@Key( JPAConfig.JPA_JDBC_URL_KEY )
 	URI jdbcUrl();
@@ -279,30 +231,6 @@ public interface HHConfig extends GlobalConfig
 		return DecimalUtil.divide( BigDecimal.ONE,
 				DecimalUtil.valueOf( value ) );
 	}
-
-//	@Key( POPULATION_PREFIX + "cbs-region-type" )
-//	@DefaultValue( "COROP" )
-//	CBSRegionType cbsRegionLevel();
-//
-//	@Key( POPULATION_PREFIX + "cbs-71486ned-data" )
-//	@DefaultValue( CONFIG_BASE_DIR + "71486ned-TS-2010-2016.json" )
-//	@ConverterClass( InputStreamConverter.class )
-//	InputStream cbs71486Data();
-//
-//	default ConditionalDistribution<Cbs71486json.Category, LocalDate> cbs71486(
-//		final Range<LocalDate> timeFilter,
-//		final ProbabilityDistribution.Factory distFactory )
-//	{
-//		final CBSRegionType cbsRegionLevel = cbsRegionLevel();
-//		final Map<LocalDate, Collection<WeightedValue<Cbs71486json.Category>>> map = Cbs71486json
-//				.readAsync( this::cbs71486Data, timeFilter )
-//				.filter( wv -> wv.getValue().regionType() == cbsRegionLevel )
-//				.toMultimap( wv -> wv.getValue().offset(), wv -> wv,
-//						TreeMap::new )
-//				.blockingGet();
-//		return ConditionalDistribution.of( distFactory::createCategorical,
-//				map );
-//	}
 
 	@Key( VACCINATION_PREFIX + "occasion-recurrence" )
 	@DefaultValue( "0 0 0 7 * ? *" )
@@ -541,24 +469,4 @@ public interface HHConfig extends GlobalConfig
 		return Timing.of( attitudePropagatorRecurrence() )
 				.offset( scheduler.offset() ).iterate();
 	}
-
-//	@Key( "morphine.measles.contact-period" )
-//	@DefaultValue( "10 h" )
-//	Duration contactPeriod();
-//
-//	@DefaultValue( "2 day" )
-//	Duration latentPeriodConst();
-//
-//	@DefaultValue( "5 day" )
-//	Duration recoverPeriodConst();
-//
-//	@DefaultValue( "9999 day" )
-//	Duration wanePeriodConst();
-//
-//	@DefaultValue( "3 day" )
-//	Duration onsetPeriodConst();
-//
-//	@DefaultValue( "7 day" )
-//	Duration symptomPeriodConst();
-
 }

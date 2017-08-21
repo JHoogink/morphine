@@ -21,16 +21,19 @@ package nl.rivm.cib.morphine.household;
 
 import java.io.IOException;
 
+import org.aeonbits.owner.ConfigCache;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
 import io.coala.bind.LocalBinder;
 import io.coala.bind.LocalConfig;
+import io.coala.config.YamlUtil;
 import io.coala.dsol3.Dsol3Scheduler;
 import io.coala.log.LogUtil;
 import io.coala.time.Scheduler;
 import io.coala.time.TimeUnits;
+import io.coala.util.FileUtil;
 
 /**
  * {@link HHConfigTest} tests {@link HHConfig}
@@ -60,7 +63,10 @@ public class HHConfigTest
 		throws InstantiationException, IllegalAccessException, IOException
 	{
 		LOG.info( "{} started", HHConfigTest.class.getSimpleName() );
-		final HHConfig conf = HHConfig.getOrCreate();
+		final HHConfig conf = ConfigCache.getOrCreate( HHConfig.class,
+				YamlUtil.flattenYaml(
+						FileUtil.toInputStream( HHConfig.CONFIG_BASE_DIR
+								+ HHConfig.CONFIG_YAML_FILE ) ) );
 		final Scheduler scheduler = this.binder.inject( Scheduler.class );
 		scheduler.onReset( () -> conf.hesitancyAttractors( this.binder )
 				.values()
