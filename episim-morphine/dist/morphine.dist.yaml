@@ -46,6 +46,7 @@ morphine:
       evaluator: nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average
       propagator: nl.rivm.cib.morphine.household.HHAttitudePropagator$Shifted
       propagator-recurrence: 0 0 0 L-2 * ? *
+      propagator-skip-vaccinated: FALSE
       # avg. no. family + friends + neighbors
       social-network-degree: 20
       # 0 = lattice, 1 = random network
@@ -53,11 +54,6 @@ morphine:
       # fraction of 'similar' connections
       social-assortativity: 0.85
       # whether school is 'similar'
-#      school-assortativity-dist: bernoulli(0.75) 
-#      school-capacities: 
-#        0-4: 50
-#        4-12: 100
-#        12-20: 200
         
       attractor-factory: nl.rivm.cib.morphine.household.HHAttractor$Factory$SimpleBinding
       attractors:

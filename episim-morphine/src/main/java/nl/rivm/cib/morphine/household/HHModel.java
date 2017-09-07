@@ -728,10 +728,25 @@ public class HHModel implements Scenario
 					//
 					).forEach( ppRef ->
 					{
-						// then vaccinate
+						// then vaccinate the child member
 						this.ppAttributes.setAsInt(
 								HHMemberStatus.ARTIFICIAL_IMMUNE.ordinal(),
 								ppRef, HHMemberAttribute.STATUS.ordinal() );
+						LOG.trace( "Vaccinated hh {} person {}", hh, ppRef );
+						
+						// and cancel further attitude updates...
+						if( !this.config.attitudePropagatorSkipVaccinated() )
+							return;
+
+						// signal propagator: freeze attitude (negative weights)
+						final long[] x = { hh,
+						HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() };
+						final long[] y = { hh,
+						HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() };
+						this.hhAttributes.setAsBigDecimal( this.hhAttributes
+								.getAsBigDecimal( x ).abs().negate(), x );
+						this.hhAttributes.setAsBigDecimal( this.hhAttributes
+								.getAsBigDecimal( y ).abs().negate(), y );
 					} );
 				} );
 	}
@@ -879,6 +894,14 @@ public class HHModel implements Scenario
 				hhIndex, HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
 		this.hhAttributes.setAsInt( 0, hhIndex,
 				HHAttribute.IMPRESSION_FEEDS.ordinal() );
+		final long[] wi = { hhIndex,
+				HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() };
+		final long[] wo = { hhIndex,
+				HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() };
+		this.hhAttributes.setAsBigDecimal(
+				this.hhAttributes.getAsBigDecimal( wi ).abs(), wi );
+		this.hhAttributes.setAsBigDecimal(
+				this.hhAttributes.getAsBigDecimal( wo ).abs(), wo );
 		// this.hhAttributes.setAsBoolean( religious, hhIndex,
 		// HHAttribute.RELIGIOUS.ordinal() );
 		// this.hhAttributes.setAsBoolean( alternative, hhIndex,

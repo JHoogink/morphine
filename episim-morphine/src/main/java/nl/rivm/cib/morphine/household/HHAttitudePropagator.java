@@ -126,26 +126,39 @@ public interface HHAttitudePropagator
 							hhTotal );
 
 					final BigDecimal calc = hhAttributes.getAsBigDecimal( i,
-							HHAttribute.CALCULATION.ordinal() );
+							HHAttribute.CALCULATION.ordinal() ),
+							wi = hhAttributes.getAsBigDecimal( i,
+									HHAttribute.IMPRESSION_INPEER_WEIGHT
+											.ordinal() ),
+							wo = hhAttributes.getAsBigDecimal( i,
+									HHAttribute.IMPRESSION_OUTPEER_WEIGHT
+											.ordinal() );
 					final AtomicReference<BigDecimal> sumW = new AtomicReference<>(
 							BigDecimal.ZERO );
 					final AtomicInteger sumJ = new AtomicInteger( 0 );
-					HHConnector.availablePeers( hhPressure, i ).forEach( j ->
-					{
-						sumJ.incrementAndGet();
 
-						// get peer weight and apply calculation/filter function
-						final BigDecimal w = filteredAppreciation(
-								HHConnector.getSymmetric( hhPressure, i, j ),
-								calc );
-						rowW.setAsBigDecimal( w, 0, j );
-						sumW.getAndUpdate( s -> s.add( w ) );
-					} );
+					// skip peers if weight is negative (e.g. after vaccination)
+					if( wi.signum() > 0 && wo.signum() > 0 ) HHConnector
+							.availablePeers( hhPressure, i ).forEach( j ->
+							{
+								sumJ.incrementAndGet();
 
+								// get peer weight and apply calculation/filter function
+								final BigDecimal w = filteredAppreciation(
+										HHConnector.getSymmetric( hhPressure, i,
+												j ),
+										calc );
+								rowW.setAsBigDecimal( w, 0, j );
+								sumW.getAndUpdate( s -> s.add( w ) );
+							} );
+
+					// peer weights sum to =<0, don't update (ignore attractor)
 					if( sumW.get().signum() < 1 )
 					{
+						sumW.set( BigDecimal.ONE );
 						MatrixUtil.insertBigDecimal( newAttributes,
 								colV.selectRows( Ret.LINK, i ), i, 0 );
+						LOG.trace( "Propagation skip: {} ({},{})", i, wi, wo );
 						return (Number[]) null;
 					}
 

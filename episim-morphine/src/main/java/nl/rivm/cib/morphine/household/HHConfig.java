@@ -427,6 +427,10 @@ public interface HHConfig extends GlobalConfig
 		return distParser.parse( hesitancySchoolAssortativity() );
 	}
 
+	@Key( HESITANCY_PREFIX + "propagator-skip-vaccinated" )
+	@DefaultValue( "" + false )
+	boolean attitudePropagatorSkipVaccinated();
+
 	/** @see HHAttitudeEvaluator */
 	@Key( HESITANCY_PREFIX + "evaluator" )
 	@DefaultValue( "nl.rivm.cib.morphine.household.HHAttitudeEvaluator$Average" )
