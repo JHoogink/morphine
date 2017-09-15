@@ -365,7 +365,12 @@ public class HHModel implements Scenario
 		{
 			final BigDecimal inpeerW = this.hhAttributes.getAsBigDecimal( a,
 					HHAttribute.IMPRESSION_INPEER_WEIGHT.ordinal() );
-			if( inpeerW.signum() < 1 ) LOG.warn( "no weight: {}", inpeerW );
+			if( inpeerW.signum() < 1 )
+				LOG.warn( "attractor {} inpeer weight: {}", a, inpeerW );
+			final BigDecimal outpeerW = this.hhAttributes.getAsBigDecimal( a,
+					HHAttribute.IMPRESSION_OUTPEER_WEIGHT.ordinal() );
+			if( outpeerW.signum() < 1 )
+				LOG.warn( "attractor {} outpeer weight: {}", a, outpeerW );
 			final Matrix m = conn.connect( Na, assortK, x -> true,
 					x -> inpeerW );
 			return m;
@@ -473,15 +478,25 @@ public class HHModel implements Scenario
 								+ "\\" + HHConnector
 										.getSymmetric( this.hhNetwork, i, l ) )
 						.toArray( String[]::new );
-				if( peerTotal == 0 || peerTotal != stored.length ) LOG.warn(
-						"hh #{} ({}/{} -> {}) peers: in {}({}/{}) "
-								+ "+ out {}({}/{}) = {}/{}, added {}: {}",
-						i, ia, Na, this.attractorNames[aOwn], inpeers,
+				if( peerTotal == 0 || peerTotal != stored.length )
+					LOG.warn(
+							"hh #{} ({}/{} -> {}) peers: in {}({}/{}) "
+									+ "+ out {}({}/{}) = {}/{}, added {}: {}",
+							i, ia, Na, this.attractorNames[aOwn], inpeers,
+							inpeers.length,
+							DecimalUtil.toScale( assortativity * K, 1 ),
+							outpeers, outpeers.length,
+							DecimalUtil.toScale( dissortativity * K, 1 ),
+							peerTotal, K, diff.length, diff );
+				else if( log ) LOG.trace(
+						"hh #{} ({} {}/{}) peers: in {}({}/{})"
+								+ "+ out {}({}/{}) = {}/{}",
+						i, this.attractorNames[aOwn], ia, Na, inpeers,
 						inpeers.length,
 						DecimalUtil.toScale( assortativity * K, 1 ), outpeers,
 						outpeers.length,
 						DecimalUtil.toScale( dissortativity * K, 1 ), peerTotal,
-						K, diff.length, diff );
+						K );
 				final BigDecimal inpeerW = totalAssortW.get(),
 						outpeerW = totalDissortW.get(),
 						selfW = inpeerW.add( outpeerW ).multiply(
@@ -733,7 +748,7 @@ public class HHModel implements Scenario
 								HHMemberStatus.ARTIFICIAL_IMMUNE.ordinal(),
 								ppRef, HHMemberAttribute.STATUS.ordinal() );
 						LOG.trace( "Vaccinated hh {} person {}", hh, ppRef );
-						
+
 						// and cancel further attitude updates...
 						if( !this.config.attitudePropagatorSkipVaccinated() )
 							return;

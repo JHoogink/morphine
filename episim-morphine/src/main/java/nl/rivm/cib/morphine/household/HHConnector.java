@@ -46,7 +46,7 @@ public interface HHConnector
 	 * @param k the average connection degree
 	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
 	 */
-	default Matrix connect( long size, long k )
+	default Matrix connect( final long size, final long k )
 	{
 		return connect( size, () -> k );
 	}
@@ -56,7 +56,7 @@ public interface HHConnector
 	 * @param initialK the initial degree supplier, e.g. a constant
 	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
 	 */
-	default Matrix connect( long size, Supplier<Long> initialK )
+	default Matrix connect( final long size, final Supplier<Long> initialK )
 	{
 		return connect( size, initialK, x -> true );
 	}
@@ -77,13 +77,14 @@ public interface HHConnector
 	 * @param initialW the initial weight distribution, e.g. a constant
 	 * @return the connected graph; if symmetric then for for each W(i,j): i>=j
 	 */
-	default Matrix connect( long size, Supplier<Long> initialK,
-		Predicate<long[]> legalJ, Function<long[], BigDecimal> initialW )
+	default Matrix connect( final long size, final Supplier<Long> initialK,
+		final Predicate<long[]> legalJ,
+		final Function<long[], BigDecimal> initialW )
 	{
 		final Matrix result = connect( size, initialK, legalJ );
-		StreamSupport
-				.stream( result.availableCoordinates().spliterator(), false )
-				.filter( x -> result.getAsDouble( x ) != 0.0 ).forEach(
+		// NOTE don't use #availableCoordinates() as it misses half the coords
+		StreamSupport.stream( result.allCoordinates().spliterator(), false )
+				.filter( x -> result.getAsDouble( x ) != 0d ).forEach(
 						x -> result.setAsBigDecimal( initialW.apply( x ), x ) );
 		return result;
 	}

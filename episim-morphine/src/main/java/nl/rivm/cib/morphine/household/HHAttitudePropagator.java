@@ -89,8 +89,8 @@ public interface HHAttitudePropagator
 		Objects.requireNonNull( hhAttributes, "attributes null" );
 		final long hhTotal = hhAttributes.getRowCount();
 
-		final AtomicLong duration = new AtomicLong(
-				System.currentTimeMillis() ), hhCount = new AtomicLong();
+		final AtomicLong logTime = new AtomicLong( System.currentTimeMillis() ),
+				hhCount = new AtomicLong();
 		final Logger LOG = LogUtil.getLogger( getClass() );
 		final AtomicBoolean logged = new AtomicBoolean( false );
 
@@ -106,9 +106,10 @@ public interface HHAttitudePropagator
 				.mapToObj( i ->
 				{
 					hhCount.incrementAndGet();
-					if( System.currentTimeMillis() - duration.get() > 1000 )
+					final long sysTime = System.currentTimeMillis();
+					if( sysTime - logTime.get() > 1000 )
 					{
-						duration.set( System.currentTimeMillis() );
+						logTime.set( sysTime );
 						LOG.trace( "Propagating; {} of {}", hhCount.get(),
 								hhTotal );
 						logged.set( true );
@@ -180,13 +181,11 @@ public interface HHAttitudePropagator
 					rowW.setAsBigDecimal( attrW, 0, attr );
 
 					// get current hesitancy values and insert transformed
-//					final Matrix prod = rowW.mtimes( colV )
-//							.divide( totalW.doubleValue() );
-//					LOG.trace( "{}:\n{}*\n{}\n / {}\t= {} ", i, rowW,
-//							colV.transpose(), totalW, prod );
 					final Matrix res = sumW.get().signum() == 0 ? colV
 							: rowW.mtimes( colV )
 									.divide( totalW.doubleValue() );
+//					LOG.trace( "{}:\n{}*\n{}\n / {}\t= {} ", i, rowW,
+//							colV.transpose(), totalW, res );
 					MatrixUtil.insertBigDecimal( newAttributes, res, i, 0 );
 
 					final int j = sumJ.get();
