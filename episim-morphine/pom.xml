@@ -30,10 +30,11 @@
 		<project.reporting.outputEncoding>${encoding}</project.reporting.outputEncoding>
 		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
 
+		<epidemes.version>0.2.0</epidemes.version> <!-- epidemiology -->
+		<coala.version>0.2.1</coala.version> <!-- coala binder -->
+		
 		<log4j.version>2.8.2</log4j.version>
 		<jackson.version>2.8.8</jackson.version>
-		<coala.version>0.2.0-b6</coala.version> <!-- coala binder -->
-		<epidemes.version>0.1.0</epidemes.version> <!-- epidemiology -->
 		<h2.version>1.4.196</h2.version> <!-- file/in-memory database -->
 		<jta.version>1.1</jta.version> <!-- java (db) transaction API -->
 		<hibernate.version>5.1.0.Final</hibernate.version> <!-- orm/ogm provider -->
@@ -53,16 +54,24 @@
 
 	<repositories>
 		<repository>
-			<name>COALA Public Maven Repository</name>
-			<id>coala-public</id>
-			<url>https://github.com/krevelen/coala-binder/raw/mvn-repo/</url>
+			<name>COALA Local Maven Repository</name>
+			<id>coala-local</id>
+			<url>file:${project.basedir}/../coala-local</url>
 			<releases>
 				<enabled>true</enabled>
+				<updatePolicy>never</updatePolicy>
 			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
+  		</repository>
+
+		<repository>
+			<name>EPIDEMES Local Maven Repository</name>
+			<id>epidemes-local</id>
+			<url>file:${project.basedir}/../epidemes-local</url>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>never</updatePolicy>
+			</releases>
+  		</repository>
 
 		<!-- TU Delft simulation repository -->
 		<repository>
@@ -78,56 +87,17 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
-
-		<repository>
-			<name>EPIDEMES Public Maven Repository</name>
-			<id>epidemes-public</id>
-			<url>https://github.com/krevelen/rivm-episim/raw/mvn-repo/</url>
-			<releases>
-				<enabled>true</enabled>
-				<updatePolicy>never</updatePolicy>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
 	</repositories>
-
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>com.fasterxml.jackson</groupId>
-				<artifactId>jackson-bom</artifactId>
-				<version>${jackson.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.logging.log4j</groupId>
-				<artifactId>log4j-bom</artifactId>
-				<version>${log4j.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.hibernate.ogm</groupId>
-				<artifactId>hibernate-ogm-bom</artifactId>
-				<version>${hibernate.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.hibernate</groupId>
-				<artifactId>hibernate-hikaricp</artifactId>
-				<version>${hibernate.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
 			<groupId>nl.rivm.cib</groupId>
 			<artifactId>epidemes-connect-cbs</artifactId>
+			<version>${epidemes.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>nl.rivm.cib</groupId>
+			<artifactId>epidemes-demo</artifactId>
 			<version>${epidemes.version}</version>
 		</dependency>
 
@@ -217,6 +187,37 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.fasterxml.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-bom</artifactId>
+				<version>${log4j.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate.ogm</groupId>
+				<artifactId>hibernate-ogm-bom</artifactId>
+				<version>${hibernate.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-hikaricp</artifactId>
+				<version>${hibernate.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<pluginManagement>

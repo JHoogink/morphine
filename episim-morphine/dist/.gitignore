@@ -3,3 +3,5 @@
 /log4j2.yaml
 /*.jar
 /*.db
+/demo.yaml
+/gm_pc6_centroid_density.json

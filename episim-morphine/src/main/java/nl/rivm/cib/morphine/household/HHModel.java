@@ -905,7 +905,7 @@ public class HHModel implements Scenario
 		this.hhAttributes.setAsInt( attractorRef, hhIndex,
 				HHAttribute.ATTRACTOR_REF.ordinal() );
 		this.hhAttributes.setAsBigDecimal(
-				QuantityUtil.toBigDecimal( impressDelay, TimeUnits.DAYS ),
+				QuantityUtil.decimalValue( impressDelay, TimeUnits.DAYS ),
 				hhIndex, HHAttribute.IMPRESSION_PERIOD_DAYS.ordinal() );
 		this.hhAttributes.setAsInt( 0, hhIndex,
 				HHAttribute.IMPRESSION_FEEDS.ordinal() );

@@ -64,7 +64,7 @@ public interface HHConfig extends GlobalConfig
 	/** configuration file name */
 	String CONFIG_BASE_DIR = "dist/";
 
-	/** configuration file name */
+	/** configuration file name system property */
 	String CONFIG_BASE_KEY = "config.base";
 
 	String CONFIG_YAML_FILE = "morphine.yaml";
@@ -163,8 +163,7 @@ public interface HHConfig extends GlobalConfig
 	default Iterable<Instant> statisticsRecurrence( final Scheduler scheduler )
 		throws ParseException
 	{
-		return Timing.of( statisticsRecurrence() ).offset( scheduler.offset() )
-				.iterate();
+		return Timing.of( statisticsRecurrence() ).iterate( scheduler );
 	}
 
 	@Key( POPULATION_PREFIX + "size" )
@@ -239,9 +238,7 @@ public interface HHConfig extends GlobalConfig
 	default Iterable<Instant> vaccinationRecurrence( final Scheduler scheduler )
 		throws ParseException
 	{
-		return Timing.of( vaccinationRecurrence() )
-				.offset( scheduler.now().toJava8( scheduler.offset() ) )
-				.iterate();
+		return Timing.of( vaccinationRecurrence() ).iterate( scheduler );
 	}
 
 	/** @see VaxOccasion#utility() */
@@ -470,7 +467,6 @@ public interface HHConfig extends GlobalConfig
 	default Iterable<Instant> attitudePropagatorRecurrence(
 		final Scheduler scheduler ) throws ParseException
 	{
-		return Timing.of( attitudePropagatorRecurrence() )
-				.offset( scheduler.offset() ).iterate();
+		return Timing.of( attitudePropagatorRecurrence() ).iterate( scheduler );
 	}
 }

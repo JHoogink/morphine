@@ -57,8 +57,8 @@ import io.coala.persist.JPAUtil;
 import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
-import io.coala.time.ReplicateConfig;
 import io.coala.time.Scheduler;
+import io.coala.time.SchedulerConfig;
 import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import io.reactivex.schedulers.Schedulers;
@@ -149,10 +149,10 @@ public class HHSimulator
 				.atStartOfDay( TimeUtil.NL_TZ );
 		final long durationDays = Duration
 				.between( offset, offset.plus( hhConfig.duration() ) ).toDays();
-		ConfigCache.getOrCreate( ReplicateConfig.class, MapBuilder.unordered()
-				.put( ReplicateConfig.ID_KEY, "" + binderConfig.rawId() )
-				.put( ReplicateConfig.OFFSET_KEY, "" + offset )
-				.put( ReplicateConfig.DURATION_KEY, "" + durationDays )
+		ConfigCache.getOrCreate( SchedulerConfig.class, MapBuilder.unordered()
+				.put( SchedulerConfig.ID_KEY, "" + binderConfig.rawId() )
+				.put( SchedulerConfig.OFFSET_KEY, "" + offset )
+				.put( SchedulerConfig.DURATION_KEY, "" + durationDays )
 				.build() );
 
 		// FIXME workaround until seed becomes configurable in coala
