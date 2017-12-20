@@ -23,6 +23,7 @@ scenario:
 #      recurrence: 1 0 0 ? * MON *
 #      db-enabled: true
   demography:
+    module: nl.rivm.cib.demo.module.PersonBrokerSimple
     population-size: 100000
     population-size-ref: 17000000
     # regional level of congruence/fidelity: MUNICIPAL, COROP, PROVINCE, TERRITORY
@@ -35,6 +36,7 @@ scenario:
     hh-birth-timeseries: ${config.base}37201_TS_2010_2015.json
     hh-age-timeseries: ${config.base}71486ned-TS-2010-2016.json
   geography:
+    module: nl.rivm.cib.demo.module.SiteBrokerSimple
     home-sites: ${config.base}gm_pc6_centroid_density.json
     primary-schools: ${config.base}gm_pc4_po_pupils.json
 #   localizers:
@@ -45,6 +47,7 @@ scenario:
 #        locator: nl.rivm.cib.demo.DemoModel$Epidemical$GeoLocater$DuoSecondarySchool
 #        data: ${config.base}....json
   mobility:
+    module: nl.rivm.cib.demo.module.SocietyBrokerSimple
     society-goals:
       # sundays 2PM for nation-wide socializing (mall/church/outing/...)
       consort: 
@@ -80,6 +83,7 @@ scenario:
         site-scope-km: 10
         capacity-dist: const( 100 ) 
   epidemiology:
+    module: nl.rivm.cib.demo.module.HealthBrokerSimple
     pathogen:
       # measles
       average-reproduction-period: 12 day
@@ -130,6 +134,7 @@ scenario:
         affinity-dist: const(0.5)
         proximity-dist: const(0.5)
   hesitancy:
+    module: nl.rivm.cib.morphine.demo.PeerBroker4C
 #    social-network:
 #      model: nl...$AssortativeWattsStrogatz
 #      # avg. no. family + friends + neighbors with persuasive (peer) pressure

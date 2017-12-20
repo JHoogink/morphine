@@ -82,7 +82,6 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.schedulers.Schedulers;
 import nl.rivm.cib.csv.CbsRegionHistory;
-import nl.rivm.cib.demo.DemoConfig;
 import nl.rivm.cib.demo.DemoModel;
 import nl.rivm.cib.demo.DemoModel.Demical.DemicFact;
 import nl.rivm.cib.demo.DemoModel.Demical.PersonBroker;
@@ -365,9 +364,11 @@ public class Demo1Million implements DemoModel, Scenario
 			{
 			}
 
+		final JsonNode scenConfig = config.toJSON( DemoConfig.SCENARIO_BASE );
+
 		final Class<? extends PersonBroker> demeModule = config.demeModule();
-		final JsonNode demeConfig = config.toJSON( DemoConfig.SCENARIO_BASE,
-				DemoConfig.DEMOGRAPHY_BASE );
+		final JsonNode demeConfig = scenConfig
+				.get( DemoConfig.DEMOGRAPHY_BASE );
 //		LOG.debug( "Deme config: {}", JsonUtil.toJSON( demeConfig ) );
 
 		final Class<? extends HealthBroker> healthModule = config
