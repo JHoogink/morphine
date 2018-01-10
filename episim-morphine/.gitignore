@@ -1,7 +1,10 @@
 .settings
 .project
 .classpath
+/.idea/
 /target/
 /dependency-reduced-pom.xml
 /morphine.mv.db
 /morphine.lock.db
+*.csv
+*.iml

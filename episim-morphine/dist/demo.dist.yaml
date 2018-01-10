@@ -23,7 +23,7 @@ scenario:
 #      recurrence: 1 0 0 ? * MON *
 #      db-enabled: true
   demography:
-    module: nl.rivm.cib.demo.module.PersonBrokerSimple
+    module: nl.rivm.cib.epidemes.demo.impl.PersonBrokerSimple
     population-size: 100000
     population-size-ref: 17000000
     # regional level of congruence/fidelity: MUNICIPAL, COROP, PROVINCE, TERRITORY
@@ -36,7 +36,7 @@ scenario:
     hh-birth-timeseries: ${config.base}37201_TS_2010_2015.json
     hh-age-timeseries: ${config.base}71486ned-TS-2010-2016.json
   geography:
-    module: nl.rivm.cib.demo.module.SiteBrokerSimple
+    module: nl.rivm.cib.epidemes.demo.impl.SiteBrokerSimple
     home-sites: ${config.base}gm_pc6_centroid_density.json
     primary-schools: ${config.base}gm_pc4_po_pupils.json
 #   localizers:
@@ -47,7 +47,7 @@ scenario:
 #        locator: nl.rivm.cib.demo.DemoModel$Epidemical$GeoLocater$DuoSecondarySchool
 #        data: ${config.base}....json
   mobility:
-    module: nl.rivm.cib.demo.module.SocietyBrokerSimple
+    module: nl.rivm.cib.epidemes.demo.impl.SocietyBrokerSimple
     society-goals:
       # sundays 2PM for nation-wide socializing (mall/church/outing/...)
       consort: 
@@ -83,7 +83,7 @@ scenario:
         site-scope-km: 10
         capacity-dist: const( 100 ) 
   epidemiology:
-    module: nl.rivm.cib.demo.module.HealthBrokerSimple
+    module: nl.rivm.cib.epidemes.demo.impl.HealthBrokerSimple
     pathogen:
       # measles
       average-reproduction-period: 12 day
@@ -118,8 +118,8 @@ scenario:
 #      # symptom/clinical period (C->R, normal/asymptomatic)
 #      symptom-period-dist: tria( 4 day; 5 day; 7 day )
     vaccination:
-      regimen: nl.rivm.cib.demo.VaxRegimenSimpleMeaslesRVP
-      acceptance-evaluator: nl.rivm.cib.demo.VaxAcceptance4CSimple
+      regimen: nl.rivm.cib.epidemes.demo.impl.VaxRegimenSimpleMeaslesRVP
+      acceptance-evaluator: nl.rivm.cib.epidemes.demo.impl.VaxAcceptance4CSimple
       # 48 weeks = 11 months = age of earliest dose (BMR0-1) or some preceding dose (eg. DKTP-Hib-HepB + Pneu)
       # e.g. BMR2 reached, mean(sd): 14.2(0.5) months/61.5(1.9) weeks/425(13) days
       treatment-delay-dist: normal(0.5 week; 1.85 week)
@@ -134,7 +134,7 @@ scenario:
         affinity-dist: const(0.5)
         proximity-dist: const(0.5)
   hesitancy:
-    module: nl.rivm.cib.morphine.demo.PeerBroker4C
+    module: nl.rivm.cib.morphine.demo.MorphinePeers4C
 #    social-network:
 #      model: nl...$AssortativeWattsStrogatz
 #      # avg. no. family + friends + neighbors with persuasive (peer) pressure

@@ -72,7 +72,6 @@ import io.coala.random.DistributionParser;
 import io.coala.random.ProbabilityDistribution;
 import io.coala.random.PseudoRandom;
 import io.coala.time.Instant;
-import io.coala.time.Scenario;
 import io.coala.time.Scheduler;
 import io.coala.time.SchedulerConfig;
 import io.coala.time.Timing;
@@ -81,40 +80,39 @@ import io.coala.util.MapBuilder;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.schedulers.Schedulers;
-import nl.rivm.cib.csv.CbsRegionHistory;
-import nl.rivm.cib.demo.DemoModel;
-import nl.rivm.cib.demo.DemoModel.Demical.DemicFact;
-import nl.rivm.cib.demo.DemoModel.Demical.PersonBroker;
-import nl.rivm.cib.demo.DemoModel.Medical.EpidemicFact;
-import nl.rivm.cib.demo.DemoModel.Medical.HealthBroker;
-import nl.rivm.cib.demo.DemoModel.Regional.SiteBroker;
-import nl.rivm.cib.demo.DemoModel.Social.PeerBroker;
-import nl.rivm.cib.demo.DemoModel.Social.SocietyBroker;
-import nl.rivm.cib.demo.Households;
-import nl.rivm.cib.demo.Persons;
-import nl.rivm.cib.demo.Regions;
-import nl.rivm.cib.demo.Sites;
-import nl.rivm.cib.demo.Societies;
-import nl.rivm.cib.epidemes.cbs.json.CBSRegionType;
-import nl.rivm.cib.epidemes.cbs.json.CbsRegionHierarchy;
-import nl.rivm.cib.episim.cbs.TimeUtil;
-//import nl.rivm.cib.episim.model.disease.infection.MSEIRS;
-import nl.rivm.cib.episim.model.disease.infection.MSEIRS.Compartment;
+import nl.rivm.cib.epidemes.data.cbs.CBSRegionType;
+import nl.rivm.cib.epidemes.data.cbs.CbsRegionHierarchy;
+import nl.rivm.cib.epidemes.data.cbs.CbsRegionHistory;
+import nl.rivm.cib.epidemes.data.cbs.TimeUtil;
+import nl.rivm.cib.epidemes.demo.DemoScenario;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Demical.DemicFact;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Demical.PersonBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Medical.EpidemicFact;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Medical.HealthBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Regional.SiteBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Social.PeerBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Social.SocietyBroker;
+import nl.rivm.cib.epidemes.demo.entity.Households;
+import nl.rivm.cib.epidemes.demo.entity.Persons;
+import nl.rivm.cib.epidemes.demo.entity.Regions;
+import nl.rivm.cib.epidemes.demo.entity.Sites;
+import nl.rivm.cib.epidemes.demo.entity.Societies;
+import nl.rivm.cib.epidemes.model.MSEIRS.Compartment;
 
 /**
- * {@link Demo1Million}
+ * {@link MorphineMain1M}
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
-public class Demo1Million implements DemoModel, Scenario
+public class MorphineMain1M implements DemoScenario
 {
 
 	/** */
-	private static final Logger LOG = LogUtil.getLogger( Demo1Million.class );
+	private static final Logger LOG = LogUtil.getLogger( MorphineMain1M.class );
 
 	@InjectConfig
-	private DemoConfig config;
+	private MorphineConfig config;
 
 	@Inject
 	private DataLayer data;
@@ -244,7 +242,7 @@ public class Demo1Million implements DemoModel, Scenario
 	}
 
 	@Override
-	public Observable<DemoModel> atEach( final String timing )
+	public Observable<DemoScenario> atEach( final String timing )
 	{
 		return Observable.create( sub ->
 		{
@@ -257,7 +255,7 @@ public class Demo1Million implements DemoModel, Scenario
 	}
 
 	private void scheduleAtEach( final String timing,
-		final ObservableEmitter<DemoModel> sub ) throws ParseException
+		final ObservableEmitter<DemoScenario> sub ) throws ParseException
 	{
 		atOnce( t -> sub.onNext( this ) );
 		scheduler().atEnd( t -> sub.onComplete() );
@@ -337,17 +335,17 @@ public class Demo1Million implements DemoModel, Scenario
 	public static void main( final String[] args )
 		throws InterruptedException, IOException
 	{
-		LOG.info( "Starting {}", Demo1Million.class.getSimpleName() );
+		LOG.info( "Starting {}", MorphineMain1M.class.getSimpleName() );
 
 		final Map<String, String> argMap = ConfigUtil.cliArgMap( args );
-		final String confFile = argMap.computeIfAbsent( DemoConfig.CONF_ARG,
-				confArg -> System.getProperty( DemoConfig.CONF_ARG,
+		final String confFile = argMap.computeIfAbsent( MorphineConfig.CONF_ARG,
+				confArg -> System.getProperty( MorphineConfig.CONF_ARG,
 						ConfigUtil.cliConfBase( argMap,
-								DemoConfig.CONFIG_BASE_KEY,
-								DemoConfig.CONFIG_BASE_DIR,
-								DemoConfig.CONFIG_YAML_FILE ) ) );
+								MorphineConfig.CONFIG_BASE_KEY,
+								MorphineConfig.CONFIG_BASE_DIR,
+								MorphineConfig.CONFIG_YAML_FILE ) ) );
 
-		final DemoConfig config = ConfigFactory.create( DemoConfig.class,
+		final MorphineConfig config = ConfigFactory.create( MorphineConfig.class,
 				// CLI args added first: override config resource and defaults 
 				argMap,
 				YamlUtil.flattenYaml( FileUtil.toInputStream( confFile ) ) );
@@ -364,33 +362,33 @@ public class Demo1Million implements DemoModel, Scenario
 			{
 			}
 
-		final JsonNode scenConfig = config.toJSON( DemoConfig.SCENARIO_BASE );
+		final JsonNode scenConfig = config.toJSON( MorphineConfig.SCENARIO_BASE );
 
 		final Class<? extends PersonBroker> demeModule = config.demeModule();
 		final JsonNode demeConfig = scenConfig
-				.get( DemoConfig.DEMOGRAPHY_BASE );
+				.get( MorphineConfig.DEMOGRAPHY_BASE );
 //		LOG.debug( "Deme config: {}", JsonUtil.toJSON( demeConfig ) );
 
 		final Class<? extends HealthBroker> healthModule = config
 				.healthModule();
-		final JsonNode healthConfig = config.toJSON( DemoConfig.SCENARIO_BASE,
-				DemoConfig.EPIDEMIOLOGY_BASE );
+		final JsonNode healthConfig = config.toJSON( MorphineConfig.SCENARIO_BASE,
+				MorphineConfig.EPIDEMIOLOGY_BASE );
 //		LOG.debug( "Health config: {}", JsonUtil.toJSON( healthConfig ) );
 
 		final Class<? extends PeerBroker> peerModule = config.peerModule();
-		final JsonNode peerConfig = config.toJSON( DemoConfig.SCENARIO_BASE,
-				DemoConfig.HESITANCY_BASE );
+		final JsonNode peerConfig = config.toJSON( MorphineConfig.SCENARIO_BASE,
+				MorphineConfig.HESITANCY_BASE );
 //		LOG.debug( "Peer config: {}", JsonUtil.toJSON( peerConfig ) );
 
 		final Class<? extends SiteBroker> siteModule = config.siteModule();
-		final JsonNode siteConfig = config.toJSON( DemoConfig.SCENARIO_BASE,
-				DemoConfig.GEOGRAPHY_BASE );
+		final JsonNode siteConfig = config.toJSON( MorphineConfig.SCENARIO_BASE,
+				MorphineConfig.GEOGRAPHY_BASE );
 //		LOG.debug( "Site config: {}", JsonUtil.toJSON( siteConfig ) );
 
 		final Class<? extends SocietyBroker> societyModule = config
 				.societyModule();
-		final JsonNode societyConfig = config.toJSON( DemoConfig.SCENARIO_BASE,
-				DemoConfig.MOTION_BASE );
+		final JsonNode societyConfig = config.toJSON( MorphineConfig.SCENARIO_BASE,
+				MorphineConfig.MOTION_BASE );
 //		LOG.debug( "Society config: {}", JsonUtil.toJSON( societyConfig ) );
 
 		final ZonedDateTime offset = config.offset()
@@ -432,7 +430,7 @@ public class Demo1Million implements DemoModel, Scenario
 
 		LOG.debug( "Constructing model, seed: {}, config: {}", rng.seed(),
 				JsonUtil.toJSON( binderConfig.toJSON() ) );
-		final Demo1Million model = binder.inject( Demo1Million.class );
+		final MorphineMain1M model = binder.inject( MorphineMain1M.class );
 
 		final CbsRegionHierarchy hier;
 		try( final InputStream is = FileUtil
@@ -464,9 +462,9 @@ public class Demo1Million implements DemoModel, Scenario
 		final String gmFallback = "GM0363";
 
 		final ObjectNode configTree = (ObjectNode) config
-				.toJSON( DemoConfig.SCENARIO_BASE );
-		configTree.with( DemoConfig.REPLICATION_BASE )
-				.put( DemoConfig.RANDOM_SEED_KEY, seed );
+				.toJSON( MorphineConfig.SCENARIO_BASE );
+		configTree.with( MorphineConfig.REPLICATION_BASE )
+				.put( MorphineConfig.RANDOM_SEED_KEY, seed );
 
 		final TreeMap<String, Set<String>> regNames = new TreeMap<>();
 		Observable.using( () -> new FileWriter( totalsFile, false ),
@@ -491,10 +489,10 @@ public class Demo1Million implements DemoModel, Scenario
 										() -> new TreeMap<>(),
 										Collectors.toCollection(
 												() -> new TreeSet<>() ) ) ) );
-						fw.write( DemoConfig.toHeader( configTree, sirCols,
+						fw.write( MorphineConfig.toHeader( configTree, sirCols,
 								regNames ) );
 					}
-					fw.write( DemoConfig.toLine( sirCols,
+					fw.write( MorphineConfig.toLine( sirCols,
 							model.scheduler().nowDT().toLocalDate().toString(),
 							regNames, totals ) );
 					fw.flush();
@@ -502,7 +500,7 @@ public class Demo1Million implements DemoModel, Scenario
 				} ), FileWriter::close ).subscribe(
 						homeSIR -> LOG.debug( "t={} TOTAL-top{}:{ {} }",
 								model.scheduler().nowDT(), n,
-								Pretty.of( () -> DemoConfig.toLog( sirCols,
+								Pretty.of( () -> MorphineConfig.toLog( sirCols,
 										homeSIR, n, sortLogCol ) ) ),
 						e ->
 						{
@@ -520,10 +518,10 @@ public class Demo1Million implements DemoModel, Scenario
 					if( first.get() )
 					{
 						first.set( false );
-						fw.write( DemoConfig.toHeader( configTree, sirCols,
+						fw.write( MorphineConfig.toHeader( configTree, sirCols,
 								regNames ) );
 					}
-					fw.write( DemoConfig.toLine( sirCols,
+					fw.write( MorphineConfig.toLine( sirCols,
 							model.scheduler().nowDT().toLocalDate().toString(),
 							regNames, deltas ) );
 					fw.flush();
@@ -531,7 +529,7 @@ public class Demo1Million implements DemoModel, Scenario
 				} ), FileWriter::close ).subscribe(
 						homeSIR -> LOG.debug( "t={} DELTA-top{}:{ {} }",
 								model.scheduler().nowDT(), n,
-								Pretty.of( () -> DemoConfig.toLog( sirCols,
+								Pretty.of( () -> MorphineConfig.toLog( sirCols,
 										homeSIR, n, sortLogCol ) ) ),
 						e ->
 						{
@@ -543,7 +541,7 @@ public class Demo1Million implements DemoModel, Scenario
 		LOG.debug( "Starting..." );
 		model.run();
 
-		LOG.info( "{} done", Demo1Million.class.getSimpleName() );
+		LOG.info( "{} done", MorphineMain1M.class.getSimpleName() );
 	}
 
 }

@@ -26,8 +26,8 @@ import java.util.stream.LongStream;
 import org.ujmp.core.Matrix;
 
 import io.coala.util.Compare;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
+import nl.rivm.cib.epidemes.model.VaxHesitancy;
+import nl.rivm.cib.epidemes.model.VaxOccasion;
 
 /**
  * {@link HHAttitudeEvaluator} : [{@link HHAttribute}] &rarr; [0,1]

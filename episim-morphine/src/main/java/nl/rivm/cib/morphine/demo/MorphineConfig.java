@@ -36,25 +36,25 @@ import io.coala.config.LocalDateConverter;
 import io.coala.config.PeriodConverter;
 import io.coala.config.YamlConfig;
 import io.coala.math.DecimalUtil;
-import nl.rivm.cib.demo.DemoModel.Demical.PersonBroker;
-import nl.rivm.cib.demo.DemoModel.Medical.HealthBroker;
-import nl.rivm.cib.demo.DemoModel.Regional.SiteBroker;
-import nl.rivm.cib.demo.DemoModel.Social.PeerBroker;
-import nl.rivm.cib.demo.DemoModel.Social.SocietyBroker;
-import nl.rivm.cib.episim.model.disease.infection.MSEIRS.Compartment;
-import nl.rivm.cib.pilot.PilotConfig.RandomSeedConverter;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Demical.PersonBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Medical.HealthBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Regional.SiteBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Social.PeerBroker;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Social.SocietyBroker;
+import nl.rivm.cib.epidemes.model.MSEIRS.Compartment;
+import nl.rivm.cib.util.RandomSeedConverter;
 
 /**
- * {@link DemoConfig} used in {@link DemoModel}
+ * {@link MorphineConfig} used in {@link DemoModel}
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
 @Sources( {
-		"file:" + DemoConfig.CONFIG_BASE_PARAM + DemoConfig.CONFIG_YAML_FILE,
-		"file:" + DemoConfig.CONFIG_BASE_DIR + DemoConfig.CONFIG_YAML_FILE,
-		"classpath:" + DemoConfig.CONFIG_YAML_FILE } )
-public interface DemoConfig extends YamlConfig
+		"file:" + MorphineConfig.CONFIG_BASE_PARAM + MorphineConfig.CONFIG_YAML_FILE,
+		"file:" + MorphineConfig.CONFIG_BASE_DIR + MorphineConfig.CONFIG_YAML_FILE,
+		"classpath:" + MorphineConfig.CONFIG_YAML_FILE } )
+public interface MorphineConfig extends YamlConfig
 {
 
 	String CONF_ARG = "conf";
@@ -130,23 +130,23 @@ public interface DemoConfig extends YamlConfig
 	LocalDate offset();
 
 	@Key( SCENARIO_BASE + KEY_SEP + DEMOGRAPHY_BASE + KEY_SEP + MODULE_KEY )
-	@DefaultValue( "nl.rivm.cib.demo.module.PersonBrokerSimple" )
+//	@DefaultValue( "nl.rivm.cib.epidemes.demo.impl.PersonBrokerSimple" )
 	Class<? extends PersonBroker> demeModule();
 
 	@Key( SCENARIO_BASE + KEY_SEP + EPIDEMIOLOGY_BASE + KEY_SEP + MODULE_KEY )
-	@DefaultValue( "nl.rivm.cib.demo.module.HealthBrokerSimple" )
+//	@DefaultValue( "nl.rivm.cib.epidemes.demo.impl.HealthBrokerSimple" )
 	Class<? extends HealthBroker> healthModule();
 
 	@Key( SCENARIO_BASE + KEY_SEP + HESITANCY_BASE + KEY_SEP + MODULE_KEY )
-	@DefaultValue( "nl.rivm.cib.demo.module.PeerBrokerSimple" )
+//	@DefaultValue( "nl.rivm.cib.epidemes.demo.impl.PeerBrokerSimple" )
 	Class<? extends PeerBroker> peerModule();
 
 	@Key( SCENARIO_BASE + KEY_SEP + GEOGRAPHY_BASE + KEY_SEP + MODULE_KEY )
-	@DefaultValue( "nl.rivm.cib.demo.module.SiteBrokerSimple" )
+//	@DefaultValue( "nl.rivm.cib.epidemes.demo.impl.SiteBrokerSimple" )
 	Class<? extends SiteBroker> siteModule();
 
 	@Key( SCENARIO_BASE + KEY_SEP + MOTION_BASE + KEY_SEP + MODULE_KEY )
-	@DefaultValue( "nl.rivm.cib.demo.module.SocietyBrokerSimple" )
+//	@DefaultValue( "nl.rivm.cib.epidemes.demo.impl.SocietyBrokerSimple" )
 	Class<? extends SocietyBroker> societyModule();
 
 	static String toHeader( final Object config,

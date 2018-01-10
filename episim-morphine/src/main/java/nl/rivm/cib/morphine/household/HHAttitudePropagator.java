@@ -40,7 +40,7 @@ import org.ujmp.core.calculation.Calculation.Ret;
 import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.MatrixUtil;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
+import nl.rivm.cib.epidemes.model.VaxHesitancy;
 
 /**
  * {@link HHAttitudePropagator} : [{@link HHAttribute}] &rarr; [0,1]

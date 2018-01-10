@@ -36,27 +36,26 @@ import io.coala.time.Scheduler;
 import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
-import nl.rivm.cib.demo.DemoConfig;
-import nl.rivm.cib.demo.DemoModel;
-import nl.rivm.cib.demo.DemoModel.EpiFact;
-import nl.rivm.cib.demo.DemoModel.Social.PeerBroker;
-import nl.rivm.cib.demo.Households;
-import nl.rivm.cib.demo.Households.HouseholdTuple;
+import nl.rivm.cib.epidemes.demo.DemoEvent;
+import nl.rivm.cib.epidemes.demo.DemoScenario;
+import nl.rivm.cib.epidemes.demo.DemoScenario.Social.PeerBroker;
+import nl.rivm.cib.epidemes.demo.entity.Households;
+import nl.rivm.cib.epidemes.demo.entity.Households.HouseholdTuple;
 
 /**
- * {@link PeerBroker4C}
+ * {@link MorphinePeers4C}
  * 
  * @version $Id$
  * @author Rick van Krevelen
  */
-public class PeerBroker4C implements PeerBroker
+public class MorphinePeers4C implements PeerBroker
 {
 
 	public interface PeerConfig extends YamlConfig
 	{
 
-		@DefaultValue( DemoConfig.CONFIG_BASE_DIR )
-		@Key( DemoConfig.CONFIG_BASE_KEY )
+		@DefaultValue( MorphineConfig.CONFIG_BASE_DIR )
+		@Key( MorphineConfig.CONFIG_BASE_KEY )
 		String configBase();
 
 //		@Key( "invitation-age" )
@@ -321,7 +320,7 @@ public class PeerBroker4C implements PeerBroker
 
 	/** */
 	private static final Logger LOG = LogUtil
-			.getLogger( PeerBroker4C.class );
+			.getLogger( MorphinePeers4C.class );
 
 	@InjectConfig
 	private PeerConfig config;
@@ -338,7 +337,7 @@ public class PeerBroker4C implements PeerBroker
 //	@Inject
 //	private ProbabilityDistribution.Parser distParser;
 
-	private final PublishSubject<EpiFact> events = PublishSubject.create();
+	private final PublishSubject<DemoEvent> events = PublishSubject.create();
 
 	@Override
 	public Scheduler scheduler()
@@ -347,7 +346,7 @@ public class PeerBroker4C implements PeerBroker
 	}
 
 	@Override
-	public Observable<EpiFact> events()
+	public Observable<DemoEvent> events()
 	{
 		return this.events;
 	}
@@ -380,10 +379,10 @@ public class PeerBroker4C implements PeerBroker
 //	private transient ConditionalDistribution<Map<HHAttribute, BigDecimal>, HesitancyProfileJson> hesitancyDist;
 
 	@Override
-	public PeerBroker4C reset() throws Exception
+	public MorphinePeers4C reset() throws Exception
 	{
 		// TODO from CBS
-		this.regionalCultureDist = regName -> DemoModel.NA;
+		this.regionalCultureDist = regName -> DemoScenario.NA;
 		// TODO from PIENTER2
 		this.culturalAttitudeDist = cult -> BigDecimal.ZERO;
 

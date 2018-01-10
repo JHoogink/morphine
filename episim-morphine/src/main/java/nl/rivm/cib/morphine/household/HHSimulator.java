@@ -62,7 +62,7 @@ import io.coala.time.SchedulerConfig;
 import io.coala.util.FileUtil;
 import io.coala.util.MapBuilder;
 import io.reactivex.schedulers.Schedulers;
-import nl.rivm.cib.episim.cbs.TimeUtil;
+import nl.rivm.cib.epidemes.data.cbs.TimeUtil;
 
 /**
  * {@link HHSimulator}

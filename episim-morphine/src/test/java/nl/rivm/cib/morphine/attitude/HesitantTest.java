@@ -17,7 +17,7 @@
  * 
  * Copyright (c) 2016 RIVM National Institute for Health and Environment 
  */
-package nl.rivm.cib.morphine;
+package nl.rivm.cib.morphine.attitude;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -38,11 +38,10 @@ import io.coala.enterprise.Actor;
 import io.coala.log.LogUtil;
 import io.coala.math.DecimalUtil;
 import io.coala.math.MatrixUtil;
-import nl.rivm.cib.episim.model.person.Attitude;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy.MatrixWeightedAverager;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxHesitancy.SocialFactors;
-import nl.rivm.cib.episim.model.vaccine.attitude.VaxOccasion;
+import nl.rivm.cib.epidemes.model.Attitude;
+import nl.rivm.cib.epidemes.model.VaxHesitancy;
+import nl.rivm.cib.epidemes.model.VaxHesitancy.SocialFactors;
+import nl.rivm.cib.epidemes.model.VaxOccasion;
 
 /**
  * {@link HesitantTest}
@@ -206,7 +205,7 @@ public class HesitantTest
 	{
 		LOG.info( "Started test of {}", VaxHesitancy.class.getSimpleName() );
 
-		final VaxHesitancy.SimpleWeightedAverager hes = VaxHesitancy.SimpleWeightedAverager
+		final SimpleWeightedAverager hes = SimpleWeightedAverager
 				.of( 1, 0, .5, id -> .5 );
 		final VaxOccasion occ = VaxOccasion.of( 1, 1, .5, .5 );
 		LOG.trace( "hes1: calc={}, conv({})={}, conf={}, compl={} => {}",
